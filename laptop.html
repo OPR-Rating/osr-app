@@ -533,6 +533,7 @@
   .mk-popt:active{background:#fbf0e6;}
   .mk-cancel{width:100%;padding:13px;background:none;border:none;color:#9a8578;font-size:14px;cursor:pointer;margin-top:6px;font-family:inherit;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="app">
@@ -549,6 +550,7 @@
     <div class="screen-content home-content">
       <button class="btn-enter" onclick="showScreen('entryScreen')">✚ Enter your match score here</button>
       <button class="btn-enter" onclick="mkOpen()" style="background:linear-gradient(180deg,#3a2416,#20130a);color:#FFA033;border:1.5px solid rgba(255,160,60,.35);box-shadow:0 8px 22px rgba(126,50,0,.35);margin-top:-6px;">◉ Score a match live (marker)</button>
+      <button class="btn-enter" onclick="watchOpen()" style="background:linear-gradient(180deg,#241509,#160d06);color:#e8d9cc;border:1.5px solid rgba(255,160,60,.22);box-shadow:0 6px 18px rgba(0,0,0,.3);margin-top:-6px;font-size:15px;">👁 Watch a live match</button>
       <div class="menu-grid">
         <button class="menu-btn" onclick="showScreen('laddersScreen')">Current Ratings and Ladders</button>
         <button class="menu-btn" onclick="showProfileSearch()">Member Profile</button>
@@ -614,7 +616,7 @@
       </div>
       <div id="formMenu" style="display:none;margin-top:8px;">
         <div style="padding:12px 14px;background:rgba(211,84,0,.08);border:1px solid rgba(211,84,0,.30);border-radius:10px;margin:0 0 10px;font-size:12px;color:#0d4a38;line-height:1.5;">
-          <strong>What is Form?</strong> Your overall performance — not just how often you win, but who you played, how convincingly, and how by much. Requires a minimum of 12 sets to appear.
+          <strong>What is Form?</strong> Your overall performance — not just how often you win, but who you played, how convincingly, and how by much. Requires a minimum of 12 games to appear.
         </div>
         <button class="menu-btn" id="formGuideBtn" style="border-color:#B8480A;font-size:13px;margin-bottom:10px;" onclick="toggleFormGuide()">📖 Understanding the Form Wall &nbsp;<span id="formGuideChevron" style="font-size:12px;">▼</span></button>
         <div id="formGuideBox" style="display:none;padding:14px;background:#fff;border:1px solid rgba(211,84,0,.30);border-radius:10px;margin:0 0 12px;font-size:12px;color:#3a2348;line-height:1.6;">
@@ -622,14 +624,14 @@
           <p style="margin:0 0 6px;"><strong>The columns explained</strong></p>
           <ul style="margin:0 0 10px;padding-left:18px;">
             <li><strong>Player / Pair</strong> — the player's name, or the pairing.</li>
-            <li><strong>Sets</strong> — total sets played (must reach 12 to appear).</li>
-            <li><strong>Sets Won</strong> — how many of those sets were won.</li>
-            <li><strong>Win %</strong> — share of sets won.</li>
-            <li><strong>Game Diff / Set</strong> — average game margin per set. 3.57 means winning sets by about 3–4 games on average. Positive = usually wins convincingly; negative = usually loses.</li>
+            <li><strong>Games</strong> — total games played (must reach 12 to appear).</li>
+            <li><strong>Games Won</strong> — how many of those games were won.</li>
+            <li><strong>Win %</strong> — share of games won.</li>
+            <li><strong>Point Diff / Game</strong> — average point margin per game. 3.57 means winning games by about 3–4 points on average. Positive = usually wins convincingly; negative = usually loses.</li>
             <li><strong>Form</strong> — the overall performance score (typically 0.0–1.0). It is <em>not</em> a win percentage. The headline number the wall is sorted by.</li>
           </ul>
           <p style="margin:0 0 4px;"><strong>Reading Form (typically 0.0 – 1.0)</strong></p>
-          <p style="margin:0 0 8px;">It blends how often you win sets (40%), your game margin per set (40%), and your games won per set (20%) — then adjusts for how many sets you've played (more = more reliable). It is not the same as Win %: winning narrowly scores lower than winning convincingly. Rough guide:</p>
+          <p style="margin:0 0 8px;">It blends how often you win games (40%), your point margin per game (40%), and your points won per game (20%) — then adjusts for how many games you've played (more = more reliable). It is not the same as Win %: winning narrowly scores lower than winning convincingly. Rough guide:</p>
           <ul style="margin:0 0 10px;padding-left:18px;">
             <li><strong>0.70+</strong> — Strong, performing very well.</li>
             <li><strong>0.55–0.70</strong> — Good, winning more than losing.</li>
@@ -707,14 +709,14 @@
           <p style="margin:0 0 6px;"><strong>The columns explained</strong></p>
           <ul style="margin:0 0 10px;padding-left:18px;">
             <li><strong>Player / Pair</strong> — the player's name, or the pairing.</li>
-            <li><strong>Sets</strong> — total sets played (must reach 12 to appear).</li>
-            <li><strong>Sets Won</strong> — how many of those sets were won.</li>
-            <li><strong>Win %</strong> — share of sets won.</li>
-            <li><strong>Game Diff / Set</strong> — average game margin per set. Positive = usually wins convincingly; negative = usually loses.</li>
+            <li><strong>Games</strong> — total games played (must reach 12 to appear).</li>
+            <li><strong>Games Won</strong> — how many of those games were won.</li>
+            <li><strong>Win %</strong> — share of games won.</li>
+            <li><strong>Point Diff / Game</strong> — average point margin per game. Positive = usually wins convincingly; negative = usually loses.</li>
             <li><strong>Form</strong> — the overall performance score (typically 0.0–1.0). It is <em>not</em> a win percentage. The headline number the wall is sorted by.</li>
           </ul>
           <p style="margin:0 0 4px;"><strong>Reading Form (typically 0.0 – 1.0)</strong></p>
-          <p style="margin:0 0 8px;">It blends how often you win sets (40%), your game margin per set (40%), and your games won per set (20%) — then adjusts for how many sets you've played (more = more reliable). It is not the same as Win %: winning narrowly scores lower than winning convincingly. Rough guide:</p>
+          <p style="margin:0 0 8px;">It blends how often you win games (40%), your point margin per game (40%), and your points won per game (20%) — then adjusts for how many games you've played (more = more reliable). It is not the same as Win %: winning narrowly scores lower than winning convincingly. Rough guide:</p>
           <ul style="margin:0 0 10px;padding-left:18px;">
             <li><strong>0.70+</strong> — Strong, performing very well.</li>
             <li><strong>0.55–0.70</strong> — Good, winning more than losing.</li>
@@ -996,6 +998,15 @@
   <!-- MARKER PLAYER MODAL -->
   <div class="mk-ov" id="mkOv"><div class="mk-sheet" id="mkSheet"></div></div>
 
+  <!-- LIVE SPECTATOR SCREEN -->
+  <div class="screen hidden" id="watchScreen">
+    <div class="header">
+      <button class="back-btn" onclick="goHome()">&#8592;</button>
+      <h1>Watch Live</h1>
+    </div>
+    <div class="screen-content" id="watchContent" style="padding:0;"></div>
+  </div>
+
   <!-- PLAYER SEARCH MODAL -->
   <div class="modal-overlay" id="playerModalOverlay" style="display:none;" onclick="closePlayerModal()"></div>
   <div class="player-modal" id="playerModal" style="display:none;">
@@ -1078,7 +1089,7 @@ function showScreen(id) {
 // preload: optional {t1:[a,b], t2:[c,d], cat, tournament, division} to launch
 // pre-filled from a tournament fixture (used by the future Rounds "Marker" btn).
 // ============================================================================
-const MK = { players:{t1p1:null,t1p2:null,t2p1:null,t2p2:null}, fmt:5, cat:"Men's",
+const MK = { players:{t1p1:null,t1p2:null,t2p1:null,t2p2:null}, fmt:5, cat:"Men's", event:"",
   format:'doubles',
   firstServe:1, gp:[0,0], games:[0,0], scores:[], server:1, box:'R', history:[],
   over:false, view:'setup', preload:null, pickSlot:null };
@@ -1106,14 +1117,16 @@ function mkPlayerPool(slot){
 }
 
 function mkOpen(preload){
+  if(typeof liveFinish==='function' && typeof LIVE!=='undefined' && LIVE.active) liveFinish('abandoned');
   MK.preload = preload || null;
   MK.players={t1p1:null,t1p2:null,t2p1:null,t2p2:null};
-  MK.fmt=5; MK.cat="Men's"; MK.format='doubles'; MK.firstServe=1; MK.view='setup';
+  MK.fmt=5; MK.cat="Men's"; MK.format='doubles'; MK.firstServe=1; MK.view='setup'; MK.event="";
   if(preload){
     if(preload.format) MK.format=preload.format;
     if(preload.t1){ MK.players.t1p1=preload.t1[0]; MK.players.t1p2=preload.t1[1]||null; }
     if(preload.t2){ MK.players.t2p1=preload.t2[0]; MK.players.t2p2=preload.t2[1]||null; }
     if(preload.cat) MK.cat=preload.cat;
+    if(preload.tournament) MK.event=preload.tournament;
   }
   showScreen('markerScreen');
   mkRenderSetup();
@@ -1150,6 +1163,10 @@ function mkRenderSetup(){
     <h2>Live Marker</h2>
     <div class="mk-sub">International squash · PAR 11 · tap the ${sing?'player':'team'} that wins each rally</div>
     <div class="mk-grp">
+      <h3>Event</h3>
+      <select id="mkSetupEvent" onchange="MK.event=this.value" style="width:100%;padding:12px;border:1.5px solid rgba(255,160,60,.3);border-radius:10px;font-size:15px;background:#241509;color:#fff;box-sizing:border-box;"><option value="">Choose event…</option></select>
+    </div>
+    <div class="mk-grp">
       <h3>Format</h3>
       <div class="mk-seg"><button class="${segFmt('doubles')}" onclick="mkSetFormat('doubles')">Doubles</button><button class="${segFmt('singles')}" onclick="mkSetFormat('singles')">Singles</button></div>
     </div>
@@ -1170,6 +1187,7 @@ function mkRenderSetup(){
     </div>
     <button class="mk-start" id="mkStartBtn" ${mkReady()?'':'disabled'} onclick="mkStart()">Start match</button>
   </div>`;
+  mkFillSetupEvent();
 }
 function mkSetFormat(f){
   MK.format=f;
@@ -1180,7 +1198,7 @@ function mkSetFormat(f){
   }
   mkRenderSetup();
 }
-function mkReady(){ const p=MK.players; return (MK.format==='singles') ? (p.t1p1&&p.t2p1) : (p.t1p1&&p.t1p2&&p.t2p1&&p.t2p2); }
+function mkReady(){ const p=MK.players; const hasPlayers=(MK.format==='singles') ? (p.t1p1&&p.t2p1) : (p.t1p1&&p.t1p2&&p.t2p1&&p.t2p2); return hasPlayers && !!MK.event; }
 // Side display name: singles = one player; doubles = "A & B".
 function mkSideName(side){
   const p=MK.players;
@@ -1241,6 +1259,7 @@ function mkStart(){
   MK.gp=[0,0]; MK.games=[0,0]; MK.scores=[]; MK.history=[]; MK.over=false;
   MK.server=MK.firstServe; MK.box='R'; MK.view='live';
   mkRenderLive();
+  if(typeof liveStart==='function') liveStart();   // begin live broadcast (no-op if realtime unavailable)
 }
 function mkSnap(){ MK.history.push(JSON.stringify({gp:MK.gp,games:MK.games,scores:MK.scores,server:MK.server,box:MK.box,over:MK.over})); if(MK.history.length>250)MK.history.shift(); }
 function mkRally(t){
@@ -1292,6 +1311,7 @@ function mkRenderLive(){
       <div class="mk-gnum" id="mkGnum">Game 1</div>
       <div class="mk-gtot" id="mkGtot">0 – 0</div>
     </div>
+    <div id="mkLiveChip" style="display:none;align-items:center;gap:6px;justify-content:center;font-size:11px;color:#ffb3a0;padding:3px 0;background:rgba(255,90,90,.08);"></div>
     <div class="mk-callbar" id="mkCall">Love–all</div>
     <div class="mk-courts">
       <div class="mk-side t1" id="mkSide1" onclick="mkRally(1)"><div class="mk-sdot"></div><div class="mk-box" id="mkBox1">R</div>
@@ -1328,6 +1348,7 @@ function mkRenderScore(){
   document.getElementById('mkSide2').classList.toggle('serving',MK.server===2&&!MK.over);
   document.getElementById('mkBox1').textContent=MK.box; document.getElementById('mkBox2').textContent=MK.box;
   document.getElementById('mkCall').textContent=mkScoreCall();
+  if(typeof livePush==='function') livePush();   // broadcast this score change
 }
 
 // ---------- finish (STUBBED submission) ----------
@@ -1352,7 +1373,7 @@ function mkEnd(){
     <div style="background:var(--mk-char2);border:1px solid rgba(255,160,60,.18);border-radius:14px;padding:16px;margin-bottom:12px;">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--mk-am);font-weight:800;margin-bottom:10px;">Where does this match go?</div>
       <label style="font-size:12px;color:#c9b8a8;display:block;margin-bottom:5px;">Event</label>
-      <select id="mkEvent" style="${fld}margin-bottom:12px;"><option value="Social">Social</option></select>
+      <div style="${fld}margin-bottom:12px;display:flex;align-items:center;color:#FFA033;font-weight:700;">${MK.event||'—'}</div>
       <label style="font-size:12px;color:#c9b8a8;display:block;margin-bottom:5px;">Your name</label>
       <select id="submitterName" style="${fld}margin-bottom:12px;"></select>
       <label style="font-size:12px;color:#c9b8a8;display:block;margin-bottom:5px;">Your 4-digit PIN</label>
@@ -1381,6 +1402,20 @@ async function mkFillEventDropdown(){
   if(MK.preload && MK.preload.tournament){ sel.value=MK.preload.tournament; }
   else if(activeCount===0){ sel.value='Social'; }
 }
+
+// Populate the SETUP-screen event dropdown (chosen up front, before format/teams).
+// Defaults to "Choose event…" (empty) so the marker must consciously pick — prevents wrong event.
+async function mkFillSetupEvent(){
+  const sel=document.getElementById('mkSetupEvent'); if(!sel) return;
+  let opts='<option value="">Choose event…</option>';
+  try{
+    const data = await sbGet(`tournaments?select=name,active,archived&active=eq.true&archived=eq.false&club_id=eq.${CLUB_ID}&order=id.desc`);
+    (data||[]).forEach(t=>{ opts+=`<option value="${String(t.name).replace(/"/g,'&quot;')}">${t.name}</option>`; });
+  }catch(e){}
+  opts+='<option value="Social">Social</option><option value="Ladder Match">Ladder Match</option>';
+  sel.innerHTML=opts;
+  sel.value = MK.event || '';   // restore any prior choice (e.g. preload tournament)
+}
 function mkFillSubmitterNames(){
   const sel=document.getElementById('submitterName'); if(!sel) return;
   // Only the players actually in THIS match may enter the score (confirms they were there).
@@ -1399,7 +1434,7 @@ async function mkSubmit(){
   entryData.date   = new Date().toISOString().slice(0,10);
   entryData.type   = MK.cat;
   entryData.format = sing ? 'singles' : 'doubles';
-  entryData.event  = document.getElementById('mkEvent').value || 'Social';
+  entryData.event  = MK.event || 'Social';
   entryData.sets   = MK.scores.length;
   entryData.t1p1   = MK.players.t1p1;
   entryData.t1p2   = sing ? null : MK.players.t1p2;
@@ -1416,6 +1451,189 @@ async function mkSubmit(){
   });
   entryData._forceFixtureRound = null;
   await submitMatch();
+}
+
+
+// ============================================================================
+// LIVE SCORING — marker broadcasts rally-by-rally; spectators watch in realtime.
+// Additive: mirrors the marker's MK state into the `live_matches` table; the FINAL
+// rated result still goes through submitMatch() unchanged. Uses Supabase Realtime.
+// Degrades gracefully: if supabase-js didn't load, the marker still works locally.
+// ============================================================================
+let _sbClient = null;            // supabase-js client (Realtime), lazily created
+let LIVE = { id:null, code:null, active:false, lastPush:0 };   // marker's live-session handle
+let SPEC = { channel:null, row:null };                          // spectator subscription
+
+function liveClient(){
+  if(_sbClient) return _sbClient;
+  try{
+    if(window.supabase && window.supabase.createClient){
+      _sbClient = window.supabase.createClient(SB_URL, SB_ANON, { realtime:{ params:{ eventsPerSecond:10 } } });
+    }
+  }catch(e){ _sbClient=null; }
+  return _sbClient;
+}
+function liveAvailable(){ return !!liveClient(); }
+
+// short human code, e.g. "SQ7F3K"
+function liveMakeCode(){
+  const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c='SQ'; for(let i=0;i<4;i++) c+=a[Math.floor(Math.random()*a.length)];
+  return c;
+}
+
+// build the row payload from the marker's MK state
+function liveRowFromMK(status){
+  return {
+    club_id: CLUB_ID,
+    match_code: LIVE.code,
+    status: status||'live',
+    format: MK.format,
+    category: MK.cat,
+    best_of: MK.fmt,
+    t1p1: MK.players.t1p1, t1p2: MK.players.t1p2,
+    t2p1: MK.players.t2p1, t2p2: MK.players.t2p2,
+    gp_t1: MK.gp[0], gp_t2: MK.gp[1],
+    games_t1: MK.games[0], games_t2: MK.games[1],
+    scores: (MK.scores||[]).map(x=>String(x).replace('*','')).join(','),
+    server: MK.server, box: MK.box,
+    last_call: (typeof mkScoreCall==='function' ? mkScoreCall() : ''),
+    updated_at: new Date().toISOString()
+  };
+}
+
+// Called by the marker when a match STARTS (from mkStart). Creates the live row.
+async function liveStart(){
+  const cl=liveClient(); if(!cl) return;               // no realtime -> silently skip
+  LIVE.code = liveMakeCode(); LIVE.active=true; LIVE.id=null;
+  try{
+    const { data, error } = await cl.from('live_matches').insert(liveRowFromMK('live')).select().single();
+    if(!error && data){ LIVE.id=data.id; }
+  }catch(e){ LIVE.active=false; }
+  liveUpdateShareUI();
+}
+
+// Called by the marker after every scoring action (rally/undo/etc). Throttled.
+async function livePush(){
+  if(!LIVE.active || !LIVE.id) return;
+  const now=Date.now();
+  // throttle to ~4/sec max; always allow if >250ms since last
+  if(now - LIVE.lastPush < 200) { clearTimeout(LIVE._t); LIVE._t=setTimeout(livePush, 220); return; }
+  LIVE.lastPush=now;
+  const cl=liveClient(); if(!cl) return;
+  try{ await cl.from('live_matches').update(liveRowFromMK('live')).eq('id', LIVE.id); }catch(e){}
+}
+
+// Called when the match ends / is submitted / abandoned.
+async function liveFinish(status){
+  if(!LIVE.active || !LIVE.id){ LIVE.active=false; return; }
+  const cl=liveClient();
+  try{ if(cl) await cl.from('live_matches').update(liveRowFromMK(status||'finished')).eq('id', LIVE.id); }catch(e){}
+  LIVE.active=false; LIVE.id=null; LIVE.code=null;
+  liveUpdateShareUI();
+}
+
+// small "LIVE · code" chip shown on the marker while broadcasting
+function liveUpdateShareUI(){
+  const el=document.getElementById('mkLiveChip'); if(!el) return;
+  if(LIVE.active && LIVE.code){
+    el.style.display='inline-flex';
+    el.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:#ff5a5a;box-shadow:0 0 8px #ff5a5a;"></span> LIVE · <b>${LIVE.code}</b>`;
+  } else { el.style.display='none'; el.innerHTML=''; }
+}
+
+// =================== SPECTATOR ===================
+function watchOpen(){
+  showScreen('watchScreen');
+  watchRenderJoin();
+}
+function watchRenderJoin(){
+  const fld='width:100%;padding:13px 12px;border:1.5px solid rgba(255,160,60,.3);border-radius:10px;font-size:16px;background:#241509;color:#fff;box-sizing:border-box;text-transform:uppercase;letter-spacing:1px;text-align:center;';
+  document.getElementById('watchContent').innerHTML = `
+  <div style="padding:20px 16px;">
+    <h2 style="font-size:19px;font-weight:800;margin-bottom:4px;">Watch a live match</h2>
+    <div style="font-size:12px;color:#9a8578;margin-bottom:16px;">Enter the code the marker is showing, or pick from live matches below.</div>
+    <input id="watchCode" placeholder="e.g. SQ7F3K" style="${fld}margin-bottom:10px;" autocomplete="off">
+    <button onclick="watchJoinByCode()" style="width:100%;padding:15px;background:linear-gradient(180deg,#FFA033,#E8791A);color:#2a1400;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;">Watch</button>
+    <div id="watchErr" style="color:#ff9b8a;font-size:13px;margin-top:10px;display:none;"></div>
+    <div style="margin-top:22px;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#D35400;font-weight:800;">Live now</div>
+    <div id="watchLiveList" style="margin-top:10px;"><div style="color:#9a8578;font-size:13px;">Checking…</div></div>
+  </div>`;
+  watchLoadLiveList();
+}
+async function watchLoadLiveList(){
+  const box=document.getElementById('watchLiveList'); if(!box) return;
+  try{
+    const rows = await sbGet(`live_matches?select=id,match_code,format,category,t1p1,t1p2,t2p1,t2p2,games_t1,games_t2&status=eq.live&club_id=eq.${CLUB_ID}&order=updated_at.desc`);
+    if(!rows || !rows.length){ box.innerHTML='<div style="color:#9a8578;font-size:13px;">No live matches right now.</div>'; return; }
+    box.innerHTML = rows.map(r=>{
+      const t1 = r.format==='singles' ? r.t1p1 : (r.t1p1+' & '+r.t1p2);
+      const t2 = r.format==='singles' ? r.t2p1 : (r.t2p1+' & '+r.t2p2);
+      return `<button onclick="watchJoin('${r.id}')" style="width:100%;text-align:left;background:#241509;border:1.5px solid rgba(255,160,60,.25);border-radius:11px;padding:12px;margin-bottom:8px;color:#fff;cursor:pointer;">
+        <div style="font-size:11px;color:#FFA033;font-weight:800;">${r.match_code} · ${r.category||''}</div>
+        <div style="font-size:14px;margin-top:3px;">${t1} <span style="color:#9a8578;">${r.games_t1}–${r.games_t2}</span> ${t2}</div>
+      </button>`;
+    }).join('');
+  }catch(e){ box.innerHTML='<div style="color:#9a8578;font-size:13px;">Could not load live matches.</div>'; }
+}
+async function watchJoinByCode(){
+  const code=(document.getElementById('watchCode').value||'').trim().toUpperCase();
+  const err=document.getElementById('watchErr');
+  if(!code){ err.textContent='Enter a code.'; err.style.display='block'; return; }
+  try{
+    const rows=await sbGet(`live_matches?select=id&match_code=eq.${encodeURIComponent(code)}&club_id=eq.${CLUB_ID}&order=updated_at.desc&limit=1`);
+    if(!rows || !rows.length){ err.textContent='No live match with that code.'; err.style.display='block'; return; }
+    watchJoin(rows[0].id);
+  }catch(e){ err.textContent='Could not find that match.'; err.style.display='block'; }
+}
+async function watchJoin(id){
+  // fetch current state, render, then subscribe to updates
+  let row=null;
+  try{ const rows=await sbGet(`live_matches?select=*&id=eq.${id}&limit=1`); row=rows&&rows[0]; }catch(e){}
+  if(!row){ return; }
+  SPEC.row=row;
+  watchRenderBoard(row);
+  const cl=liveClient();
+  if(cl){
+    if(SPEC.channel){ try{ cl.removeChannel(SPEC.channel); }catch(e){} }
+    SPEC.channel = cl.channel('live_'+id)
+      .on('postgres_changes', { event:'UPDATE', schema:'public', table:'live_matches', filter:'id=eq.'+id },
+          payload=>{ SPEC.row=payload.new; watchRenderBoard(payload.new); })
+      .subscribe();
+  }
+}
+function watchSideName(row, side){
+  if(row.format==='singles') return side===1 ? row.t1p1 : row.t2p1;
+  return side===1 ? (row.t1p1+'<br>'+row.t1p2) : (row.t2p1+'<br>'+row.t2p2);
+}
+function watchRenderBoard(r){
+  const done = r.status!=='live';
+  const s1 = r.server===1, s2 = r.server===2;
+  document.getElementById('watchContent').innerHTML = `
+  <div class="mk-live" style="min-height:70vh;">
+    <div class="mk-top">
+      <div class="mk-fmt">${r.format==='singles'?'Singles':'Doubles'} · ${r.category||''} · ${r.match_code}</div>
+      <div class="mk-gnum">${done?'FINISHED':'LIVE'}</div>
+      <div class="mk-gtot">${r.games_t1} – ${r.games_t2}</div>
+    </div>
+    <div class="mk-callbar">${done? 'Match complete' : (r.last_call||'')}</div>
+    <div class="mk-courts">
+      <div class="mk-side t1 ${s1&&!done?'serving':''}"><div class="mk-sdot"></div><div class="mk-box">${r.box}</div>
+        <div class="mk-names">${watchSideName(r,1)}</div><div class="mk-score">${r.gp_t1}</div><div class="mk-gt">Games: ${r.games_t1}</div></div>
+      <div class="mk-side t2 ${s2&&!done?'serving':''}"><div class="mk-sdot"></div><div class="mk-box">${r.box}</div>
+        <div class="mk-names">${watchSideName(r,2)}</div><div class="mk-score">${r.gp_t2}</div><div class="mk-gt">Games: ${r.games_t2}</div></div>
+    </div>
+    <div style="padding:12px;text-align:center;">
+      <div style="font-size:12px;color:#9a8578;">${r.scores? ('Games so far: '+r.scores) : ''}</div>
+      <button onclick="watchLeave()" style="margin-top:12px;padding:12px 20px;background:#241509;color:#e8d9cc;border:1.5px solid rgba(255,160,60,.25);border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;">‹ Back</button>
+    </div>
+  </div>`;
+}
+function watchLeave(){
+  const cl=liveClient();
+  if(cl && SPEC.channel){ try{ cl.removeChannel(SPEC.channel); }catch(e){} }
+  SPEC.channel=null; SPEC.row=null;
+  watchRenderJoin();
 }
 
 
@@ -1524,14 +1742,14 @@ async function adminLoadMembers(){
   let html='<table class="ladder-table"><thead><tr><th>Name</th><th>G</th><th>Rating</th><th>Sets</th><th>PIN</th><th></th></tr></thead><tbody>';
   r.members.forEach(m=>{
     const sets = setsByName[m.name]||0;
-    const lowFlag = sets<12 ? ' style="color:#c0392b;font-weight:700;" title="Under 12 sets — not yet proven; consider adjusting initial rating"' : '';
+    const lowFlag = sets<12 ? ' style="color:#c0392b;font-weight:700;" title="Under 12 games — not yet proven; consider adjusting initial rating"' : '';
     html+='<tr><td>'+m.name+'</td><td>'+m.gender+'</td><td>'+Math.round(m.initial_rating)+'</td>'
       +'<td'+lowFlag+'>'+sets+(sets<12?' ⚠':'')+'</td><td>'+(m.pin||'—')+'</td>'
       +'<td style="white-space:nowrap;"><button onclick="adminEditMember('+m.id+',\''+m.name.replace(/'/g,"\\'")+'\','+m.initial_rating+',\''+(m.pin||'')+'\')" style="background:none;border:none;color:#D35400;cursor:pointer;">edit</button> '
       +'<button onclick="adminDeleteMember('+m.id+',\''+m.name.replace(/'/g,"\\'")+'\')" style="background:none;border:none;color:#c0392b;cursor:pointer;">del</button></td></tr>';
   });
   html+='</tbody></table>';
-  html+='<div style="font-size:11px;color:#7a6688;margin-top:6px;">⚠ = under 12 sets played (not yet proven — a good candidate for a manual initial-rating check after a bulk reset).</div>';
+  html+='<div style="font-size:11px;color:#7a6688;margin-top:6px;">⚠ = under 12 games played (not yet proven — a good candidate for a manual initial-rating check after a bulk reset).</div>';
   box.innerHTML=html;
   adminLoadTournaments();
 }
@@ -1941,8 +2159,8 @@ async function loadFormWall(type, title) {
   try {
     const note = '<div style="padding:10px 14px;background:rgba(211,84,0,.08);border:1px solid rgba(211,84,0,.30);border-radius:10px;margin:14px 12px 12px;font-size:12px;color:#0d4a38;line-height:1.5;">'
       + (type==='individual'
-          ? 'Individual Form — overall player performance. Minimum 12 sets.'
-          : 'Doubles Form — how this pairing performs <em>as a team</em>. Minimum 12 team sets.')
+          ? 'Individual Form — overall player performance. Minimum 12 games.'
+          : 'Doubles Form — how this pairing performs <em>as a team</em>. Minimum 12 team games.')
       + '</div>';
     let html = note;
 
@@ -2022,7 +2240,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.07.30-12";  // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.07.30-13";  // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -2267,7 +2485,7 @@ async function loadLadder(type, title) {
       let displayRank = 0;
       qualified.forEach(({p,i})=>{ displayRank++; html += pairRow(p,i,rankBadge(displayRank),''); });
       if(unqualified.length){
-        html += `<tr><td colspan="8" style="background:rgba(211,84,0,.08);color:#3a6b5c;font-size:11px;font-style:italic;padding:7px 12px;">Not yet qualified — fewer than ${MIN_SETS} sets played together (shown for reference; not ranked)</td></tr>`;
+        html += `<tr><td colspan="8" style="background:rgba(211,84,0,.08);color:#3a6b5c;font-size:11px;font-style:italic;padding:7px 12px;">Not yet qualified — fewer than ${MIN_SETS} games played together (shown for reference; not ranked)</td></tr>`;
         unqualified.forEach(({p,i})=>{ html += pairRow(p,i,'—','opacity:0.55;'); });
       }
       html += '</tbody></table>';
@@ -3892,6 +4110,7 @@ async function doSubmit(btn){  const err=document.getElementById('err4');
           </div>
         </div>`;
       MK.view='done';
+      if(typeof liveFinish==='function') liveFinish('finished');
       return;
     }
     document.getElementById('entryContent').innerHTML=`
@@ -5238,8 +5457,11 @@ async function loadTournamentSheet(tournament, division) {
     // per section, each crowning its own winner. Detect and branch before the single-draw path.
     const _koFix = fixtures.filter(f=> f.round_type==='ko');
     const _sectionTags = [...new Set(_koFix.map(f=>{
-      const p = String(f.band||'').split('·')[0];
-      return /^[A-Z]$/.test(p) ? p : null;
+      const b = String(f.band||'');
+      const dot = b.indexOf('·');
+      if(dot<=0) return null;                 // no "·" → plain KO band (e.g. "R"), not a section
+      const p = b.slice(0, dot);
+      return /^[A-Z]$/.test(p) ? p : null;    // single-letter section tag before the "·"
     }).filter(Boolean))].sort();
     if(_sectionTags.length){
       const tiers = (typeof etTierNames==='function') ? etTierNames(_sectionTags.length) : [];
@@ -6729,7 +6951,7 @@ async function renderClubLadder(){
       + '<h2 style="font-size:14px;">How the Club Ladder works</h2>'
       + '<p class="sub" style="margin:0;line-height:1.6;">The ladder works on a <b>challenge basis only</b>. Ratings are used <b>once</b> — to set the opening order when the ladder is activated. After that, ratings no longer apply and teams move only by results. '
       + 'A challenger may challenge <b>any team above them</b>. If the challenger <b>wins</b>, they move into the challenged team\u2019s spot and everyone in between moves down one. If the challenger <b>loses</b>, all teams stay where they are. '
-      + 'All ladder matches are <b>best of 3 sets</b>.</p></div>';
+      + 'All ladder matches are <b>best of 3 games</b>.</p></div>';
 
     bodyHTML = explainer + '<div class="card"><h2>'+cat+' Ladder <span class="tm-divtag">'+cat+'</span>'
       + (activated ? ' <span style="font-size:10px;background:#1e8449;color:#fff;padding:2px 7px;border-radius:8px;vertical-align:middle;">ACTIVE</span>' : ' <span style="font-size:10px;background:#b9770e;color:#fff;padding:2px 7px;border-radius:8px;vertical-align:middle;">NOT ACTIVATED</span>')
