@@ -1133,6 +1133,7 @@ function mkOpen(preload){
 }
 function mkBack(){
   if(MK.view==='live'){ if(!confirm('Leave this match? The live score will be lost.')) return; }
+  if(typeof liveFinish==='function' && typeof LIVE!=='undefined' && LIVE.active) liveFinish('abandoned');
   goHome();
 }
 
@@ -1517,8 +1518,13 @@ async function liveStart(){
 async function livePush(){
   if(!LIVE.active || !LIVE.id) return;
   const now=Date.now();
-  // throttle to ~4/sec max; always allow if >250ms since last
-  if(now - LIVE.lastPush < 200) { clearTimeout(LIVE._t); LIVE._t=setTimeout(livePush, 220); return; }
+  // Throttle to ~5/sec, but ALWAYS guarantee the latest state lands (trailing edge),
+  // so the final point of a game reliably reaches spectators.
+  if(now - LIVE.lastPush < 200){
+    clearTimeout(LIVE._t);
+    LIVE._t=setTimeout(()=>{ livePush(); }, 210);
+    return;
+  }
   LIVE.lastPush=now;
   const cl=liveClient(); if(!cl) return;
   try{ await cl.from('live_matches').update(liveRowFromMK('live')).eq('id', LIVE.id); }catch(e){}
@@ -2240,7 +2246,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.07.30-13";  // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.07.30-14";  // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
