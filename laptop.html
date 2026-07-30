@@ -29,7 +29,7 @@
 
   /* Home */
   .home-hero { background:linear-gradient(rgba(7,26,18,0.0),rgba(7,26,18,0.0)),radial-gradient(120% 90% at 78% 8%, rgba(255,160,60,.20), transparent 55%),radial-gradient(130% 100% at 12% 96%, rgba(211,84,0,.55), transparent 60%),#1c110a; padding:0; margin:0; text-align:center; position:relative; }
-  .screen-content.home-content { padding-top: 0; margin-top: -26px; position: relative; z-index: 5; display:flex; flex-direction:column; overflow:hidden; }
+  .screen-content.home-content { padding-top: 0; margin-top: -26px; position: relative; z-index: 5; }
   .home-hero .hero-logo-panel { display:block; width:100%; margin:0; background:transparent; border-radius:0; padding:42px 16px 40px; color:#fff; position:relative; }
   .home-hero .hero-logo-panel::before { display:none; content:""; position:absolute; top:-30px; right:-30px; width:120px; height:120px; background:radial-gradient(circle, rgba(255,160,60,0.25), transparent 70%); border-radius:50%; }
   .home-hero .hero-logo-panel::after { display:none; content:""; position:absolute; bottom:-40px; left:-20px; width:140px; height:140px; background:radial-gradient(circle, rgba(211,84,0,0.3), transparent 70%); border-radius:50%; }
@@ -46,8 +46,6 @@
   .home-lower { margin-top: 4px; }
   @media (max-width: 899px){
     .home-club-col { display: none; }
-    .screen-content.home-content { overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
-    .home-recent-col #homeRecentList { max-height: none !important; overflow: visible !important; }
   }
   .club-panel { background:#fff; border:1px solid rgba(211,84,0,.16); border-radius:14px; overflow:hidden; box-shadow:0 2px 10px rgba(108,52,131,0.06); margin-top:22px; }
   .club-panel-head { background:linear-gradient(135deg,#D35400,#7E3200); color:#fff; font-size:13px; font-weight:800; letter-spacing:0.5px; padding:11px 16px; }
@@ -456,7 +454,7 @@
   }
 
   /* ===== LIVE MARKER ===== */
-  #mkContent{--mk-or:#D35400;--mk-ord:#E8791A;--mk-am:#FFA033;--mk-char:#1c110a;--mk-char2:#2a1a10;--mk-ink:#2a1400;--mk-mut:#9a8578;}
+  #mkContent,#watchContent{--mk-or:#D35400;--mk-ord:#E8791A;--mk-am:#FFA033;--mk-char:#1c110a;--mk-char2:#2a1a10;--mk-ink:#2a1400;--mk-mut:#9a8578;}
   .mk-setup{padding:18px 16px 26px;overflow-y:auto;background:#fff;flex:1;}
   .mk-setup h2{font-size:18px;font-weight:800;margin-bottom:2px;color:#2a1400;}
   .mk-setup .mk-sub{font-size:12px;color:#9a8578;margin-bottom:16px;}
@@ -1745,7 +1743,7 @@ async function adminLoadMembers(){
     const pr=await sbGet('player_results?select=name,sets_played&club_id=eq.'+Number(cid))||[];
     pr.forEach(p=>{ setsByName[p.name]=p.sets_played||0; });
   }catch(e){}
-  let html='<table class="ladder-table"><thead><tr><th>Name</th><th>G</th><th>Rating</th><th>Sets</th><th>PIN</th><th></th></tr></thead><tbody>';
+  let html='<table class="ladder-table"><thead><tr><th>Name</th><th>G</th><th>Rating</th><th>Games</th><th>PIN</th><th></th></tr></thead><tbody>';
   r.members.forEach(m=>{
     const sets = setsByName[m.name]||0;
     const lowFlag = sets<12 ? ' style="color:#c0392b;font-weight:700;" title="Under 12 games — not yet proven; consider adjusting initial rating"' : '';
@@ -1873,7 +1871,7 @@ function adminSetStr(m){ return (m.set_scores||'').split(',').map(s=>s.trim()).f
 function adminExportPicked(){
   const rows=adminPickedRows(); if(!rows) return;
   const esc=v=>{ v=(v==null?'':String(v)); return (/[",\n]/.test(v))?'"'+v.replace(/"/g,'""')+'"':v; };
-  let csv='Date,Match Type,Event,Team 1,Sets,Team 2,Sets,Set Scores,Entered by\n';
+  let csv='Date,Match Type,Event,Team 1,Games,Team 2,Games,Game Scores,Entered by\n';
   rows.forEach(m=>{ csv+=[m.match_date,m.match_type,(m.event||'Social'),sideName(m.t1p1,m.t1p2),m.t1_sets,sideName(m.t2p1,m.t2p2),m.t2_sets,adminSetStr(m),(m.submitted_by||'')].map(esc).join(',')+'\n'; });
   const today=new Date().toISOString().slice(0,10);
   downloadCSV('OPR_'+CLUB_NAME.replace(/\s+/g,'_')+'_Matches_'+today+'.csv', csv);
@@ -1883,7 +1881,7 @@ function adminPrintPicked(){
   let box=document.getElementById('admPrintBox');
   if(!box){ box=document.createElement('div'); box.id='admPrintBox'; box.style.display='none'; document.body.appendChild(box); }
   const eh=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
-  let t='<table class="ladder-table"><thead><tr><th>Date</th><th>Type</th><th>Event</th><th>Team 1</th><th>Sets</th><th>Team 2</th><th>Sets</th><th>Set Scores</th><th>Entered by</th></tr></thead><tbody>';
+  let t='<table class="ladder-table"><thead><tr><th>Date</th><th>Type</th><th>Event</th><th>Team 1</th><th>Games</th><th>Team 2</th><th>Games</th><th>Game Scores</th><th>Entered by</th></tr></thead><tbody>';
   rows.forEach(m=>{ t+='<tr><td>'+eh(m.match_date)+'</td><td>'+eh(m.match_type)+'</td><td>'+eh(m.event||'Social')+'</td><td>'+eh(sideName(m.t1p1,m.t1p2))+'</td><td>'+eh(m.t1_sets)+'</td><td>'+eh(sideName(m.t2p1,m.t2p2))+'</td><td>'+eh(m.t2_sets)+'</td><td>'+eh(adminSetStr(m))+'</td><td>'+eh(m.submitted_by||'')+'</td></tr>'; });
   t+='</tbody></table>';
   box.innerHTML=t;
@@ -1929,7 +1927,7 @@ function adminEditMatch(id){
     + '<div class="ac-row"><input id="emT1s" type="number" value="'+m.t1_sets+'" placeholder="sets" style="'+fld+'"><input id="emT1g" type="number" value="'+m.t1_games+'" placeholder="games" style="'+fld+'"></div>'
     + '<div style="font-size:12px;margin:4px 0;">'+sideName(m.t2p1,m.t2p2,' &amp; ')+'</div>'
     + '<div class="ac-row"><input id="emT2s" type="number" value="'+m.t2_sets+'" placeholder="sets" style="'+fld+'"><input id="emT2g" type="number" value="'+m.t2_games+'" placeholder="games" style="'+fld+'"></div>'
-    + '<label style="font-size:11px;color:#5aa98d;">Set scores (e.g. 6-4,6-3)</label><input id="emSet" value="'+(m.set_scores||'').replace(/"/g,'&quot;')+'" style="'+fld+'">'
+    + '<label style="font-size:11px;color:#5aa98d;">Game scores (e.g. 11-6,11-8)</label><input id="emSet" value="'+(m.set_scores||'').replace(/"/g,'&quot;')+'" style="'+fld+'">'
     + '<button class="ac-btn ac-btn-primary" style="width:100%;" onclick="adminSaveMatch('+id+')">Save changes</button>'
     + '<button class="ac-btn ac-btn-ghost" style="width:100%;margin-top:6px;" onclick="adminLoadMatches()">Cancel</button>'
     + '<div id="emMsg" class="ac-msg"></div></div>';
@@ -2178,7 +2176,7 @@ async function loadFormWall(type, title) {
       const uf = (data||[]).filter(p=>!(p.form_npi!=null && (p.sets_played||0)>=FORM_MIN));
       qf.sort((a,b)=>(b.form_npi-a.form_npi)||((b.set_win_pct||0)-(a.set_win_pct||0))||((b.game_diff_per_set||0)-(a.game_diff_per_set||0))||((b.sets_won||0)-(a.sets_won||0)));
       uf.sort((a,b)=>((b.set_win_pct||0)-(a.set_win_pct||0))||((b.sets_won||0)-(a.sets_won||0)));
-      html += '<table class="ladder-table"><thead><tr><th>Player</th><th>Sets</th><th>Sets Won</th><th>Win %</th><th>Game Diff/Set</th><th>Form</th></tr></thead><tbody>';
+      html += '<table class="ladder-table"><thead><tr><th>Player</th><th>Games</th><th>Games Won</th><th>Win %</th><th>Point Diff/Game</th><th>Form</th></tr></thead><tbody>';
       const frow=(p,style)=>{
         const winpct = p.set_win_pct==null?'—':Number(p.set_win_pct).toFixed(1);
         const gdps = p.game_diff_per_set==null?'—':Number(p.game_diff_per_set).toFixed(2);
@@ -2201,7 +2199,7 @@ async function loadFormWall(type, title) {
       const uf = (data||[]).filter(p=>!(p.team_form!=null && (p.sets||0)>=FORM_MIN));
       qf.sort((a,b)=>(b.team_form-a.team_form)||((b.set_win_pct||0)-(a.set_win_pct||0))||((b.game_diff_per_set||0)-(a.game_diff_per_set||0))||((b.sets_won||0)-(a.sets_won||0)));
       uf.sort((a,b)=>((b.set_win_pct||0)-(a.set_win_pct||0))||((b.sets_won||0)-(a.sets_won||0)));
-      html += '<table class="ladder-table"><thead><tr><th>Pair</th><th>Sets</th><th>Sets Won</th><th>Win %</th><th>Game Diff/Set</th><th>Form</th></tr></thead><tbody>';
+      html += '<table class="ladder-table"><thead><tr><th>Pair</th><th>Games</th><th>Games Won</th><th>Win %</th><th>Point Diff/Game</th><th>Form</th></tr></thead><tbody>';
       const frow=(p,style)=>{
         const winpct = p.set_win_pct==null?'—':Number(p.set_win_pct).toFixed(1);
         const gdps = p.game_diff_per_set==null?'—':Number(p.game_diff_per_set).toFixed(2);
@@ -2246,7 +2244,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.07.30-14";  // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.07.30-16";  // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -2696,7 +2694,7 @@ async function loadTournament(category, title) {
     data.forEach(p=>{ (((p.sets||0)>=STATS_MIN && p.set_win_pct!=null) ? q : u).push(p); });
     q.sort(byPerf); u.sort(byPerf);
     let html='<div style="padding:10px 14px;background:rgba(211,84,0,.08);border:1px solid rgba(211,84,0,.30);border-radius:10px;margin:0 0 12px;font-size:12px;color:#0d4a38;line-height:1.5;"><strong>Tournament Performance Stats</strong> — how each entry performed during the event. This is not the final placing; the winner is decided by the final.</div>';
-    html+=`<table class="ladder-table"><thead><tr><th>Rank</th><th>${nameHdr}</th><th>% Won</th><th>Sets</th><th>Won</th><th>${ratingHdr}</th><th>Level</th></tr></thead><tbody>`;
+    html+=`<table class="ladder-table"><thead><tr><th>Rank</th><th>${nameHdr}</th><th>% Won</th><th>Games</th><th>Won</th><th>${ratingHdr}</th><th>Level</th></tr></thead><tbody>`;
     const rowFor=(p,rankCell,rowStyle)=>{
       const rating = isSingles ? Math.round(p.combined) : (usesCombined ? Math.round(p.combined) : Math.round(p.weighted));
       const swp = p.set_win_pct==null?'—':Number(p.set_win_pct).toFixed(1);
@@ -2732,7 +2730,7 @@ async function loadTournamentForm(category, title) {
     const uf = (data||[]).filter(p=>!(p.team_form!=null && (p.sets||0)>=TFORM_MIN));
     qf.sort((a,b)=>(b.team_form-a.team_form)||((b.set_win_pct||0)-(a.set_win_pct||0))||((b.game_diff_per_set||0)-(a.game_diff_per_set||0))||((b.sets_won||0)-(a.sets_won||0)));
     uf.sort((a,b)=>((b.set_win_pct||0)-(a.set_win_pct||0))||((b.sets_won||0)-(a.sets_won||0)));
-    let html='<table class="ladder-table"><thead><tr><th>'+nameHdr+'</th><th>Sets</th><th>Sets Won</th><th>Win %</th><th>Game Diff/Set</th><th>Form</th></tr></thead><tbody>';
+    let html='<table class="ladder-table"><thead><tr><th>'+nameHdr+'</th><th>Games</th><th>Games Won</th><th>Win %</th><th>Point Diff/Game</th><th>Form</th></tr></thead><tbody>';
     const frow=(p,style)=>{
       const winpct = p.set_win_pct==null?'—':Number(p.set_win_pct).toFixed(1);
       const gdps = p.game_diff_per_set==null?'—':Number(p.game_diff_per_set).toFixed(2);
@@ -3358,9 +3356,9 @@ async function toggleRecent(idx){
     }
     detail.innerHTML=`
       <div style="margin-bottom:6px;text-align:center;">
-        ${setScoresHTML||'<span style="color:#888;font-size:11px;">Set scores not recorded for this match</span>'}
+        ${setScoresHTML||'<span style="color:#888;font-size:11px;">Game scores not recorded for this match</span>'}
       </div>
-      <div style="font-size:11px;color:#888;text-align:center;">Sets: ${m.t1_sets||0}-${m.t2_sets||0}  ·  Games: ${m.t1_games||0}-${m.t2_games||0}</div>`;
+      <div style="font-size:11px;color:#888;text-align:center;">Games: ${m.t1_sets||0}-${m.t2_sets||0}  ·  Points: ${m.t1_games||0}-${m.t2_games||0}</div>`;
   } else {
     detail.style.display='none';
     arrow.textContent='▼';
@@ -5535,7 +5533,7 @@ async function loadTournamentSheet(tournament, division) {
   function standingsTableFor(seedSet){
     const full = standings(maxPlayed);                 // already computed over all played fixtures
     const rows = full.filter(r => seedSet.has(r.seed)); // restrict to this group's seeds
-    let h = '<table><thead><tr><th class="num">#</th><th>Team</th><th class="num">P</th><th class="num">Sets Won</th><th class="num">G.Won</th><th class="num">G.Diff</th></tr></thead><tbody>';
+    let h = '<table><thead><tr><th class="num">#</th><th>Team</th><th class="num">P</th><th class="num">Games Won</th><th class="num">G.Won</th><th class="num">G.Diff</th></tr></thead><tbody>';
     rows.forEach((r, i) => {
       h += '<tr><td class="num"><span class="rank' + (i === 0 ? ' top' : '') + '">' + (i + 1) + '</span></td>'
         + '<td><b>' + tName(r.seed) + '</b></td>'
