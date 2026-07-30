@@ -44,6 +44,12 @@
   .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
   /* Club panel (shows beside Recent Matches on laptop; stacks below on phone) */
   .home-lower { margin-top: 4px; }
+  /* PHONE (default, <900px): hide Club Overview so Recent Matches gets the space
+     and scrolls — matches the OPR/OTR phone apps. Laptop layout unaffected. */
+  @media (max-width: 899px){
+    .home-club-col { display: none; }
+    .home-recent-col #homeRecentList { max-height: calc(100vh - 300px) !important; }
+  }
   .club-panel { background:#fff; border:1px solid rgba(211,84,0,.16); border-radius:14px; overflow:hidden; box-shadow:0 2px 10px rgba(108,52,131,0.06); margin-top:22px; }
   .club-panel-head { background:linear-gradient(135deg,#D35400,#7E3200); color:#fff; font-size:13px; font-weight:800; letter-spacing:0.5px; padding:11px 16px; }
   .club-stats { padding:6px 16px 4px; }
@@ -473,7 +479,7 @@
   .mk-top .mk-gnum{font-size:11px;color:var(--mk-am);font-weight:800;text-transform:uppercase;letter-spacing:1px;}
   .mk-top .mk-gtot{font-size:13px;font-weight:800;letter-spacing:.5px;}
   .mk-callbar{text-align:center;font-size:12px;font-weight:700;padding:5px;color:var(--mk-am);min-height:25px;background:var(--mk-char);}
-  .mk-courts{flex:1;display:flex;gap:3px;padding:0 3px;min-height:340px;}
+  .mk-courts{flex:1;display:flex;gap:3px;padding:0 3px;min-height:300px;max-height:62vh;}
   .mk-side{flex:1;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:transform .06s;user-select:none;overflow:hidden;color:#fff;}
   .mk-side:active{transform:scale(.985);}
   .mk-side.t1{background:linear-gradient(160deg,#E0631A,#9c3f08);}
@@ -484,6 +490,9 @@
   .mk-side .mk-gt{position:absolute;bottom:13px;font-size:13px;font-weight:800;opacity:.75;letter-spacing:.5px;}
   .mk-side .mk-sdot{position:absolute;top:15px;right:15px;width:14px;height:14px;border-radius:50%;background:var(--mk-am);box-shadow:0 0 10px var(--mk-am);display:none;}
   .mk-side.serving .mk-sdot{display:block;}
+  .mk-side.t1 .mk-sdot{background:#20130a;box-shadow:0 0 10px rgba(0,0,0,.5);}      /* orange box -> dark dot (contrasts) */
+  .mk-side.t2 .mk-sdot{background:var(--mk-am);box-shadow:0 0 10px var(--mk-am);}   /* charcoal box -> amber dot */
+  .mk-side.t1 .mk-box{color:#20130a;}  /* R/L label dark on orange */
   .mk-side .mk-box{position:absolute;top:36px;right:14px;font-size:10px;color:var(--mk-am);font-weight:800;display:none;letter-spacing:.5px;}
   .mk-side.serving .mk-box{display:block;}
   .mk-ctrl{background:var(--mk-char);padding:9px 10px calc(9px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,160,60,.12);}
@@ -932,7 +941,7 @@
           <div class="ac-card">
             <h4>Edit a match</h4>
             <p style="font-size:11px;color:#5aa98d;margin:0 0 8px;">Fix a wrong score or event type, or delete a match. Ratings recompute automatically after a change.</p>
-            <div id="adminMatches" style="font-size:13px;">Loading…</div>
+            <div id="adminMatches" style="font-size:13px;max-height:70vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">Loading…</div>
           </div>
         </div>
 
@@ -1588,7 +1597,7 @@ async function adminLoadMatches(){
   const box=document.getElementById('adminMatches');
   const cid=Number(document.getElementById('adminClubSelect').value);
   box.innerHTML='Loading…';
-  const r=await adminCall('list_matches',{ club_id:cid, limit:60 });
+  const r=await adminCall('list_matches',{ club_id:cid, limit:100 });
   if(!r.ok){ box.innerHTML='<span style="color:#c0392b;">'+(r.error||'Could not load.')+'</span>'; return; }
   const ms=r.matches||[];
   if(!ms.length){ box.innerHTML='<p class="sub">No matches recorded for this club.</p>'; return; }
