@@ -48,7 +48,7 @@
      and scrolls — matches the OPR/OTR phone apps. Laptop layout unaffected. */
   @media (max-width: 899px){
     .home-club-col { display: none; }
-    .home-recent-col #homeRecentList { max-height: calc(100vh - 300px) !important; }
+    .home-recent-col #homeRecentList { max-height: 52vh !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
   }
   .club-panel { background:#fff; border:1px solid rgba(211,84,0,.16); border-radius:14px; overflow:hidden; box-shadow:0 2px 10px rgba(108,52,131,0.06); margin-top:22px; }
   .club-panel-head { background:linear-gradient(135deg,#D35400,#7E3200); color:#fff; font-size:13px; font-weight:800; letter-spacing:0.5px; padding:11px 16px; }
@@ -479,12 +479,12 @@
   .mk-top .mk-gnum{font-size:11px;color:var(--mk-am);font-weight:800;text-transform:uppercase;letter-spacing:1px;}
   .mk-top .mk-gtot{font-size:13px;font-weight:800;letter-spacing:.5px;}
   .mk-callbar{text-align:center;font-size:12px;font-weight:700;padding:5px;color:var(--mk-am);min-height:25px;background:var(--mk-char);}
-  .mk-courts{flex:1;display:flex;gap:3px;padding:0 3px;min-height:300px;max-height:62vh;}
+  .mk-courts{flex:1;display:flex;gap:3px;padding:0 3px;min-height:280px;max-height:56vh;}
   .mk-side{flex:1;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:transform .06s;user-select:none;overflow:hidden;color:#fff;}
   .mk-side:active{transform:scale(.985);}
   .mk-side.t1{background:linear-gradient(160deg,#E0631A,#9c3f08);}
   .mk-side.t2{background:linear-gradient(160deg,#3a2416,#20130a);border:1px solid rgba(255,160,60,.2);}
-  .mk-side .mk-names{font-size:13px;font-weight:700;text-align:center;padding:0 12px;opacity:.92;line-height:1.35;position:absolute;top:16px;left:0;right:0;}
+  .mk-side .mk-names{font-size:13px;font-weight:700;text-align:center;padding:0 34px;opacity:.92;line-height:1.4;position:absolute;top:14px;left:0;right:0;}
   .mk-side .mk-score{font-size:23vw;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;}
   @media(min-width:480px){.mk-side .mk-score{font-size:110px;}}
   .mk-side .mk-gt{position:absolute;bottom:13px;font-size:13px;font-weight:800;opacity:.75;letter-spacing:.5px;}
@@ -496,9 +496,9 @@
   .mk-side .mk-box{position:absolute;top:36px;right:14px;font-size:10px;color:var(--mk-am);font-weight:800;display:none;letter-spacing:.5px;}
   .mk-side.serving .mk-box{display:block;}
   .mk-ctrl{background:var(--mk-char);padding:9px 10px calc(9px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,160,60,.12);}
-  .mk-crow{display:flex;gap:7px;margin-bottom:7px;}
+  .mk-crow{display:flex;gap:8px;margin-bottom:8px;}
   .mk-crow:last-child{margin-bottom:0;}
-  .mk-cbtn{flex:1;padding:11px 4px;border:1.5px solid rgba(255,160,60,.28);background:#160d06;color:#fff;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .mk-cbtn{flex:1;padding:15px 4px;border:1.5px solid rgba(255,160,60,.28);background:#160d06;color:#fff;border-radius:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
   .mk-cbtn:active{background:#241509;}
   .mk-cbtn.undo{border-color:rgba(255,255,255,.25);color:#e8d9cc;}
   .mk-cbtn.let{border-color:#5aa9ff;color:#bcdcff;}
@@ -1187,6 +1187,12 @@ function mkSideName(side){
   if(MK.format==='singles') return side===1 ? p.t1p1 : p.t2p1;
   return side===1 ? (p.t1p1+' & '+p.t1p2) : (p.t2p1+' & '+p.t2p2);
 }
+// Stacked (one player per line) for the court header, so long pair names don't hit the serve dot.
+function mkSideNameStacked(side){
+  const p=MK.players;
+  if(MK.format==='singles') return side===1 ? p.t1p1 : p.t2p1;
+  return side===1 ? (p.t1p1+'<br>'+p.t1p2) : (p.t2p1+'<br>'+p.t2p2);
+}
 function mkSetFmt(v){ MK.fmt=v; mkRenderSetup(); }
 function mkSetCat(v){
   MK.cat=v;
@@ -1289,9 +1295,9 @@ function mkRenderLive(){
     <div class="mk-callbar" id="mkCall">Love–all</div>
     <div class="mk-courts">
       <div class="mk-side t1" id="mkSide1" onclick="mkRally(1)"><div class="mk-sdot"></div><div class="mk-box" id="mkBox1">R</div>
-        <div class="mk-names">${t1}</div><div class="mk-score" id="mkS1">0</div><div class="mk-gt" id="mkG1">Games: 0</div></div>
+        <div class="mk-names">${mkSideNameStacked(1)}</div><div class="mk-score" id="mkS1">0</div><div class="mk-gt" id="mkG1">Games: 0</div></div>
       <div class="mk-side t2" id="mkSide2" onclick="mkRally(2)"><div class="mk-sdot"></div><div class="mk-box" id="mkBox2">R</div>
-        <div class="mk-names">${t2}</div><div class="mk-score" id="mkS2">0</div><div class="mk-gt" id="mkG2">Games: 0</div></div>
+        <div class="mk-names">${mkSideNameStacked(2)}</div><div class="mk-score" id="mkS2">0</div><div class="mk-gt" id="mkG2">Games: 0</div></div>
     </div>
     <div class="mk-ctrl">
       <div class="mk-crow"><button class="mk-cbtn let" onclick="mkLet()">Let</button><button class="mk-cbtn stroke" onclick="mkOpenStroke()">Stroke ›</button><button class="mk-cbtn conduct" onclick="mkOpenConduct()">Conduct ›</button></div>
@@ -2016,7 +2022,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-PHONE v2026.07.30-10";  // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-PHONE v2026.07.30-11";  // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real

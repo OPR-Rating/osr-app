@@ -478,12 +478,15 @@
   .mk-side:active{transform:scale(.985);}
   .mk-side.t1{background:linear-gradient(160deg,#E0631A,#9c3f08);}
   .mk-side.t2{background:linear-gradient(160deg,#3a2416,#20130a);border:1px solid rgba(255,160,60,.2);}
-  .mk-side .mk-names{font-size:13px;font-weight:700;text-align:center;padding:0 12px;opacity:.92;line-height:1.35;position:absolute;top:16px;left:0;right:0;}
+  .mk-side .mk-names{font-size:13px;font-weight:700;text-align:center;padding:0 34px;opacity:.92;line-height:1.4;position:absolute;top:14px;left:0;right:0;}
   .mk-side .mk-score{font-size:23vw;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;}
   @media(min-width:480px){.mk-side .mk-score{font-size:110px;}}
   .mk-side .mk-gt{position:absolute;bottom:13px;font-size:13px;font-weight:800;opacity:.75;letter-spacing:.5px;}
   .mk-side .mk-sdot{position:absolute;top:15px;right:15px;width:14px;height:14px;border-radius:50%;background:var(--mk-am);box-shadow:0 0 10px var(--mk-am);display:none;}
   .mk-side.serving .mk-sdot{display:block;}
+  .mk-side.t1 .mk-sdot{background:#20130a;box-shadow:0 0 10px rgba(0,0,0,.5);}
+  .mk-side.t2 .mk-sdot{background:var(--mk-am);box-shadow:0 0 10px var(--mk-am);}
+  .mk-side.t1 .mk-box{color:#20130a;}
   .mk-side .mk-box{position:absolute;top:36px;right:14px;font-size:10px;color:var(--mk-am);font-weight:800;display:none;letter-spacing:.5px;}
   .mk-side.serving .mk-box{display:block;}
   .mk-ctrl{background:var(--mk-char);padding:9px 10px calc(9px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,160,60,.12);}
@@ -932,7 +935,7 @@
           <div class="ac-card">
             <h4>Edit a match</h4>
             <p style="font-size:11px;color:#5aa98d;margin:0 0 8px;">Fix a wrong score or event type, or delete a match. Ratings recompute automatically after a change.</p>
-            <div id="adminMatches" style="font-size:13px;">Loading…</div>
+            <div id="adminMatches" style="font-size:13px;max-height:70vh;overflow-y:auto;-webkit-overflow-scrolling:touch;">Loading…</div>
           </div>
         </div>
 
@@ -1178,6 +1181,12 @@ function mkSideName(side){
   if(MK.format==='singles') return side===1 ? p.t1p1 : p.t2p1;
   return side===1 ? (p.t1p1+' & '+p.t1p2) : (p.t2p1+' & '+p.t2p2);
 }
+// Stacked (one player per line) for the court header, so long pair names don't hit the serve dot.
+function mkSideNameStacked(side){
+  const p=MK.players;
+  if(MK.format==='singles') return side===1 ? p.t1p1 : p.t2p1;
+  return side===1 ? (p.t1p1+'<br>'+p.t1p2) : (p.t2p1+'<br>'+p.t2p2);
+}
 function mkSetFmt(v){ MK.fmt=v; mkRenderSetup(); }
 function mkSetCat(v){
   MK.cat=v;
@@ -1280,9 +1289,9 @@ function mkRenderLive(){
     <div class="mk-callbar" id="mkCall">Love–all</div>
     <div class="mk-courts">
       <div class="mk-side t1" id="mkSide1" onclick="mkRally(1)"><div class="mk-sdot"></div><div class="mk-box" id="mkBox1">R</div>
-        <div class="mk-names">${t1}</div><div class="mk-score" id="mkS1">0</div><div class="mk-gt" id="mkG1">Games: 0</div></div>
+        <div class="mk-names">${mkSideNameStacked(1)}</div><div class="mk-score" id="mkS1">0</div><div class="mk-gt" id="mkG1">Games: 0</div></div>
       <div class="mk-side t2" id="mkSide2" onclick="mkRally(2)"><div class="mk-sdot"></div><div class="mk-box" id="mkBox2">R</div>
-        <div class="mk-names">${t2}</div><div class="mk-score" id="mkS2">0</div><div class="mk-gt" id="mkG2">Games: 0</div></div>
+        <div class="mk-names">${mkSideNameStacked(2)}</div><div class="mk-score" id="mkS2">0</div><div class="mk-gt" id="mkG2">Games: 0</div></div>
     </div>
     <div class="mk-ctrl">
       <div class="mk-crow"><button class="mk-cbtn let" onclick="mkLet()">Let</button><button class="mk-cbtn stroke" onclick="mkOpenStroke()">Stroke ›</button><button class="mk-cbtn conduct" onclick="mkOpenConduct()">Conduct ›</button></div>
@@ -1588,7 +1597,7 @@ async function adminLoadMatches(){
   const box=document.getElementById('adminMatches');
   const cid=Number(document.getElementById('adminClubSelect').value);
   box.innerHTML='Loading…';
-  const r=await adminCall('list_matches',{ club_id:cid, limit:60 });
+  const r=await adminCall('list_matches',{ club_id:cid, limit:100 });
   if(!r.ok){ box.innerHTML='<span style="color:#c0392b;">'+(r.error||'Could not load.')+'</span>'; return; }
   const ms=r.matches||[];
   if(!ms.length){ box.innerHTML='<p class="sub">No matches recorded for this club.</p>'; return; }
@@ -2007,7 +2016,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.07.30-10";  // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.07.30-11";  // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
