@@ -48,7 +48,10 @@
      and scrolls — matches the OPR/OTR phone apps. Laptop layout unaffected. */
   @media (max-width: 899px){
     .home-club-col { display: none; }
-    .home-recent-col #homeRecentList { max-height: 52vh !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
+    /* Phone: scroll the whole home area (robust on touch) rather than a nested div.
+       Show all recent matches inline; the page scrolls to reach them. */
+    .screen-content.home-content { overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
+    .home-recent-col #homeRecentList { max-height: none !important; overflow: visible !important; }
   }
   .club-panel { background:#fff; border:1px solid rgba(211,84,0,.16); border-radius:14px; overflow:hidden; box-shadow:0 2px 10px rgba(108,52,131,0.06); margin-top:22px; }
   .club-panel-head { background:linear-gradient(135deg,#D35400,#7E3200); color:#fff; font-size:13px; font-weight:800; letter-spacing:0.5px; padding:11px 16px; }
@@ -107,7 +110,8 @@
   .profile-rating { font-size: 48px; font-weight: 800; margin: 6px 0; line-height: 1; }
   .profile-level { font-size: 18px; font-weight: 600; opacity: 0.95; margin-bottom: 4px; }
   .profile-rank { font-size: 13px; opacity: 0.8; }
-  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px; }
+  @media (max-width: 420px){ .stat-grid { grid-template-columns: repeat(5, 1fr); gap: 4px; } .stat-grid .stat-card { padding: 8px 3px; } .stat-grid .stat-label{ font-size:9px; } .stat-grid .stat-value{ font-size:15px; } }
   .stat-card { background: rgba(211,84,0,.12); border-radius: 10px; padding: 10px 6px; text-align: center; }
   .stat-value { font-size: 20px; font-weight: 700; color: #D35400; white-space: nowrap; }
   .stat-grid .stat-card:nth-child(4) .stat-value { font-size: 18px; }
@@ -2022,7 +2026,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-PHONE v2026.07.30-11";  // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-PHONE v2026.07.30-12";  // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -2249,25 +2253,25 @@ async function loadLadder(type, title) {
       const catMap={'mensdoubles':"Men's",'ladiesdoubles':'Ladies','mixed':'Mixed','allsorts':'All Sorts','universal':'Universal'};
       const cat = catMap[type];
       const usesCombined = (cat==="Men's" || cat==='Ladies');
-      const data = await sbGet(`doubles_results?select=rank,p1,p2,combined,weighted,level,sets,sets_won,set_win_pct&category=eq.${encodeURIComponent(cat)}&order=rank.asc&club_id=eq.${CLUB_ID}`);
+      const data = await sbGet(`doubles_results?select=rank,p1,p2,combined,weighted,level,sets,sets_won,set_win_pct,matches&category=eq.${encodeURIComponent(cat)}&order=rank.asc&club_id=eq.${CLUB_ID}`);
       window._doublesRows = data;
       window._doublesCat = cat;
       const ratingHdr = usesCombined ? 'Rating (Comb)' : 'Rating (Wtd)';
-      html = `<table class="ladder-table"><thead><tr><th>Rank</th><th>Pair</th><th>${ratingHdr}</th><th>Level</th><th>Sets</th><th>Won</th><th>% Won</th></tr></thead><tbody>`;
+      html = `<table class="ladder-table"><thead><tr><th>Rank</th><th>Pair</th><th>${ratingHdr}</th><th>Level</th><th>M</th><th>Games</th><th>Won</th><th>% Won</th></tr></thead><tbody>`;
       const MIN_SETS = 12;
       const qualified = [], unqualified = [];
       data.forEach((p,i)=>{ (((p.sets||0) >= MIN_SETS) ? qualified : unqualified).push({p,i}); });
       const pairRow = (p,i,rankCell,rowStyle)=>{
         const rating = usesCombined ? Math.round(p.combined) : Math.round(p.weighted);
         const swp = p.set_win_pct==null?'—':Number(p.set_win_pct).toFixed(1);
-        let h = `<tr class="pair-row" style="cursor:pointer;${rowStyle}" onclick="togglePairMatches(${i})" id="pairrow_${i}"><td>${rankCell}</td><td>${p.p1} & ${p.p2} <span style="color:#B8480A;font-size:10px;">▼</span></td><td>${rating}</td><td>${Number(p.level).toFixed(1)}</td><td>${p.sets}</td><td>${p.sets_won==null?'—':Math.round(p.sets_won)}</td><td>${swp}</td></tr>`;
-        h += `<tr id="pairdetail_${i}" style="display:none;"><td colspan="7" style="background:rgba(211,84,0,.12);padding:0;"><div id="pairdetailinner_${i}" style="padding:10px 14px;font-size:12px;"></div></td></tr>`;
+        let h = `<tr class="pair-row" style="cursor:pointer;${rowStyle}" onclick="togglePairMatches(${i})" id="pairrow_${i}"><td>${rankCell}</td><td>${p.p1} & ${p.p2} <span style="color:#B8480A;font-size:10px;">▼</span></td><td>${rating}</td><td>${Number(p.level).toFixed(1)}</td><td>${p.matches==null?'—':p.matches}</td><td>${p.sets}</td><td>${p.sets_won==null?'—':Math.round(p.sets_won)}</td><td>${swp}</td></tr>`;
+        h += `<tr id="pairdetail_${i}" style="display:none;"><td colspan="8" style="background:rgba(211,84,0,.12);padding:0;"><div id="pairdetailinner_${i}" style="padding:10px 14px;font-size:12px;"></div></td></tr>`;
         return h;
       };
       let displayRank = 0;
       qualified.forEach(({p,i})=>{ displayRank++; html += pairRow(p,i,rankBadge(displayRank),''); });
       if(unqualified.length){
-        html += `<tr><td colspan="7" style="background:rgba(211,84,0,.08);color:#3a6b5c;font-size:11px;font-style:italic;padding:7px 12px;">Not yet qualified — fewer than ${MIN_SETS} sets played together (shown for reference; not ranked)</td></tr>`;
+        html += `<tr><td colspan="8" style="background:rgba(211,84,0,.08);color:#3a6b5c;font-size:11px;font-style:italic;padding:7px 12px;">Not yet qualified — fewer than ${MIN_SETS} sets played together (shown for reference; not ranked)</td></tr>`;
         unqualified.forEach(({p,i})=>{ html += pairRow(p,i,'—','opacity:0.55;'); });
       }
       html += '</tbody></table>';
@@ -2602,7 +2606,8 @@ async function loadProfileIndividual(name, gender) {
     const playerMatches = await sbGet(q);
     window._profileMatches = playerMatches;
 
-    // Compute sets played / won / win% / game diff per set from the player's matches
+    // Compute matches, sets played / won / win% / game diff per set from the player's matches
+    const matchesPlayed = playerMatches.length;
     let setsPlayed=0, setsWon=0, gamesFor=0, gamesAgainst=0;
     playerMatches.forEach(m=>{
       const onT1 = (m.t1p1===name||m.t1p2===name);
@@ -2681,10 +2686,11 @@ async function loadProfileIndividual(name, gender) {
         <div class="profile-rank">${isMen?"Men's":"Ladies"}</div>
       </div>
       <div class="stat-grid">
-        <div class="stat-card"><div class="stat-value">${setsPlayed}</div><div class="stat-label">Sets Played</div></div>
-        <div class="stat-card"><div class="stat-value">${setsWon}</div><div class="stat-label">Sets Won</div></div>
+        <div class="stat-card"><div class="stat-value">${matchesPlayed}</div><div class="stat-label">Matches</div></div>
+        <div class="stat-card"><div class="stat-value">${setsPlayed}</div><div class="stat-label">Games Played</div></div>
+        <div class="stat-card"><div class="stat-value">${setsWon}</div><div class="stat-label">Games Won</div></div>
         <div class="stat-card"><div class="stat-value">${setWinPct}%</div><div class="stat-label">Win %</div></div>
-        <div class="stat-card"><div class="stat-value">${gdpsTxt}</div><div class="stat-label">Game Diff/Set</div></div>
+        <div class="stat-card"><div class="stat-value">${gdpsTxt}</div><div class="stat-label">Point Diff/Game</div></div>
       </div>
       ${matchHTML}`;
   } catch(e){
@@ -2749,6 +2755,7 @@ async function profileShowPartner(partner){
     const together = await sbGet(q);
     window._profilePartnerMatches = together;
 
+    const matchesTogether = together.length;
     let setsPlayed=0, setsWon=0, gamesFor=0, gamesAgainst=0;
     together.forEach(m=>{
       const onT1=((m.t1p1===name||m.t1p2===name));
@@ -2815,10 +2822,11 @@ async function profileShowPartner(partner){
         <div class="profile-rank">Team rating</div>
       </div>
       <div class="stat-grid">
-        <div class="stat-card"><div class="stat-value">${setsPlayed}</div><div class="stat-label">Sets Played</div></div>
-        <div class="stat-card"><div class="stat-value">${setsWon}</div><div class="stat-label">Sets Won</div></div>
+        <div class="stat-card"><div class="stat-value">${matchesTogether}</div><div class="stat-label">Matches Together</div></div>
+        <div class="stat-card"><div class="stat-value">${setsPlayed}</div><div class="stat-label">Games Played</div></div>
+        <div class="stat-card"><div class="stat-value">${setsWon}</div><div class="stat-label">Games Won</div></div>
         <div class="stat-card"><div class="stat-value">${winPct}${winPct==='-'?'':'%'}</div><div class="stat-label">Win %</div></div>
-        <div class="stat-card"><div class="stat-value">${gdpsPTxt}</div><div class="stat-label">Game Diff/Set</div></div>
+        <div class="stat-card"><div class="stat-value">${gdpsPTxt}</div><div class="stat-label">Point Diff/Game</div></div>
       </div>
       ${matchHTML}`;
   } catch(e){
