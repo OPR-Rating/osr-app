@@ -2244,7 +2244,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.07.30-16";  // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.01-01";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -3824,7 +3824,7 @@ async function submitMatch(){
       if(trow && trow.length && trow[0].type==='internal'){
         // If EVERY fixture in this division already has a result, the draw is complete —
         // warn (a new match won't appear on the board, no open fixture). Allow override.
-        const allFx = await sbGet(`tournament_fixtures?select=sets_a&tournament=eq.${encodeURIComponent(ev)}&division=eq.${encodeURIComponent(_mDiv)}&club_id=eq.${CLUB_ID}`) || [];
+        const allFx = await sbGet(`tournament_fixtures?select=sets_a,round_type&tournament=eq.${encodeURIComponent(ev)}&division=eq.${encodeURIComponent(_mDiv)}&club_id=eq.${CLUB_ID}`) || [];
         if(allFx.length>0 && allFx.every(f=>f.sets_a!=null)){
           if(!confirm('All rounds for "'+ev+'" ('+entryData.type+') are complete — there are no open fixtures.\n\nThis result will be recorded and will count toward ratings/stats, but it will NOT appear on the draw board. Proceed anyway?')){
             return;
@@ -3866,11 +3866,28 @@ async function submitMatch(){
           if(x && (x===p.p1 || x===p.p2)) n++;
           if(y && (y===p.p1 || y===p.p2)) n++;
           return n; };
-        const fixes = await sbGet(`tournament_fixtures?select=id,round,seed_a,seed_b,sets_a&tournament=eq.${encodeURIComponent(ev)}&division=eq.${encodeURIComponent(_mDiv)}&club_id=eq.${CLUB_ID}&order=round.asc`) || [];
+        const fixes = await sbGet(`tournament_fixtures?select=id,round,round_type,seed_a,seed_b,sets_a,sets_b&tournament=eq.${encodeURIComponent(ev)}&division=eq.${encodeURIComponent(_mDiv)}&club_id=eq.${CLUB_ID}&order=round.asc`) || [];
+        // FIX B (#5): MAIN DRAW + PLATE run concurrently to the end. A team with a PLAYED, LOST
+        // main-draw ko/final fixture is out of the main draw and can only continue in the plate.
+        // So main-draw fixtures are INELIGIBLE for teams already eliminated there — this breaks
+        // the false cross-type tie that stopped plate results landing on the board.
+        const _elimMain = new Set();
+        fixes.forEach(f=>{
+          if((f.round_type==='ko'||f.round_type==='final') && f.sets_a!=null && f.sets_b!=null){
+            const loser = (f.sets_a>f.sets_b) ? f.seed_b : (f.sets_b>f.sets_a ? f.seed_a : null);
+            if(loser) _elimMain.add(loser);
+          }
+        });
+        const _eligible=(f)=>{
+          if(f.round_type==='plate') return true;
+          if(_elimMain.has(f.seed_a) || _elimMain.has(f.seed_b)) return false;
+          return true;
+        };
         // score each UNPLAYED fixture by name-count (max over both orientations)
         let scored=[];
         fixes.forEach(f=>{
           if(f.sets_a!=null) return;
+          if(!_eligible(f)) return;
           const pa=pairOf(f.seed_a), pb=pairOf(f.seed_b);
           const s1=hits(pa,entryData.t1p1,entryData.t1p2)+hits(pb,entryData.t2p1,entryData.t2p2);
           const s2=hits(pb,entryData.t1p1,entryData.t1p2)+hits(pa,entryData.t2p1,entryData.t2p2);
@@ -5209,7 +5226,16 @@ async function loadTournamentSheet(tournament, division) {
         const _secFin = fixtures.some(f=> f.round_type==='ko' && typeof f.band==='string' && /^[A-Z]·/.test(f.band));
         h += '<div style="text-align:center;margin-top:10px;"><p class="sub" style="margin:6px 0;">Group stage complete — the '+(_secFin?'section finals are':'knockout playoff is')+' set. Enter results on the 🗂 Bracket tab; winners advance automatically.</p></div></div>';
       } else {
-        h += '<div style="text-align:center;margin-top:10px;"><p class="sub" style="margin:6px 0;">The full round robin is already scheduled. Play the fixtures in any order — the standings table updates as results come in, and the leader is the winner once every fixture is played.</p></div></div>';
+        h += '<div style="text-align:center;margin-top:10px;"><p class="sub" style="margin:6px 0;">The full round robin is already scheduled. Play the fixtures in any order — the standings table updates as results come in, and the leader is the winner once every fixture is played.</p>';
+        if(_rrComplete){
+          h += '<div style="font-size:12px;font-weight:700;color:#5aa98d;margin:10px 0 6px;">Set up a knockout</div>'
+            + '<div style="max-width:520px;margin:0 auto;">'
+            + '<button class="menu-btn" style="padding:10px 16px;border-color:#F1C40F;font-weight:700;text-align:left;line-height:1.35;width:100%;" onclick="tmGeneratePlayoffSingle()">'
+            + '🏆 <b>Top teams into a knockout</b> — take the leading teams from the standings into a final / semi-finals for an overall champion</button>'
+            + '</div>'
+            + '<div class="sub" style="margin-top:8px;">The round robin is complete. You can crown the leader as winner, or run a knockout of the top teams.</div>';
+        }
+        h += '</div></div>';
       }
     } else {
       h += '<div style="text-align:center;margin-top:10px;"><button class="menu-btn" style="display:inline-block;width:auto;padding:10px 18px;border-color:#B8480A;font-weight:700;" onclick="tmGenerateNextRound()">➕ Generate next round (Swiss)</button>'
@@ -5802,6 +5828,58 @@ async function loadTournamentSheet(tournament, division) {
   // (1 or 2). Qualifiers are cross-seeded so group winners are kept apart and a
   // winner never meets a runner-up from its OWN group in round 1. Writes KO round-1
   // fixtures (round_type 'ko'); the existing bracket engine auto-advances from there.
+  // FIX A (#6): single-group round robin -> knockout. The grouped tmGeneratePlayoff needs >=2
+  // group letters; a one-group RR has none, so this seeds the top-N by live standings straight
+  // into a bracket using the SAME KO helpers and write_fixtures call. Additive, no engine change.
+  window.tmGeneratePlayoffSingle = async function(){
+    // all RR matches complete?
+    const rrFix = fixtures.filter(f=> f.round_type==='rr');
+    const anyOpen = rrFix.some(f=> f.seed_b!==0 && f.sets_a==null);
+    if(anyOpen){ alert('Finish every round robin match before setting up the knockout.'); return; }
+    if(fixtures.some(f=> f.round_type==='ko')){ alert('The knockout has already been generated.'); return; }
+
+    const table = standings(maxPlayed);
+    if(table.length < 2){ alert('Not enough teams for a knockout.'); return; }
+
+    // how many advance into the knockout
+    const maxN = table.length;
+    const ans = prompt('How many top teams go into the knockout?\n\n  2 = final only\n  4 = semi-finals + final\n  8 = quarter-finals onward\n\nEnter 2, 4'+(maxN>=8?', 8':'')+' (up to '+maxN+'):', String(Math.min(4,maxN)));
+    if(ans===null) return;
+    let take = parseInt(ans.trim(),10);
+    if(!(take>=2)){ alert('Enter a number of 2 or more.'); return; }
+    take = Math.min(take, maxN);
+
+    // top `take` seeds by standing; seed them into a bracket (favourites kept apart)
+    const playoffTeams = table.slice(0, take).map(r=> r.seed);
+    const Q = playoffTeams.length;
+    const order = KO.bracketOrder(KO.nextPow2(Q));
+    const teamForPlayoffSeed = ps => (ps>=1 && ps<=Q) ? playoffTeams[ps-1] : null;
+
+    const rows = [];
+    const PBASE = 90;
+    const label = KO.roundLabel(KO.nextPow2(Q));
+    order.forEach(([psA, psB])=>{
+      const a = teamForPlayoffSeed(psA), b = teamForPlayoffSeed(psB);
+      if(a && b){ rows.push({ tournament, division:TM_DIVISION, round:PBASE, round_type:'ko', band:label, seed_a:a, seed_b:b }); }
+      else if(a && !b){ rows.push({ tournament, division:TM_DIVISION, round:PBASE, round_type:'ko', band:'bye', seed_a:a, seed_b:0 }); }
+      else if(!a && b){ rows.push({ tournament, division:TM_DIVISION, round:PBASE, round_type:'ko', band:'bye', seed_a:b, seed_b:0 }); }
+    });
+    if(!rows.length){ alert('Could not build the knockout bracket.'); return; }
+
+    const pin = (prompt('Admin PIN to generate the '+TM_DIVISION+' knockout (top '+take+'):')||'').trim();
+    if(!pin) return;
+    TM_ADMIN_PIN = pin;
+    const resp = await fetch(SB_URL+'/functions/v1/tournament',{ method:'POST',
+      headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON, 'Content-Type':'application/json' },
+      body: JSON.stringify({ action:'write_fixtures', club_id:CLUB_ID, admin_pin:pin,
+        tournament, division:TM_DIVISION, replace:false, fixtures:rows }) });
+    const j = await resp.json().catch(()=>({}));
+    if(!j.ok){ alert('Could not create knockout: '+((j&&j.error)||resp.status)); return; }
+    box._tab='bracket';
+    alert('Knockout created: top '+take+' teams. Enter results on the Bracket tab — winners advance automatically.');
+    loadTournamentSheet(tournament, TM_DIVISION);
+  };
+
   window.tmGeneratePlayoff = async function(mode){
     mode = (mode==='block') ? 'block' : 'snake';   // 'snake' = combined KO; 'block' = section finals
     const groupLabels = [...new Set(entries.map(e=>e.grp).filter(Boolean))].sort();
@@ -6317,8 +6395,45 @@ function etPickDiv(d){ window._etCat = d; renderEnterScreen(); }
 // The admin picks the OUTCOME in plain language; block/snake is derived, never shown.
 function etGroupCfg(d){
   if(!window._etGroupCfg) window._etGroupCfg = {};
-  if(!window._etGroupCfg[d]) window._etGroupCfg[d] = { groups:1, mode:'block', playoff:false, outcomeChosen:true };
+  if(!window._etGroupCfg[d]) window._etGroupCfg[d] = { groups:1, mode:'block', playoff:false, playoffSize:0, outcomeChosen:true };
   return window._etGroupCfg[d];
+}
+
+// Single-group RR: choose UP FRONT whether it finishes on the table or feeds a
+// knockout. The choice is a known parameter from the start (players know what
+// they're playing for), stamped onto the RR fixtures at generation. The bracket
+// itself is built only when the round robin is COMPLETE — that's when the final
+// standings (and therefore the top 2 / top 4) exist. The post-completion button
+// still confirms 2-or-4 at build time; this is the up-front intent signal.
+function etRRFinishHTML(d, cnt){
+  const cfg = etGroupCfg(d);
+  const de = d.replace(/'/g,"\\'");
+  const size = cfg.playoff ? (cfg.playoffSize||2) : 0;
+  const maxTop = Math.min(4, cnt);
+  let h = '<div style="font-size:12px;font-weight:700;color:#5aa98d;margin:8px 0 6px;">How does it finish?</div>';
+  h += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">';
+  const tblSel = !cfg.playoff;
+  h += '<button onclick="etRRFinishSet(\'' + de + '\',0)" class="ac-btn ' + (tblSel?'ac-btn-primary':'ac-btn-ghost') + '" style="text-align:left;line-height:1.35;">'
+    + (tblSel?'● ':'○ ') + '<b>Table decides</b> — final standings crown the winner, no knockout</button>';
+  const ko2 = (cfg.playoff && size===2);
+  h += '<button onclick="etRRFinishSet(\'' + de + '\',2)" class="ac-btn ' + (ko2?'ac-btn-primary':'ac-btn-ghost') + '" style="text-align:left;line-height:1.35;">'
+    + (ko2?'● ':'○ ') + '<b>Top 2 → final</b> — the top two on the table play a final</button>';
+  if(maxTop>=4){
+    const ko4 = (cfg.playoff && size===4);
+    h += '<button onclick="etRRFinishSet(\'' + de + '\',4)" class="ac-btn ' + (ko4?'ac-btn-primary':'ac-btn-ghost') + '" style="text-align:left;line-height:1.35;">'
+      + (ko4?'● ':'○ ') + '<b>Top 4 → semi-finals + final</b> — top four cross over (1v4, 2v3)</button>';
+  }
+  h += '</div>';
+  if(cfg.playoff){
+    h += '<div class="sub" style="margin:0 0 10px;">When the round robin is complete, an admin sets up the knockout from the final table (confirming top 2 or top 4).</div>';
+  }
+  return h;
+}
+function etRRFinishSet(d, size){
+  const cfg = etGroupCfg(d);
+  cfg.playoff = (size>0);
+  cfg.playoffSize = size;
+  renderEnterScreen();
 }
 // Build the group-config card body for one division.
 function etGroupConfigHTML(d, cnt){
@@ -6333,8 +6448,9 @@ function etGroupConfigHTML(d, cnt){
   if(!splits.length){
     h += '<div class="sub" style="margin:0 0 8px;">' + cnt + ' teams — one round robin'
       + (cnt % 2 !== 0 ? ' <span style="color:#B9770E;">(odd field — one team byes each round)</span>' : '')
-      + '. Everyone plays everyone; the table decides the winner.</div>'
-      + '<button class="ac-btn ac-btn-primary" style="width:100%;" onclick="etGenerateDiv(\'' + de + '\')">Generate ' + d + ' round robin</button>';
+      + '. Everyone plays everyone; the table decides the winner.</div>';
+    h += etRRFinishHTML(d, cnt);
+    h += '<button class="ac-btn ac-btn-primary" style="width:100%;" onclick="etGenerateDiv(\'' + de + '\')">Generate ' + d + ' round robin</button>';
     return h;
   }
 
@@ -6369,6 +6485,9 @@ function etGroupConfigHTML(d, cnt){
     if(cfg.outcomeChosen){ h += etGroupPreviewHTML(d, cnt, cfg); }
     else { h += '<div class="sub" style="margin:0 0 10px;">Pick an outcome above to preview the groups.</div>'; }
   }
+
+  // Single-group (chosen among available splits) — offer the knockout finish choice too.
+  if(cfg.groups===1){ h += etRRFinishHTML(d, cnt); }
 
   // Generate button (enabled once the config is coherent).
   const ready = (cfg.groups===1) || (cfg.groups>1 && cfg.outcomeChosen && (cfg.mode==='block'||cfg.mode==='snake'));
