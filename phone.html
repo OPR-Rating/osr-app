@@ -1146,10 +1146,15 @@ function mkRenderSetup(){
   const sing=(MK.format==='singles');
   const slot=(id,ph)=>{ const v=p[id]; return `<button class="mk-pick ${v?'set':''}" onclick="mkPick('${id}')">${v?('<span>'+v+'</span>'):('<span class="mk-ph">'+ph+'</span>')}<span>›</span></button>`; };
   const segF=v=>MK.fmt===v?'on':'', segC=v=>MK.cat===v?'on':'', segS=v=>MK.firstServe===v?'on':'', segFmt=v=>MK.format===v?'on':'';
+  // Event-driven locks: when a tournament event dictates format/category, disable the
+  // other options so the marker can't pick a mismatched combination (mirrors +Enter Match).
+  const lk = MK.eventLocked || { fmt:false, cat:false };
+  const fmtDis = v => (lk.fmt && lk.fmtVal!==v) ? ' disabled style="opacity:.35;"' : '';
+  const catDis = v => (lk.cat && lk.catVal!==v) ? ' disabled style="opacity:.35;"' : '';
   // Category options: doubles has Mixed + All Sorts; singles is Men's/Ladies only.
   const catBtns = sing
-    ? `<button class="${segC("Men's")}" onclick="mkSetCat(&quot;Men's&quot;)">Men's</button><button class="${segC('Ladies')}" onclick="mkSetCat('Ladies')">Ladies</button>`
-    : `<button class="${segC("Men's")}" onclick="mkSetCat(&quot;Men's&quot;)">Men's</button><button class="${segC('Ladies')}" onclick="mkSetCat('Ladies')">Ladies</button><button class="${segC('Mixed')}" onclick="mkSetCat('Mixed')">Mixed</button><button class="${segC('All Sorts')}" onclick="mkSetCat('All Sorts')">All Sorts</button>`;
+    ? `<button class="${segC("Men's")}"${catDis("Men's")} onclick="mkSetCat(&quot;Men's&quot;)">Men's</button><button class="${segC('Ladies')}"${catDis('Ladies')} onclick="mkSetCat('Ladies')">Ladies</button>`
+    : `<button class="${segC("Men's")}"${catDis("Men's")} onclick="mkSetCat(&quot;Men's&quot;)">Men's</button><button class="${segC('Ladies')}"${catDis('Ladies')} onclick="mkSetCat('Ladies')">Ladies</button><button class="${segC('Mixed')}"${catDis('Mixed')} onclick="mkSetCat('Mixed')">Mixed</button><button class="${segC('All Sorts')}"${catDis('All Sorts')} onclick="mkSetCat('All Sorts')">All Sorts</button>`;
   // Team block: doubles shows 2 slots per side; singles shows 1 (labelled "Player").
   const teamBlock = sing
     ? `<div class="mk-tl"><span class="mk-tdot" style="background:#E0631A;"></span>Player 1 (side 1)</div>
@@ -1167,11 +1172,11 @@ function mkRenderSetup(){
     <div class="mk-sub">International squash · PAR 11 · tap the ${sing?'player':'team'} that wins each rally</div>
     <div class="mk-grp">
       <h3>Event</h3>
-      <select id="mkSetupEvent" onchange="MK.event=this.value" style="width:100%;padding:12px;border:1.5px solid rgba(255,160,60,.3);border-radius:10px;font-size:15px;background:#241509;color:#fff;box-sizing:border-box;"><option value="">Choose event…</option></select>
+      <select id="mkSetupEvent" onchange="mkSetupEventChanged(this.value)" style="width:100%;padding:12px;border:1.5px solid rgba(255,160,60,.3);border-radius:10px;font-size:15px;background:#241509;color:#fff;box-sizing:border-box;"><option value="">Choose event…</option></select>
     </div>
     <div class="mk-grp">
       <h3>Format</h3>
-      <div class="mk-seg"><button class="${segFmt('doubles')}" onclick="mkSetFormat('doubles')">Doubles</button><button class="${segFmt('singles')}" onclick="mkSetFormat('singles')">Singles</button></div>
+      <div class="mk-seg"><button class="${segFmt('doubles')}"${fmtDis('doubles')} onclick="mkSetFormat('doubles')">Doubles</button><button class="${segFmt('singles')}"${fmtDis('singles')} onclick="mkSetFormat('singles')">Singles</button></div>
     </div>
     <div class="mk-grp">
       <h3>Match</h3>
@@ -1408,16 +1413,42 @@ async function mkFillEventDropdown(){
 
 // Populate the SETUP-screen event dropdown (chosen up front, before format/teams).
 // Defaults to "Choose event…" (empty) so the marker must consciously pick — prevents wrong event.
+// Also fetches each tournament's `divisions` so mkSetupEventChanged can auto-default format/category.
 async function mkFillSetupEvent(){
   const sel=document.getElementById('mkSetupEvent'); if(!sel) return;
   let opts='<option value="">Choose event…</option>';
+  window._mkEventDivs = {};   // name -> divisions string, for the auto-default lookup
   try{
-    const data = await sbGet(`tournaments?select=name,active,archived&active=eq.true&archived=eq.false&club_id=eq.${CLUB_ID}&order=id.desc`);
-    (data||[]).forEach(t=>{ opts+=`<option value="${String(t.name).replace(/"/g,'&quot;')}">${t.name}</option>`; });
+    const data = await sbGet(`tournaments?select=name,divisions,active,archived&active=eq.true&archived=eq.false&club_id=eq.${CLUB_ID}&order=id.desc`);
+    (data||[]).forEach(t=>{ window._mkEventDivs[t.name]=t.divisions||''; opts+=`<option value="${String(t.name).replace(/"/g,'&quot;')}">${t.name}</option>`; });
   }catch(e){}
   opts+='<option value="Social">Social</option><option value="Ladder Match">Ladder Match</option>';
   sel.innerHTML=opts;
   sel.value = MK.event || '';   // restore any prior choice (e.g. preload tournament)
+  if(MK.event) mkSetupEventChanged(MK.event);   // apply lock for a restored/preloaded event
+}
+// When a marker picks a tournament event, default the format + category from what was
+// set at admin control (the tournament's divisions) — mirroring how +Enter Match defaults —
+// and LOCK those segments so the marker can't pick a mismatched combination.
+// Social / Ladder Match / empty → everything unlocked (free choice).
+function mkSetupEventChanged(ev){
+  ev=(ev||'').trim();
+  MK.event=ev;
+  MK.eventLocked = { fmt:false, cat:false, catVal:null, fmtVal:null };
+  if(ev && ev!=='Social' && ev!=='Ladder Match'){
+    const divStr = (window._mkEventDivs && window._mkEventDivs[ev]) || '';
+    const divs = divStr.split(',').map(s=>s.trim()).filter(Boolean);
+    if(divs.length){
+      const allSingles = divs.every(d=>/singles/i.test(d));
+      const allDoubles = divs.every(d=>!/singles/i.test(d));
+      if(allSingles){ MK.format='singles'; MK.eventLocked.fmt=true; MK.eventLocked.fmtVal='singles';
+        if(MK.cat!=="Men's" && MK.cat!=='Ladies') MK.cat="Men's"; }
+      else if(allDoubles){ MK.format='doubles'; MK.eventLocked.fmt=true; MK.eventLocked.fmtVal='doubles'; }
+      const bases = [...new Set(divs.map(d=>d.replace(/\s*Singles$/i,'').trim()))];
+      if(bases.length===1){ MK.cat=bases[0]; MK.eventLocked.cat=true; MK.eventLocked.catVal=bases[0]; }
+    }
+  }
+  mkRenderSetup();
 }
 function mkFillSubmitterNames(){
   const sel=document.getElementById('submitterName'); if(!sel) return;
@@ -2248,7 +2279,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-PHONE v2026.08.01-01";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-PHONE v2026.08.01-03";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -3099,14 +3130,14 @@ async function renderStep1(){
         <option value="All Sorts">All Sorts</option>
       </select>
     </div>
-    <div class="field"><label>Sets Played</label>
+    <div class="field"><label>Games Played</label>
       <select id="setsPlayed">
-        <option value="">Select sets...</option>
-        <option value="1">1 set</option>
-        <option value="2">2 sets</option>
-        <option value="3">3 sets</option>
-        <option value="4">4 sets</option>
-        <option value="5">5 sets</option>
+        <option value="">Select games...</option>
+        <option value="1">1 game</option>
+        <option value="2">2 games</option>
+        <option value="3">3 games</option>
+        <option value="4">4 games</option>
+        <option value="5">5 games</option>
       </select>
     </div>
     <div id="err1" class="error-msg">Please fill in all fields.</div>
@@ -5071,17 +5102,14 @@ async function loadTournamentSheet(tournament, division) {
       : 'Bands keep matches competitive.';
 
     let h = '<div class="card"><h2>' + heading + ' <span class="tm-divtag">' + tmDivLabel(TM_DIVISION) + '</span></h2>'
-      + '<p class="sub">Seeded by frozen entry rating (strongest = Seed 1). ' + blurb + '</p>'
-      + '<table><thead><tr><th class="num">Seed</th><th>' + who + '</th>'
-      + '<th class="num">Rating</th>'
-      + (_showGroup ? '<th class="num">Group</th>' : '') + (_showBand ? '<th class="num">Band</th>' : '')
-      + (!_sg ? '<th class="num"></th>' : '')
-      + '</tr></thead><tbody>';
-    for (let s = 1; s <= N; s++) {
+      + '<p class="sub">Seeded by frozen entry rating (strongest = Seed 1). ' + blurb + '</p>';
+
+    // Render one team row for a given seed. Shared by the flat and the grouped layouts.
+    const teamRowHTML = (s) => {
       const e = bySeed[s];
       const hasSub = e && e.sub_from_round!=null && (e.sub_p1 || e.sub_p2);
       const subName = hasSub ? tmTeamName(e.sub_p1 || e.p1, (e.p2!=null ? (e.sub_p2 || e.p2) : e.p2)) : '';
-      h += '<tr><td class="num"><span class="seed' + (s === 1 ? ' s1' : '') + '">' + s + '</span></td>'
+      let r = '<tr><td class="num"><span class="seed' + (s === 1 ? ' s1' : '') + '">' + s + '</span></td>'
         + '<td><b>' + tName(s) + '</b>'
         + (hasSub ? ('<div style="font-size:11px;color:#B9770E;margin-top:2px;">→ ' + subName + ' from R' + e.sub_from_round + '</div>') : '')
         + '</td>'
@@ -5089,19 +5117,45 @@ async function loadTournamentSheet(tournament, division) {
       if (_showGroup) {
         const L = _grpOf[s] || '—';
         const tn = _tierOf[L] ? (' <span style="color:#5aa98d;font-size:11px;">' + _tierOf[L] + '</span>') : '';
-        h += '<td class="num"><b>' + L + '</b>' + tn + '</td>';
+        r += '<td class="num"><b>' + L + '</b>' + tn + '</td>';
       }
-      if (_showBand) { const [lo, hi] = BANDS[s]; h += '<td class="num">' + lo + '–' + hi + '</td>'; }
+      if (_showBand) { const [lo, hi] = BANDS[s]; r += '<td class="num">' + lo + '–' + hi + '</td>'; }
       // Substitution controls — doubles only. "✎ sub" swaps ONE player (either slot);
       // "⇄ team" replaces BOTH (whole-team takeover, inherits the seat's standing).
       if (!_sg) {
-        h += '<td class="num">'
+        r += '<td class="num">'
           + '<div style="display:flex;gap:5px;justify-content:flex-end;align-items:center;flex-wrap:nowrap;">'
           + '<button class="menu-btn tm-minibtn" style="border-color:#B9770E;white-space:nowrap;" onclick="tmReplacePartner(' + s + ')" title="Replace ONE player from the next unplayed round onward">✎ sub</button>'
           + '<button class="menu-btn tm-minibtn" style="border-color:#7D3C98;white-space:nowrap;" onclick="tmReplaceTeam(' + s + ')" title="Replace the WHOLE team — the new pair takes this seat and its tournament standing from the next unplayed round">⇄ team</button>'
           + '</div></td>';
       }
-      h += '</tr>';
+      r += '</tr>';
+      return r;
+    };
+    const theadHTML = '<thead><tr><th class="num">Seed</th><th>' + who + '</th>'
+      + '<th class="num">Rating</th>'
+      + (_showGroup ? '<th class="num">Group</th>' : '') + (_showBand ? '<th class="num">Band</th>' : '')
+      + (!_sg ? '<th class="num"></th>' : '')
+      + '</tr></thead>';
+
+    if (_showGroup && _hasGroups && _groupLabels.length) {
+      // GROUPED layout — one sub-table per division, mirroring the Standings tab, so a
+      // grouped RR shows its teams IN their groups rather than as one flat field.
+      _groupLabels.forEach((L) => {
+        const tn = _tierOf[L] ? (' <span style="font-weight:600;color:#5aa98d;">· ' + _tierOf[L] + '</span>') : '';
+        h += '<div style="font-size:13px;font-weight:800;color:#D35400;margin:12px 0 4px;">Group ' + L + tn + '</div>';
+        h += '<table>' + theadHTML + '<tbody>';
+        for (let s = 1; s <= N; s++) { if ((_grpOf[s] || '—') === L) h += teamRowHTML(s); }
+        h += '</tbody></table>';
+      });
+      h += '</div>';
+      return h;
+    }
+
+    // FLAT layout — single-group RR / knockout / bands (unchanged behaviour).
+    h += '<table>' + theadHTML + '<tbody>';
+    for (let s = 1; s <= N; s++) {
+      h += teamRowHTML(s);
     }
     h += '</tbody></table></div>';
     return h;
