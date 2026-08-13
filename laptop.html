@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>OSR</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;1,9..144,600;1,9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="manifest" href='data:application/manifest+json,{"name":"OSR · Open Squash Ratings","short_name":"OSR","start_url":"./laptop.html?club=1","scope":"./","display":"standalone","background_color":"%231c110a","theme_color":"%231c110a","icons":[{"src":"./icon-192.png","sizes":"192x192","type":"image/png"},{"src":"./icon-512.png","sizes":"512x512","type":"image/png"}]}'>
+<link rel="manifest" href='data:application/manifest+json,{"name":"OSR · Open Squash Ratings","short_name":"OSR","start_url":"./laptop.html","scope":"./","display":"standalone","background_color":"%231c110a","theme_color":"%231c110a","icons":[{"src":"./icon-192.png","sizes":"192x192","type":"image/png"},{"src":"./icon-512.png","sizes":"512x512","type":"image/png"}]}'>
 <meta name="theme-color" content="#D35400">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -488,18 +488,19 @@
 .mk-live{flex:1;display:flex;flex-direction:column;background:var(--mk-char);}
   .mk-top{padding:9px 14px 7px;display:flex;align-items:center;justify-content:space-between;background:var(--mk-char);border-bottom:1px solid rgba(255,160,60,.12);color:#fff;}
   .mk-top .mk-fmt{font-size:11px;color:var(--mk-mut);}
-  .mk-top .mk-gnum{font-size:11px;color:var(--mk-am);font-weight:800;text-transform:uppercase;letter-spacing:1px;}
+  .mk-top .mk-gnum{font-size:15px;color:var(--mk-am);font-weight:800;text-transform:uppercase;letter-spacing:1px;}
   .mk-top .mk-gtot{font-size:13px;font-weight:800;letter-spacing:.5px;}
-  .mk-callbar{text-align:center;font-size:12px;font-weight:700;padding:5px;color:var(--mk-am);min-height:25px;background:var(--mk-char);}
+  .mk-callbar{text-align:center;font-size:17px;font-weight:800;padding:9px 5px;color:var(--mk-am);min-height:34px;background:var(--mk-char);letter-spacing:.3px;}
   .mk-courts{flex:1;display:flex;gap:3px;padding:0 3px;min-height:340px;}
   .mk-side{flex:1;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:transform .06s;user-select:none;overflow:hidden;color:#fff;}
   .mk-side:active{transform:scale(.985);}
   .mk-side.t1{background:linear-gradient(160deg,#E0631A,#9c3f08);}
   .mk-side.t2{background:linear-gradient(160deg,#3a2416,#20130a);border:1px solid rgba(255,160,60,.2);}
-  .mk-side .mk-names{font-size:13px;font-weight:700;text-align:center;padding:0 34px;opacity:.92;line-height:1.4;position:absolute;top:14px;left:0;right:0;}
+  .mk-side .mk-names{font-size:17px;font-weight:800;text-align:center;padding:0 30px;opacity:.96;line-height:1.35;position:absolute;top:14px;left:0;right:0;}
   .mk-side .mk-score{font-size:23vw;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;}
   @media(min-width:480px){.mk-side .mk-score{font-size:110px;}}
-  .mk-side .mk-gt{position:absolute;bottom:13px;font-size:13px;font-weight:800;opacity:.75;letter-spacing:.5px;}
+  .mk-side .mk-gt{position:absolute;bottom:14px;font-size:14px;font-weight:800;letter-spacing:.5px;opacity:1;padding:5px 16px;border-radius:999px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.22);}
+  .mk-side.t1 .mk-gt{background:rgba(0,0,0,.22);border-color:rgba(0,0,0,.28);color:#20130a;}
   .mk-side .mk-sdot{position:absolute;top:15px;right:15px;width:14px;height:14px;border-radius:50%;background:var(--mk-am);box-shadow:0 0 10px var(--mk-am);display:none;}
   .mk-side.serving .mk-sdot{display:block;}
   .mk-side.t1 .mk-sdot{background:#20130a;box-shadow:0 0 10px rgba(0,0,0,.5);}
@@ -555,7 +556,7 @@
     <div class="home-hero">
       <div class="hero-logo-panel">
         <div class="ball-row"><span class="ball-pair"><svg class="pball" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="sq1" cx="36%" cy="30%" r="80%"><stop offset="0%" stop-color="#4a4a4a"/><stop offset="45%" stop-color="#1c1c1c"/><stop offset="100%" stop-color="#000000"/></radialGradient></defs><circle cx="50" cy="50" r="46" fill="url(#sq1)" stroke="#000" stroke-width="1"/><ellipse cx="64" cy="32" rx="12" ry="8" fill="rgba(255,255,255,0.15)"/><circle cx="37" cy="35" r="7" fill="#E8791A"/><circle cx="37" cy="35" r="7" fill="none" stroke="#ffb066" stroke-width="0.8" opacity="0.6"/></svg><svg class="pball" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="sq2" cx="36%" cy="30%" r="80%"><stop offset="0%" stop-color="#4a4a4a"/><stop offset="45%" stop-color="#1c1c1c"/><stop offset="100%" stop-color="#000000"/></radialGradient></defs><circle cx="50" cy="50" r="46" fill="url(#sq2)" stroke="#000" stroke-width="1"/><ellipse cx="64" cy="32" rx="12" ry="8" fill="rgba(255,255,255,0.15)"/><circle cx="37" cy="35" r="7" fill="#E8791A"/><circle cx="37" cy="35" r="7" fill="none" stroke="#ffb066" stroke-width="0.8" opacity="0.6"/></svg></span><span class="ball-pair"><svg class="pball" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="sq3" cx="36%" cy="30%" r="80%"><stop offset="0%" stop-color="#4a4a4a"/><stop offset="45%" stop-color="#1c1c1c"/><stop offset="100%" stop-color="#000000"/></radialGradient></defs><circle cx="50" cy="50" r="46" fill="url(#sq3)" stroke="#000" stroke-width="1"/><ellipse cx="64" cy="32" rx="12" ry="8" fill="rgba(255,255,255,0.15)"/><circle cx="37" cy="35" r="7" fill="#E8791A"/><circle cx="37" cy="35" r="7" fill="none" stroke="#ffb066" stroke-width="0.8" opacity="0.6"/></svg><svg class="pball" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="sq4" cx="36%" cy="30%" r="80%"><stop offset="0%" stop-color="#4a4a4a"/><stop offset="45%" stop-color="#1c1c1c"/><stop offset="100%" stop-color="#000000"/></radialGradient></defs><circle cx="50" cy="50" r="46" fill="url(#sq4)" stroke="#000" stroke-width="1"/><ellipse cx="64" cy="32" rx="12" ry="8" fill="rgba(255,255,255,0.15)"/><circle cx="37" cy="35" r="7" fill="#E8791A"/><circle cx="37" cy="35" r="7" fill="none" stroke="#ffb066" stroke-width="0.8" opacity="0.6"/></svg></span></div>
-        <h2 id="heroTitle">ODR-Rating</h2>
+        <h2 id="heroTitle">OSR-Rating</h2>
         <p>Open Squash Ratings System</p>
       </div>
     </div>
@@ -573,7 +574,7 @@
             <div class="club-panel-head">Club Overview</div>
             <div id="clubStats" class="club-stats"><div style="color:#999;font-size:12px;">Loading…</div></div>
             <div class="club-panel-foot">
-              <a href="https://www.opr-online.com" target="_blank" rel="noopener" class="club-panel-link">Powered by ODR · opr-online.com ›</a>
+              <a href="https://www.opr-online.com" target="_blank" rel="noopener" class="club-panel-link">Powered by OSR · opr-online.com ›</a>
             </div>
           </div>
         </div>
@@ -2790,11 +2791,11 @@ const CLUBS = {
 const _clubParam = (new URLSearchParams(window.location.search).get('club') || '1').toLowerCase();
 // Known clubs come from the map; any OTHER numeric id (new clubs 20+) is used directly —
 // the real name is fetched from the database on load. Non-numeric unknowns fall back to Demo.
-const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubParam), name:'ODR Club '+_clubParam} : CLUBS['1']);
+const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubParam), name:'OSR Club '+_clubParam} : CLUBS['1']);
 const CLUB_ID = _club.id;
-document.title = 'ODR · ' + _club.name;
+document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.13-03 · Singles now renders as a clickable, expandable card (Rating/Matches/Move + gender pill) matching OTR, above the Partnerships section. Demo(1)/OSR-Club 2(2).";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.13-05 · Marker readability: larger call/status banner, GAME number and player names; Games-per-side now shown in a pill. Same layout, bigger type.";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -2890,7 +2891,7 @@ function printTable(containerId, title){
     +'td{padding:7px 10px;border-bottom:1px solid #eee;}'
     +'tr:nth-child(even) td{background:#f5f2fb;}'
     +'</style></head><body>'
-    +'<h1>ODR · '+CLUB_NAME+' — '+title+'</h1>'
+    +'<h1>OSR · '+CLUB_NAME+' — '+title+'</h1>'
     +'<div class="meta">Generated '+today+' · '+OPR_VERSION+'</div>'
     +tbl.outerHTML+'</body></html>');
   w.document.close(); w.focus(); setTimeout(()=>w.print(),300);
@@ -5320,7 +5321,7 @@ function closePlayerModal() {
   if (bar) bar.style.display = 'none';
 }
 
-window.onload=function(){ var ht=document.getElementById('heroTitle'); if(ht) ht.textContent='ODR · '+CLUB_NAME; var vt=document.getElementById("oprVerTag"); if(vt) vt.textContent=OPR_VERSION; var av=document.getElementById("aboutVersion"); if(av) av.textContent=OPR_VERSION; refreshClubName(); loadRecent(); loadPlayers(); loadClubStats(); };
+window.onload=function(){ var ht=document.getElementById('heroTitle'); if(ht) ht.textContent='OSR · '+CLUB_NAME; var vt=document.getElementById("oprVerTag"); if(vt) vt.textContent=OPR_VERSION; var av=document.getElementById("aboutVersion"); if(av) av.textContent=OPR_VERSION; refreshClubName(); loadRecent(); loadPlayers(); loadClubStats(); };
 // Pull the current club name from the database so admin renames appear on the front page.
 async function refreshClubName(){
   try{
@@ -5328,8 +5329,8 @@ async function refreshClubName(){
     if(rows && rows[0] && rows[0].name){
       window.CLUB_NAME_LIVE=rows[0].name;
       var ht=document.getElementById('heroTitle');
-      if(ht) ht.textContent='ODR · '+rows[0].name;
-      document.title='ODR · '+rows[0].name;
+      if(ht) ht.textContent='OSR · '+rows[0].name;
+      document.title='OSR · '+rows[0].name;
     }
   }catch(e){/* keep the URL-map name if fetch fails */}
 }
