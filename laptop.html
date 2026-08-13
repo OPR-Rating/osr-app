@@ -17,7 +17,7 @@
   .app { max-width: 480px; margin: 0 auto; background: #ffffff; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; position: relative; }
 
   /* Header */
-  .header { background:linear-gradient(rgba(7,26,18,0.0),rgba(7,26,18,0.0)),radial-gradient(120% 90% at 78% 8%, rgba(255,160,60,.20), transparent 55%),radial-gradient(130% 100% at 12% 96%, rgba(211,84,0,.55), transparent 60%),#1c110a; background-size:cover; color: white; padding: 16px 20px; display: flex; align-items: center; gap: 12px; min-height: 64px; text-shadow:0 2px 6px rgba(0,0,0,0.45); }
+  .header { background:linear-gradient(rgba(7,26,18,0.0),rgba(7,26,18,0.0)),radial-gradient(120% 90% at 78% 8%, rgba(255,160,60,.20), transparent 55%),radial-gradient(130% 100% at 12% 96%, rgba(211,84,0,.55), transparent 60%),#1c110a; background-size:cover; color: white; padding: 16px 20px; display: flex; align-items: center; gap: 12px; min-height: 64px; }
   .header h1 { font-size: 18px; font-weight: 600; flex: 1; }
   .back-btn { background: none; border: none; color: white; font-size: 22px; cursor: pointer; padding: 4px 8px 4px 0; }
 
@@ -223,6 +223,13 @@
   .ac-tab.active { background:#fff; color:#D35400; box-shadow:0 1px 4px rgba(0,0,0,0.1); }
   .ac-room { display:none; }
   .ac-room.active { display:block; animation: acFade .2s ease; }
+  .odr-searchlist { position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid rgba(211,84,0,.25); border-radius:9px; max-height:320px; overflow-y:auto; -webkit-overflow-scrolling:touch; z-index:40; box-shadow:0 6px 18px rgba(0,0,0,.14); display:none; margin-top:-6px; }
+  .odr-searchlist.show { display:block; }
+  .odr-searchlist div { padding:8px 12px; font-size:13px; cursor:pointer; }
+  .odr-searchlist div:hover { background:rgba(211,84,0,.08); color:#D35400; }
+  .odr-pair-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid rgba(211,84,0,.12); }
+  .odr-cat-pill { display:inline-block; padding:2px 8px; border-radius:99px; font-size:11px; font-weight:700; }
+  .odr-cat-M { background:#e3edff; color:#2148a0; } .odr-cat-L { background:#ffe6f0; color:#a02166; } .odr-cat-X { background:#e9f7e5; color:#2a7d1f; }
   @keyframes acFade { from{opacity:0;transform:translateY(4px);} to{opacity:1;transform:none;} }
   .ac-card { background:#fff; border:1px solid rgba(211,84,0,.16); border-radius:12px; padding:16px; margin-bottom:14px; }
   .ac-card h4 { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#5aa98d; margin-bottom:12px; font-weight:800; }
@@ -471,7 +478,14 @@
   .mk-start{width:100%;padding:16px;background:linear-gradient(180deg,#FFA033,#E8791A);color:#2a1400;border:none;border-radius:13px;font-size:16px;font-weight:800;cursor:pointer;margin-top:4px;box-shadow:0 8px 20px rgba(232,121,26,.35);}
   .mk-start:disabled{opacity:.45;box-shadow:none;}
 
-  .mk-live{flex:1;display:flex;flex-direction:column;background:var(--mk-char);}
+  .mk-banner{ position:absolute; inset:0; z-index:40; background:linear-gradient(160deg,#0d3b26,#124a30); display:flex; align-items:center; justify-content:center; cursor:pointer; animation:mkBannerIn .18s ease-out; }
+.mk-banner-inner{ text-align:center; padding:24px; }
+.mk-banner-kind{ font-size:64px; font-weight:800; letter-spacing:2px; color:#fff; line-height:1; }
+.mk-banner-who{ font-size:22px; font-weight:700; color:#8fd694; margin-top:10px; }
+.mk-banner-sub{ font-size:15px; color:#FFD966; margin-top:14px; font-weight:600; }
+.mk-banner-tap{ font-size:13px; color:#c9b8a8; margin-top:20px; text-transform:uppercase; letter-spacing:1px; }
+@keyframes mkBannerIn{ from{ opacity:0; transform:scale(.96); } to{ opacity:1; transform:scale(1); } }
+.mk-live{flex:1;display:flex;flex-direction:column;background:var(--mk-char);}
   .mk-top{padding:9px 14px 7px;display:flex;align-items:center;justify-content:space-between;background:var(--mk-char);border-bottom:1px solid rgba(255,160,60,.12);color:#fff;}
   .mk-top .mk-fmt{font-size:11px;color:var(--mk-mut);}
   .mk-top .mk-gnum{font-size:11px;color:var(--mk-am);font-weight:800;text-transform:uppercase;letter-spacing:1px;}
@@ -541,17 +555,15 @@
     <div class="home-hero">
       <div class="hero-logo-panel">
         <div class="ball-row"><span class="ball-pair"><svg class="pball" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="sq1" cx="36%" cy="30%" r="80%"><stop offset="0%" stop-color="#4a4a4a"/><stop offset="45%" stop-color="#1c1c1c"/><stop offset="100%" stop-color="#000000"/></radialGradient></defs><circle cx="50" cy="50" r="46" fill="url(#sq1)" stroke="#000" stroke-width="1"/><ellipse cx="64" cy="32" rx="12" ry="8" fill="rgba(255,255,255,0.15)"/><circle cx="37" cy="35" r="7" fill="#E8791A"/><circle cx="37" cy="35" r="7" fill="none" stroke="#ffb066" stroke-width="0.8" opacity="0.6"/></svg><svg class="pball" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="sq2" cx="36%" cy="30%" r="80%"><stop offset="0%" stop-color="#4a4a4a"/><stop offset="45%" stop-color="#1c1c1c"/><stop offset="100%" stop-color="#000000"/></radialGradient></defs><circle cx="50" cy="50" r="46" fill="url(#sq2)" stroke="#000" stroke-width="1"/><ellipse cx="64" cy="32" rx="12" ry="8" fill="rgba(255,255,255,0.15)"/><circle cx="37" cy="35" r="7" fill="#E8791A"/><circle cx="37" cy="35" r="7" fill="none" stroke="#ffb066" stroke-width="0.8" opacity="0.6"/></svg></span><span class="ball-pair"><svg class="pball" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="sq3" cx="36%" cy="30%" r="80%"><stop offset="0%" stop-color="#4a4a4a"/><stop offset="45%" stop-color="#1c1c1c"/><stop offset="100%" stop-color="#000000"/></radialGradient></defs><circle cx="50" cy="50" r="46" fill="url(#sq3)" stroke="#000" stroke-width="1"/><ellipse cx="64" cy="32" rx="12" ry="8" fill="rgba(255,255,255,0.15)"/><circle cx="37" cy="35" r="7" fill="#E8791A"/><circle cx="37" cy="35" r="7" fill="none" stroke="#ffb066" stroke-width="0.8" opacity="0.6"/></svg><svg class="pball" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="sq4" cx="36%" cy="30%" r="80%"><stop offset="0%" stop-color="#4a4a4a"/><stop offset="45%" stop-color="#1c1c1c"/><stop offset="100%" stop-color="#000000"/></radialGradient></defs><circle cx="50" cy="50" r="46" fill="url(#sq4)" stroke="#000" stroke-width="1"/><ellipse cx="64" cy="32" rx="12" ry="8" fill="rgba(255,255,255,0.15)"/><circle cx="37" cy="35" r="7" fill="#E8791A"/><circle cx="37" cy="35" r="7" fill="none" stroke="#ffb066" stroke-width="0.8" opacity="0.6"/></svg></span></div>
-        <h2 id="heroTitle">OSR-Rating</h2>
+        <h2 id="heroTitle">ODR-Rating</h2>
         <p>Open Squash Ratings System</p>
       </div>
     </div>
     <div class="screen-content home-content">
       <button class="btn-enter" onclick="showScreen('entryScreen')">✚ Enter your match score here</button>
-      <button class="btn-enter" onclick="mkOpen()" style="background:linear-gradient(180deg,#3a2416,#20130a);color:#FFA033;border:1.5px solid rgba(255,160,60,.35);box-shadow:0 8px 22px rgba(126,50,0,.35);margin-top:-6px;">◉ Score a match live (marker)</button>
-      <button class="btn-enter" onclick="watchOpen()" style="background:linear-gradient(180deg,#241509,#160d06);color:#e8d9cc;border:1.5px solid rgba(255,160,60,.22);box-shadow:0 6px 18px rgba(0,0,0,.3);margin-top:-6px;font-size:15px;">👁 Watch a live match</button>
       <div class="menu-grid">
         <button class="menu-btn" onclick="showScreen('laddersScreen')">Current Ratings and Ladders</button>
-        <button class="menu-btn" onclick="showProfileSearch()">Member Profile</button>
+        <button class="menu-btn" onclick="showProfileSearch()">Team Profile</button>
         <button class="menu-btn" onclick="showScreen('tournamentScreen')">Current Tournaments</button>
         <button class="menu-btn" onclick="showScreen('aboutScreen')">About OSR</button>
       </div>
@@ -561,7 +573,7 @@
             <div class="club-panel-head">Club Overview</div>
             <div id="clubStats" class="club-stats"><div style="color:#999;font-size:12px;">Loading…</div></div>
             <div class="club-panel-foot">
-              <a href="https://www.opr-online.com" target="_blank" rel="noopener" class="club-panel-link">Powered by OSR · opr-online.com ›</a>
+              <a href="https://www.opr-online.com" target="_blank" rel="noopener" class="club-panel-link">Powered by ODR · opr-online.com ›</a>
             </div>
           </div>
         </div>
@@ -590,19 +602,26 @@
       <div style="background:rgba(211,84,0,.08);border:1px solid rgba(211,84,0,.30);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#0d4a38;line-height:1.5;text-align:center;">Overall standings for ALL matches recorded in both Social and Tournament records</div>
       <div class="ladders-group-title">Singles Ratings</div>
       <div class="ladders-grid">
-        <button class="menu-btn" onclick="loadLadder('mens','Mens Rating')">Men's Rating</button>
-        <button class="menu-btn" onclick="loadLadder('ladies','Ladies Rating')">Ladies Rating</button>
+        <button class="menu-btn" onclick="loadLadder('mens_singles','Men\u2019s Singles')">Men's Singles</button>
+        <button class="menu-btn" onclick="loadLadder('ladies_singles','Ladies\u2019 Singles')">Ladies' Singles</button>
       </div>
-      <div class="ladders-group-title">Doubles Ratings</div>
+      <div class="ladders-group-title">Pair Ratings</div>
       <div class="ladders-grid">
+        <button class="menu-btn" onclick="loadLadder('mens','Men\u2019s Pairs')">Men's Pairs</button>
+        <button class="menu-btn" onclick="loadLadder('ladies','Ladies\u2019 Pairs')">Ladies' Pairs</button>
+        <button class="menu-btn" onclick="loadLadder('mixed','Mixed Pairs')">Mixed Pairs</button>
+        <button class="menu-btn" onclick="loadLadder('allsorts','All Sorts')">All Sorts</button>
+      </div>
+      <div class="ladders-group-title" style="display:none;">Doubles Ratings</div>
+      <div class="ladders-grid" style="display:none;">
         <button class="menu-btn" onclick="loadLadder('mensdoubles','Mens Doubles Rating')">Men's Doubles Rating</button>
         <button class="menu-btn" onclick="loadLadder('ladiesdoubles','Ladies Doubles Rating')">Ladies Doubles Rating</button>
-        <button class="menu-btn" onclick="loadLadder('mixed','Mixed Doubles Rating')">Mixed Doubles Rating</button>
-        <button class="menu-btn" onclick="loadLadder('allsorts','All Sorts Rating')">All Sorts Rating</button>
+        <button class="menu-btn" onclick="loadLadder('mixeddoubles','Mixed Doubles Rating')">Mixed Doubles Rating</button>
+        <button class="menu-btn" onclick="loadLadder('allsortsd','All Sorts Rating')">All Sorts Rating</button>
       </div>
       <div class="ladders-group-title">Universal</div>
       <div class="ladders-grid one-col">
-        <button class="menu-btn" onclick="loadLadder('universal','Universal Rating')">Universal Rating</button>
+        <button class="menu-btn" onclick="loadLadder('universal','Universal Rating')">Universal Rating — all pairs combined</button>
       </div>
       <div class="ladders-group-title">Club Ladder</div>
       <div class="ladders-grid one-col">
@@ -641,7 +660,7 @@
           <p style="margin:0;">Win % treats a narrow 7–6 win the same as a crushing 6–0, and ignores who you played. Form rewards convincing performances and accounts for opponent strength — a fairer picture of how someone is actually playing. For doubles, Form shows how a <strong>partnership performs as a team</strong>.</p>
         </div>
         <div class="ladders-grid one-col">
-          <button class="menu-btn" onclick="loadFormWall('individual','Individual Form')">Individual Form</button>
+          <button class="menu-btn" onclick="loadFormWall('individual','Pairs Form')">Pairs Form (all)</button>
           <button class="menu-btn" onclick="loadFormWall('mensdoubles',&quot;Men's Doubles Form&quot;)">Men's Doubles Form</button>
           <button class="menu-btn" onclick="loadFormWall('ladiesdoubles','Ladies Doubles Form')">Ladies Doubles Form</button>
           <button class="menu-btn" onclick="loadFormWall('mixed','Mixed Doubles Form')">Mixed Doubles Form</button>
@@ -667,11 +686,23 @@
   <div class="screen hidden" id="profileSearchScreen">
     <div class="header">
       <button class="back-btn" onclick="goHome()">&#8592;</button>
-      <h1>Member Profile</h1>
+      <h1>Team Profile</h1>
     </div>
     <div class="screen-content">
-      <input type="text" class="search-box" id="playerSearch" placeholder="Search your name..." oninput="filterPlayers()">
+      <input type="text" class="search-box" id="playerSearch" placeholder="Search your name..." oninput="filterPlayers()" style="position:sticky;top:0;z-index:30;background:#fff;">
       <ul class="player-list" id="playerList"></ul>
+    </div>
+  </div>
+
+  <!-- PARTNERSHIPS (all of one person's teams) -->
+  <div class="screen hidden" id="partnershipsScreen">
+    <div class="header">
+      <button class="back-btn" onclick="showProfileSearch()">&#8592;</button>
+      <h1 id="partnershipsTitle">Partnerships</h1>
+    </div>
+    <div class="screen-content">
+      <div style="background:#fdf3ec;border:1px solid rgba(211,84,0,.18);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#5a4636;">Every team this player is part of. Tap a team for its full rating story.</div>
+      <div id="partnershipsList"></div>
     </div>
   </div>
 
@@ -791,7 +822,7 @@
 
       <div class="about-section">
         <h3>Version</h3>
-        <p>OSR Version 2.0 — June 2026</p>
+        <p id="aboutVersion">OSR Version 2.0 — June 2026</p>
         <p>Built with passion for the game of squash.</p>
       </div>
 
@@ -832,7 +863,8 @@
 
         <!-- Tabs -->
         <div class="ac-tabs">
-          <button class="ac-tab active" id="acTabMembers" onclick="acRoom('members')">Members</button>
+          <button class="ac-tab active" id="acTabMembers" onclick="acRoom('members')">Individuals</button>
+          <button class="ac-tab" id="acTabPairs" onclick="acRoom('pairs')">Pairs</button>
           <button class="ac-tab" id="acTabTours" onclick="acRoom('tours')">Tournaments</button>
           <button class="ac-tab" id="acTabMatches" onclick="acRoom('matches')">Matches</button>
           <button class="ac-tab" id="acTabClub" onclick="acRoom('club')">Club</button>
@@ -841,16 +873,16 @@
         <!-- ROOM: MEMBERS -->
         <div class="ac-room active" id="acRoomMembers">
           <div class="ac-card">
-            <h4>Current members</h4>
-            <p style="font-size:11px;color:#7a6688;margin:0 0 8px;">Note: editing a member's <b>initial rating</b> re-bases that player and automatically recomputes the club's ratings.</p>
+            <h4>Current individuals</h4>
+            <p style="font-size:11px;color:#7a6688;margin:0 0 8px;">Individuals are the ingredients pairs are built from. Editing a seed rating re-derives any pairs they belong to on the next recompute.</p>
             <div id="adminMembers" style="font-size:13px;"></div>
           </div>
           <div class="ac-card">
-            <h4>Add a member</h4>
-            <input id="amName" placeholder="Full name" class="ac-field">
+            <h4>Add an individual</h4>
+            <input id="amName" placeholder="Full name (e.g. Andre Farrell)" class="ac-field">
             <div class="ac-row" style="margin-bottom:9px;">
               <select id="amGender" class="ac-field" style="margin-bottom:0;"><option value="M">Male</option><option value="F">Female</option></select>
-              <input id="amRating" type="number" placeholder="Rating (e.g. 1200)" class="ac-field" style="margin-bottom:0;">
+              <input id="amRating" type="number" placeholder="Rating (blank = 1500/1300)" class="ac-field" style="margin-bottom:0;">
             </div>
             <input id="amPin" inputmode="numeric" placeholder="4-digit PIN" class="ac-field">
             <button class="ac-btn ac-btn-primary" style="width:100%;" onclick="adminAddMember()">Add member</button>
@@ -859,8 +891,8 @@
 
           <!-- BULK ADD (desktop onboarding): paste Name, Gender, Initial Rating, PIN from Excel -->
           <div class="ac-card">
-            <h4>Bulk add members (paste from Excel)</h4>
-            <p style="font-size:12px;color:#7a6688;margin:0 0 8px;">Paste rows of <b>Name, Gender, Initial Rating, PIN</b> — one member per line. Copy 4 columns straight from Excel (tabs) or type comma-separated. Gender = M or F. Each player gets their own starting rating.</p>
+            <h4>Bulk add individuals (paste from Excel)</h4>
+            <p style="font-size:12px;color:#7a6688;margin:0 0 8px;">Paste rows of <b>Name, Gender, Rating, PIN</b> — one per line. Tabs (straight from Excel) or commas. Gender = M or F. Rating optional — blank defaults to 1500 (M) / 1300 (F).</p>
             <textarea id="bulkText" class="ac-field" style="min-height:150px;font-family:monospace;font-size:12px;" placeholder="John Smith, M, 1350, 1234&#10;Sarah Jones, F, 1180, 5678&#10;Mike Brown	M	1420	9012"></textarea>
             <button class="ac-btn ac-btn-primary" style="width:100%;" onclick="adminBulkAdd()">Add all pasted members</button>
             <div id="bulkMsg" class="ac-msg"></div>
@@ -888,6 +920,43 @@
             <input id="editClubName" placeholder="New club name" class="ac-field">
             <button class="ac-btn ac-btn-primary" style="width:100%;" onclick="adminRenameClub()">Save club name</button>
             <div id="renameMsg" class="ac-msg"></div>
+          </div>
+        </div>
+
+        <!-- ROOM: PAIRS (ODR — individuals combine into rated pairs) -->
+        <div class="ac-room" id="acRoomPairs">
+          <div class="ac-card">
+            <h4>Create a pair</h4>
+            <p style="font-size:12px;color:#7a6688;margin:0 0 9px;">Pick two individuals. The pair is born as one rated member: name A→Z, category from genders (Men's / Ladies / Mixed), initial rating = stronger×0.6 + weaker×0.4.</p>
+            <label style="font-size:11px;color:#7a6688;">Member A</label>
+            <div style="position:relative;"><input id="pAsearch" class="ac-field" placeholder="Search individual…" autocomplete="off"><div id="pAlist" class="odr-searchlist"></div></div>
+            <label style="font-size:11px;color:#7a6688;">Member B</label>
+            <div style="position:relative;"><input id="pBsearch" class="ac-field" placeholder="Search individual…" autocomplete="off"><div id="pBlist" class="odr-searchlist"></div></div>
+            <input id="pPin" class="ac-field" inputmode="numeric" placeholder="Pair PIN (4-digit)">
+            <div id="pairBirthPreview" style="font-size:12px;color:#7a6688;margin-bottom:9px;">Pick two individuals to preview the birth.</div>
+            <button class="ac-btn ac-btn-primary" style="width:100%;" onclick="odrCreatePair()">Create pair</button>
+            <div id="pairMsg" class="ac-msg"></div>
+          </div>
+
+          <div class="ac-card">
+            <h4>Bulk create pairs (paste)</h4>
+            <p style="font-size:12px;color:#7a6688;margin:0 0 8px;">Paste rows of <b>Person A, Person B, PIN</b> — one pair per line. Names must exactly match registered individuals. Category &amp; 60/40 rating are computed automatically.</p>
+            <textarea id="bulkPairText" class="ac-field" style="min-height:120px;font-family:monospace;font-size:12px;" placeholder="Andre Farrell, Bridget Dlamini, 4321&#10;Andre Farrell, Thomas Farrell, 4322"></textarea>
+            <button class="ac-btn ac-btn-primary" style="width:100%;" onclick="odrBulkCreatePairs()">Create all pasted pairs</button>
+            <div id="bulkPairMsg" class="ac-msg"></div>
+          </div>
+
+          <div class="ac-card">
+            <h4>Re-derive all pairs from current seeds</h4>
+            <p style="font-size:12px;color:#7a6688;margin:0 0 9px;">Recomputes every pair's <b>initial rating</b> = 60/40 of its two components' <b>current</b> individual seeds, overwrites the stored initial, then recomputes the whole club. Use this to fix any drift after editing individual seeds. Rarely needed — it moves ratings across the board.</p>
+            <button class="ac-btn ac-btn-primary" style="width:100%;" onclick="odrRederiveAll()">Re-derive all pairs &amp; recompute</button>
+            <div id="odrRederiveMsg" class="ac-msg"></div>
+          </div>
+
+          <div class="ac-card">
+            <h4>Current pairs <span id="odrPairCount" style="color:#7a6688;font-weight:600;"></span></h4>
+            <p style="font-size:11px;color:#7a6688;margin:0 0 8px;">Each pair is one rated entity. "Move" = current − initial (since inception).</p>
+            <div id="odrPairList" style="font-size:13px;">Loading…</div>
           </div>
         </div>
 
@@ -1038,16 +1107,28 @@ const GIDS = {
   mixed:'2006988657', allsorts:'863533181', universal:'669456070'
 };
 
-let MEN = [];
-let LADIES = [];
+let MEN = [];      // ODR: MEN'S PAIRS (gender 'M')
+let LADIES = [];   // ODR: LADIES' PAIRS (gender 'L')
+let MIXED = [];    // ODR: MIXED PAIRS (gender 'X')
 
-async function loadPlayers() {
+let INDIV_BY_NAME = {};   // name -> {id, gender, seed_rating} for pair auto-birth
+// PERF: cache the individuals roster. openPlayerModal used to await a full network fetch of
+// the individuals table on EVERY name-field tap → visible lag. Now loadPlayers fetches once
+// and returns instantly from cache; roster-change spots (add/edit/delete/import/pair-create)
+// call loadPlayers(true) to force a refresh.
+let _playersLoaded = false;
+async function loadPlayers(force) {
+  if (_playersLoaded && !force) return;   // serve from cache unless forced
   try {
-    const data = await sbGet(`players_public?select=name,gender&order=name.asc&club_id=eq.${CLUB_ID}`);
-    const m = data.filter(p=>p.gender==='M').map(p=>p.name);
-    const l = data.filter(p=>p.gender==='F').map(p=>p.name);
-    if (m.length > 0) MEN = m.sort((a,b)=>a.localeCompare(b));
-    if (l.length > 0) LADIES = l.sort((a,b)=>a.localeCompare(b));
+    // ODR hybrid entry: dropdowns show INDIVIDUALS (people), like OPR/OTR. Pairs are
+    // auto-born from the two people chosen. Men's list = M people, Ladies = F people.
+    const data = await sbGet(`individuals?select=id,full_name,gender,seed_rating&club_id=eq.${CLUB_ID}&order=full_name.asc`) || [];
+    INDIV_BY_NAME = {};
+    data.forEach(p=>{ INDIV_BY_NAME[p.full_name]={ id:p.id, gender:p.gender, seed_rating:p.seed_rating }; });
+    MEN    = data.filter(p=>p.gender==='M').map(p=>p.full_name).sort((a,b)=>a.localeCompare(b));
+    LADIES = data.filter(p=>p.gender==='F').map(p=>p.full_name).sort((a,b)=>a.localeCompare(b));
+    MIXED  = [];  // not used in individual entry
+    _playersLoaded = true;   // cache is now warm
   } catch(e){}
 }
 
@@ -1064,6 +1145,8 @@ function parseCSV(row) {
 }
 
 function getPlayerList(type) {
+  // ODR hybrid: returns INDIVIDUALS. Men's = men, Ladies = women, Mixed/All Sorts = everyone
+  // (so you can pick one man + one lady, or any combination).
   if(type==="Men's") return MEN;
   if(type==="Ladies") return LADIES;
   return [...MEN,...LADIES].sort((a,b)=>a.localeCompare(b));
@@ -1093,16 +1176,13 @@ const MK = { players:{t1p1:null,t1p2:null,t2p1:null,t2p2:null}, fmt:5, cat:"Men'
   over:false, view:'setup', preload:null, pickSlot:null };
 
 function mkPlayerPool(slot){
-  // MIRRORS +Enter Match openPlayerModal() exactly:
-  //  Men's -> men only; Ladies -> ladies only; All Sorts -> whole field;
-  //  Mixed -> if this slot's PARTNER is already chosen, restrict to the opposite gender
-  //           (a Mixed team must be one man + one lady); otherwise whole field.
+  // ODR doubles entry (4 individuals): Men's->men; Ladies->ladies; All Sorts->whole field;
+  // Mixed -> if partner chosen, restrict to opposite gender (one man + one lady).
   const cat=MK.cat;
   let pool;
   if(cat==="Men's") pool=(MEN||[]).slice();
   else if(cat==='Ladies') pool=(LADIES||[]).slice();
-  else pool=[...(MEN||[]),...(LADIES||[])]; // Mixed, All Sorts start from whole field
-  // Mixed partner-gender restriction (same rule as openPlayerModal)
+  else pool=[...(MEN||[]),...(LADIES||[])];
   if(cat==='Mixed' && slot){
     const partnerId = (slot==='t1p1')?'t1p2':(slot==='t1p2')?'t1p1':(slot==='t2p1')?'t2p2':'t2p1';
     const partnerName = MK.players[partnerId];
@@ -1119,6 +1199,8 @@ function mkOpen(preload){
   MK.preload = preload || null;
   MK.players={t1p1:null,t1p2:null,t2p1:null,t2p2:null};
   MK.fmt=5; MK.cat="Men's"; MK.format='doubles'; MK.firstServe=1; MK.view='setup'; MK.event="";
+  MK.returnToEntry=false;   // home-launched marker self-submits. markerFromEntry() sets this true.
+  if(typeof loadPlayers==='function'){ loadPlayers(); }   // ODR: refresh individuals for the pickers
   if(preload){
     if(preload.format) MK.format=preload.format;
     if(preload.t1){ MK.players.t1p1=preload.t1[0]; MK.players.t1p2=preload.t1[1]||null; }
@@ -1132,6 +1214,16 @@ function mkOpen(preload){
 function mkBack(){
   if(MK.view==='live'){ if(!confirm('Leave this match? The live score will be lost.')) return; }
   if(typeof liveFinish==='function' && typeof LIVE!=='undefined' && LIVE.active) liveFinish('abandoned');
+  // If opened from +Enter Score, return to that flow (Step 2) not home, so the user keeps
+  // their event/teams selection.
+  if(MK.returnToEntry){
+    MK.returnToEntry=false;
+    document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.classList.add('hidden');});
+    const es=document.getElementById('entryScreen'); es.classList.remove('hidden'); es.classList.add('active');
+    window.scrollTo(0,0);
+    if(typeof renderStep2==='function') renderStep2();
+    return;
+  }
   goHome();
 }
 
@@ -1148,9 +1240,9 @@ function mkRenderSetup(){
   const fmtDis = v => (lk.fmt && lk.fmtVal!==v) ? ' disabled style="opacity:.35;"' : '';
   const catDis = v => (lk.cat && lk.catVal!==v) ? ' disabled style="opacity:.35;"' : '';
   // Category options: doubles has Mixed + All Sorts; singles is Men's/Ladies only.
-  const catBtns = sing
-    ? `<button class="${segC("Men's")}"${catDis("Men's")} onclick="mkSetCat(&quot;Men's&quot;)">Men's</button><button class="${segC('Ladies')}"${catDis('Ladies')} onclick="mkSetCat('Ladies')">Ladies</button>`
-    : `<button class="${segC("Men's")}"${catDis("Men's")} onclick="mkSetCat(&quot;Men's&quot;)">Men's</button><button class="${segC('Ladies')}"${catDis('Ladies')} onclick="mkSetCat('Ladies')">Ladies</button><button class="${segC('Mixed')}"${catDis('Mixed')} onclick="mkSetCat('Mixed')">Mixed</button><button class="${segC('All Sorts')}"${catDis('All Sorts')} onclick="mkSetCat('All Sorts')">All Sorts</button>`;
+  // ODR: pairs run on the singles rail but a pair can be Men's/Ladies/Mixed and any
+  // pair can play All Sorts — always offer all four categories.
+  const catBtns = `<button class="${segC("Men's")}"${catDis("Men's")} onclick="mkSetCat(&quot;Men's&quot;)">Men's</button><button class="${segC('Ladies')}"${catDis('Ladies')} onclick="mkSetCat('Ladies')">Ladies</button><button class="${segC('Mixed')}"${catDis('Mixed')} onclick="mkSetCat('Mixed')">Mixed</button><button class="${segC('All Sorts')}"${catDis('All Sorts')} onclick="mkSetCat('All Sorts')">All Sorts</button>`;
   // Team block: doubles shows 2 slots per side; singles shows 1 (labelled "Player").
   const teamBlock = sing
     ? `<div class="mk-tl"><span class="mk-tdot" style="background:#E0631A;"></span>Player 1 (side 1)</div>
@@ -1207,7 +1299,7 @@ function mkReady(){ const p=MK.players; const hasPlayers=(MK.format==='singles')
 function mkSideName(side){
   const p=MK.players;
   if(MK.format==='singles') return side===1 ? p.t1p1 : p.t2p1;
-  return side===1 ? (p.t1p1+' & '+p.t1p2) : (p.t2p1+' & '+p.t2p2);
+  return side===1 ? pairName(p.t1p1,p.t1p2) : pairName(p.t2p1,p.t2p2);
 }
 // Stacked (one player per line) for the court header, so long pair names don't hit the serve dot.
 function mkSideNameStacked(side){
@@ -1235,13 +1327,10 @@ function mkPick(slot){
   const pool=mkPlayerPool(slot);
   const taken=Object.entries(MK.players).filter(([k,v])=>k!==slot&&v).map(([k,v])=>v);
   let note;
-  if(MK.cat==="Men's") note='Showing men only.';
-  else if(MK.cat==='Ladies') note='Showing ladies only.';
-  else if(MK.cat==='Mixed'){
-    const partnerId=(slot==='t1p1')?'t1p2':(slot==='t1p2')?'t1p1':(slot==='t2p1')?'t2p2':'t2p1';
-    const pn=MK.players[partnerId];
-    note = pn ? ('Mixed — partner is '+((MEN||[]).includes(pn)?'a man, so showing ladies':'a lady, so showing men')+'.') : 'Mixed — pick either; the partner slot then shows the opposite gender.';
-  } else note='All Sorts — whole field.';
+  if(MK.cat==="Men's") note='Showing Men\u2019s pairs.';
+  else if(MK.cat==='Ladies') note='Showing Ladies\u2019 pairs.';
+  else if(MK.cat==='Mixed') note='Showing Mixed pairs.';
+  else note='All Sorts \u2014 every pair.';
   let opts;
   if(!pool.length){ opts='<div style="padding:14px;color:#9a8578;font-size:13px;">No eligible players found.</div>'; }
   else opts=pool.map(n=>{ const dis=taken.includes(n); return `<button class="mk-popt" style="${dis?'opacity:.35;':''}" ${dis?'':`onclick="mkPicked('${n.replace(/'/g,"\\'")}')"`}>${n}${dis?' · in match':''}</button>`; }).join('');
@@ -1251,19 +1340,113 @@ function mkPick(slot){
   MK._pool=pool; MK._taken=taken;
 }
 function mkFilterPick(){
-  const q=(document.getElementById('mkSearch').value||'').toLowerCase();
-  const list=MK._pool.filter(n=>n.toLowerCase().includes(q));
+  const q=(document.getElementById('mkSearch').value||'').toLowerCase().trim();
+  const list=MK._pool.filter(n=>n.toLowerCase().startsWith(q));
   document.getElementById('mkPlist').innerHTML = list.map(n=>{ const dis=MK._taken.includes(n); return `<button class="mk-popt" style="${dis?'opacity:.35;':''}" ${dis?'':`onclick="mkPicked('${n.replace(/'/g,"\\'")}')"`}>${n}${dis?' · in match':''}</button>`; }).join('');
 }
 function mkPicked(name){ MK.players[MK.pickSlot]=name; mkCloseOv(); mkRenderSetup(); }
 function mkCloseOv(){ document.getElementById('mkOv').classList.remove('on'); }
 
 // ---------- start / core ----------
-function mkStart(){
-  MK.gp=[0,0]; MK.games=[0,0]; MK.scores=[]; MK.history=[]; MK.over=false;
+async function mkStart(){
+  await mkResolveHandicap();         // squash handicap: sets MK.hcTeam = [{base,alt,frac}, …] or null
+  MK.games=[0,0]; MK.scores=[]; MK.history=[]; MK.over=false; MK._pending=null;
+  MK.hcGameNo=0;                     // reset the alternation counter at the true start
+  MK.gp=mkNewGamePts();              // first game's starting head-start (alternates from here)
   MK.server=MK.firstServe; MK.box='R'; MK.view='live';
+  const bn=document.getElementById('mkBanner'); if(bn) bn.style.display='none';
   mkRenderLive();
   if(typeof liveStart==='function') liveStart();   // begin live broadcast (no-op if realtime unavailable)
+}
+// ===== SQUASH HANDICAP — true OPR parity (fractional/alternating) =====================
+// The underdog gets a POINTS head-start toward 11; the favourite always starts at 0. A
+// fractional handicap ALTERNATES per game (base most games, alt on the fraction's games),
+// realised by mkNewGamePts using the same g%2 / g%4 rule as OPR. The head-start only sets each
+// game's STARTING score on the live board; the final score submitted is the real played score,
+// and handicap events never touch the rating engine (routed via record_fixture_result).
+function mkNewGamePts(){
+  if(!MK.hcTeam) return [0,0];
+  MK.hcGameNo = (MK.hcGameNo||0) + 1;   // 1-based game counter
+  const g = MK.hcGameNo;
+  const startFor = (t)=>{
+    if(!t) return 0;
+    if(!t.frac || t.alt===t.base) return t.base;   // fixed every game
+    let useAlt=false;
+    if(t.frac===0.5) useAlt=(g%2===0);
+    else if(t.frac===0.25) useAlt=(g%4===0);
+    else if(t.frac===0.75) useAlt=(g%4!==0);
+    else useAlt=(g%2===0);
+    return useAlt ? t.alt : t.base;
+  };
+  return [ startFor(MK.hcTeam[0]), startFor(MK.hcTeam[1]) ];
+}
+// Peek the NEXT game's start WITHOUT advancing the counter (banner preview only).
+function mkPeekNextGamePts(){
+  if(!MK.hcTeam) return null;
+  const g = (MK.hcGameNo||0) + 1;
+  const startFor = (t)=>{
+    if(!t) return 0;
+    if(!t.frac || t.alt===t.base) return t.base;
+    let useAlt=false;
+    if(t.frac===0.5) useAlt=(g%2===0);
+    else if(t.frac===0.25) useAlt=(g%4===0);
+    else if(t.frac===0.75) useAlt=(g%4!==0);
+    else useAlt=(g%2===0);
+    return useAlt ? t.alt : t.base;
+  };
+  return [ startFor(MK.hcTeam[0]), startFor(MK.hcTeam[1]) ];
+}
+async function mkResolveHandicap(){
+  MK.hcTeam=null; MK.hcInfo=null;
+  // Resolve the handicap flag if it wasn't armed on the way in (entry-flow "Live Marker"
+  // launch skips the setup dropdown). Cache-first, then a direct lookup — so the head-start
+  // is guaranteed known BEFORE the first game starts.
+  if(MK.handicap===undefined){
+    const ev=(MK.event||'').trim();
+    MK.handicap=false;
+    if(ev && ev!=='Social' && ev!=='Ladder Match'){
+      if(window._mkEventHc && (ev in window._mkEventHc)){
+        MK.handicap=(window._mkEventHc[ev]===true);
+      } else {
+        try{
+          const hrow = await sbGet(`tournaments?select=handicap&club_id=eq.${CLUB_ID}&name=eq.${encodeURIComponent(ev)}&limit=1`);
+          MK.handicap=!!(hrow && hrow[0] && hrow[0].handicap);
+        }catch(e){ MK.handicap=false; }
+      }
+    }
+  }
+  if(!MK.handicap) return;
+  const na1=MK.players.t1p1, na2=MK.players.t1p2, nb1=MK.players.t2p1, nb2=MK.players.t2p2;
+  const singles=(MK.format==='singles');
+  if(!(na1 && nb1 && (singles || (na2 && nb2)))) return;
+  // Ensure the individual-rating cache is loaded (either launch path). Without it, sideRating
+  // returns null and the head-start silently falls back to 0 — the bug we are fixing.
+  try{
+    if(typeof odrBuildIndivRatings==='function' &&
+       (typeof ODR_INDIV_RATING==='undefined' || !ODR_INDIV_RATING || Object.keys(ODR_INDIV_RATING).length===0)){
+      await odrBuildIndivRatings();
+    }
+  }catch(e){}
+  const sideRating=(p1,p2)=>{
+    try{
+      if(singles) return odrIndivRating(p1);
+      const canon=[p1,p2].sort((x,y)=>x.localeCompare(y)).join(' & ');
+      if(typeof ODR_PAIR_RATING!=='undefined' && ODR_PAIR_RATING[canon]!=null) return Math.round(ODR_PAIR_RATING[canon]);
+      const ra=odrIndivRating(p1), rb=odrIndivRating(p2);
+      if(ra==null||rb==null) return null;
+      return Math.round(Math.max(ra,rb)*0.6+Math.min(ra,rb)*0.4);   // live 60/40
+    }catch(e){ return null; }
+  };
+  const rA=sideRating(na1,na2), rB=sideRating(nb1,nb2);
+  if(rA==null||rB==null) return;
+  if(Math.round(rA)===Math.round(rB)){ MK.hcInfo={scratch:true}; return; }
+  const hc=TM.computeHandicap(Math.max(rA,rB), Math.min(rA,rB));
+  if((hc.hcTarget||0)===0){ MK.hcInfo={scratch:true}; return; }
+  const favIsT1=(rA>rB);
+  const undT = { base:hc.hcBase, alt:hc.hcAlt, frac:hc.hcFrac };
+  const favT = { base:0, alt:0, frac:0 };
+  MK.hcTeam = favIsT1 ? [favT, undT] : [undT, favT];   // [team1, team2]
+  MK.hcInfo = { scratch:false, favIsT1, undTeam:(favIsT1?2:1), base:hc.hcBase, alt:hc.hcAlt, frac:hc.hcFrac, label:hc.hcLabel };
 }
 function mkSnap(){ MK.history.push(JSON.stringify({gp:MK.gp,games:MK.games,scores:MK.scores,server:MK.server,box:MK.box,over:MK.over})); if(MK.history.length>250)MK.history.shift(); }
 function mkRally(t){
@@ -1278,13 +1461,47 @@ function mkLet(){ if(MK.over)return; mkSnap(); mkFlash('Yes, let'); }
 function mkCheckGame(){
   const target=11; const [a,b]=MK.gp;             // to 11, NO win-by-2 (intl doubles)
   if(a>=target||b>=target){
-    const w=a>b?1:2; MK.games[w-1]++; MK.scores.push(a+'-'+b);
+    const w=a>b?1:2;
+    // Freeze the completed game, then show the GAME/SET banner (OPR parity). The actual
+    // advance (record score, reset to the NEXT game's head-start, swap server) happens on the
+    // tap in mkBannerTap — giving one clean moment to compute the next game's alternating start.
+    MK._pending = { winner:w, scoreA:a, scoreB:b };
     const need=MK.fmt===5?3:2;
-    if(MK.games[w-1]>=need){ MK.over=true; return; }
-    MK.gp=[0,0]; MK.server=w; MK.box='R';
+    const willFinish = (MK.games[w-1]+1) >= need;
+    mkShowBanner(willFinish?'set':'game', w);
   }
 }
-function mkUndo(){ if(!MK.history.length){ mkFlash('Nothing to undo'); return; } const s=JSON.parse(MK.history.pop()); MK.gp=s.gp;MK.games=s.games;MK.scores=s.scores;MK.server=s.server;MK.box=s.box;MK.over=s.over; mkRenderScore(); }
+// GAME/SET tap-to-continue banner (OPR parity). For handicap matches it previews the NEXT
+// game's starting head-start; the umpire taps to continue.
+function mkShowBanner(kind, team){
+  const bn=document.getElementById('mkBanner'); if(!bn){ mkAdvanceGame(); return; }
+  document.getElementById('mkBannerKind').textContent = (kind==='set'?'MATCH':'GAME');
+  document.getElementById('mkBannerWho').textContent = mkTeamShort(team) + ' win';
+  let sub='';
+  if(kind==='game' && MK.hcTeam){
+    const peek = mkPeekNextGamePts();
+    if(peek){ sub = 'Next game starts  '+mkPtDisp(peek[0])+' – '+mkPtDisp(peek[1]); }
+  }
+  document.getElementById('mkBannerSub').textContent = sub;
+  bn.style.display='flex';
+}
+function mkPtDisp(v){ return (v>0? ('+'+v) : String(v)); }   // squash: 0..8, underdog positive
+function mkTeamShort(team){ try{ return mkSideName(team) || ('Team '+team); }catch(e){ return 'Team '+team; } }
+// The tap that actually advances after a game/set banner.
+function mkBannerTap(){
+  const bn=document.getElementById('mkBanner'); if(bn) bn.style.display='none';
+  mkAdvanceGame();
+}
+function mkAdvanceGame(){
+  const p=MK._pending; MK._pending=null; if(!p) return;
+  const w=p.winner;
+  MK.games[w-1]++; MK.scores.push(p.scoreA+'-'+p.scoreB);
+  const need=MK.fmt===5?3:2;
+  if(MK.games[w-1]>=need){ MK.over=true; mkRenderScore(); return; }
+  MK.gp=mkNewGamePts(); MK.server=w; MK.box='R';   // next game's alternating head-start
+  mkRenderScore();
+}
+function mkUndo(){ if(MK._pending){ MK._pending=null; const bn=document.getElementById('mkBanner'); if(bn) bn.style.display='none'; } if(!MK.history.length){ mkFlash('Nothing to undo'); return; } const s=JSON.parse(MK.history.pop()); MK.gp=s.gp;MK.games=s.games;MK.scores=s.scores;MK.server=s.server;MK.box=s.box;MK.over=s.over; mkRenderScore(); }
 
 function mkOpenStroke(){
   const t1=mkSideName(1), t2=mkSideName(2);
@@ -1302,14 +1519,22 @@ function mkOpenConduct(){
   document.getElementById('mkOv').classList.add('on');
 }
 function mkConductStroke(t){ if(MK.over)return; mkSnap(); mkFlash('Conduct stroke → Team '+t); MK.gp[t-1]++; mkCheckGame(); mkRenderScore(); }
-function mkConductGame(t){ if(MK.over)return; mkSnap(); mkFlash('Conduct game → Team '+t); MK.games[t-1]++; MK.scores.push(MK.gp[0]+'-'+MK.gp[1]+'*'); const need=MK.fmt===5?3:2; if(MK.games[t-1]>=need){MK.over=true;} else {MK.gp=[0,0];MK.server=t;MK.box='R';} mkRenderScore(); }
+function mkConductGame(t){ if(MK.over)return; mkSnap(); mkFlash('Conduct game → Team '+t); MK._pending={winner:t, scoreA:MK.gp[0], scoreB:MK.gp[1]}; const need=MK.fmt===5?3:2; const willFinish=(MK.games[t-1]+1)>=need; mkShowBanner(willFinish?'set':'game', t); }
 
 // ---------- render ----------
 function mkRenderLive(){
   document.getElementById('mkTitle').textContent='Marker';
   const t1=mkSideName(1), t2=mkSideName(2);
   document.getElementById('mkContent').innerHTML = `
-  <div class="mk-live">
+  <div class="mk-live" style="position:relative;">
+    <div class="mk-banner" id="mkBanner" onclick="mkBannerTap()" style="display:none;">
+      <div class="mk-banner-inner">
+        <div class="mk-banner-kind" id="mkBannerKind">GAME</div>
+        <div class="mk-banner-who" id="mkBannerWho"></div>
+        <div class="mk-banner-sub" id="mkBannerSub"></div>
+        <div class="mk-banner-tap">tap to continue ▸</div>
+      </div>
+    </div>
     <div class="mk-top">
       <div class="mk-fmt" id="mkFmt">Best of ${MK.fmt} · ${MK.cat}</div>
       <div class="mk-gnum" id="mkGnum">Game 1</div>
@@ -1357,6 +1582,9 @@ function mkRenderScore(){
 
 // ---------- finish (STUBBED submission) ----------
 function mkEnd(){
+  // FROM ENTRY FLOW: opened via markerFromEntry() — don't run the marker's own PIN/submit
+  // screen; write the games into entryData and hand back to Step 3 (pre-filled).
+  if(MK.returnToEntry){ mkReturnToStep3(); return; }
   MK.view='finish';
   document.getElementById('mkTitle').textContent='Confirm & submit';
   const sing=(MK.format==='singles');
@@ -1414,9 +1642,10 @@ async function mkFillSetupEvent(){
   const sel=document.getElementById('mkSetupEvent'); if(!sel) return;
   let opts='<option value="">Choose event…</option>';
   window._mkEventDivs = {};   // name -> divisions string, for the auto-default lookup
+  window._mkEventHc = {};     // name -> handicap flag (arms the umpire head-start)
   try{
-    const data = await sbGet(`tournaments?select=name,divisions,active,archived&active=eq.true&archived=eq.false&club_id=eq.${CLUB_ID}&order=id.desc`);
-    (data||[]).forEach(t=>{ window._mkEventDivs[t.name]=t.divisions||''; opts+=`<option value="${String(t.name).replace(/"/g,'&quot;')}">${t.name}</option>`; });
+    const data = await sbGet(`tournaments?select=name,divisions,handicap,active,archived&active=eq.true&archived=eq.false&club_id=eq.${CLUB_ID}&order=id.desc`);
+    (data||[]).forEach(t=>{ window._mkEventDivs[t.name]=t.divisions||''; window._mkEventHc[t.name]=(t.handicap===true); opts+=`<option value="${String(t.name).replace(/"/g,'&quot;')}">${t.name}</option>`; });
   }catch(e){}
   opts+='<option value="Social">Social</option><option value="Ladder Match">Ladder Match</option>';
   sel.innerHTML=opts;
@@ -1430,21 +1659,27 @@ async function mkFillSetupEvent(){
 function mkSetupEventChanged(ev){
   ev=(ev||'').trim();
   MK.event=ev;
+  MK.handicap = !!(ev && ev!=='Social' && ev!=='Ladder Match' && window._mkEventHc && window._mkEventHc[ev]===true);
+  const hadLock = !!(MK.eventLocked && MK.eventLocked.cat);
   MK.eventLocked = { fmt:false, cat:false, catVal:null, fmtVal:null };
+  let needsRerender = hadLock;   // if we HAD a lock, we must re-render to clear it
+  // ODR: every match is pair-vs-pair (singles rail). We never change format on event.
+  // We only optionally lock the CATEGORY when a tournament has a single division.
   if(ev && ev!=='Social' && ev!=='Ladder Match'){
     const divStr = (window._mkEventDivs && window._mkEventDivs[ev]) || '';
     const divs = divStr.split(',').map(s=>s.trim()).filter(Boolean);
     if(divs.length){
-      const allSingles = divs.every(d=>/singles/i.test(d));
-      const allDoubles = divs.every(d=>!/singles/i.test(d));
-      if(allSingles){ MK.format='singles'; MK.eventLocked.fmt=true; MK.eventLocked.fmtVal='singles';
-        if(MK.cat!=="Men's" && MK.cat!=='Ladies') MK.cat="Men's"; }
-      else if(allDoubles){ MK.format='doubles'; MK.eventLocked.fmt=true; MK.eventLocked.fmtVal='doubles'; }
       const bases = [...new Set(divs.map(d=>d.replace(/\s*Singles$/i,'').trim()))];
-      if(bases.length===1){ MK.cat=bases[0]; MK.eventLocked.cat=true; MK.eventLocked.catVal=bases[0]; }
+      if(bases.length===1){ MK.cat=bases[0]; MK.eventLocked.cat=true; MK.eventLocked.catVal=bases[0]; needsRerender=true; }
     }
   }
-  mkRenderSetup();
+  // Only re-render the setup when a category lock actually changed (tournament events).
+  // For Social / Ladder / empty there is no lock, so we DON'T re-render — that was the
+  // flicker/jump that reset the event dropdown.
+  if(needsRerender){
+    mkRenderSetup();
+    const sel=document.getElementById('mkSetupEvent'); if(sel) sel.value = MK.event || '';
+  }
 }
 function mkFillSubmitterNames(){
   const sel=document.getElementById('submitterName'); if(!sel) return;
@@ -1481,6 +1716,48 @@ async function mkSubmit(){
   });
   entryData._forceFixtureRound = null;
   await submitMatch();
+}
+
+// Hand a completed live-marked match BACK to +Enter Score at Step 3 (pre-filled). Builds
+// entryData exactly as mkSubmit does, then shows the entry screen at Step 3 with the score
+// inputs filled. The user confirms + submits through the normal path (step3Next -> Step 4).
+function mkReturnToStep3(){
+  const sing=(MK.format==='singles');
+  const g1=MK.games[0], g2=MK.games[1];
+  let p1=0,p2=0; MK.scores.forEach(s=>{ const[x,y]=s.replace('*','').split('-').map(Number); p1+=x; p2+=y; });
+  entryData = entryData || {};
+  entryData.type   = MK.cat;
+  entryData.format = sing ? 'singles' : 'doubles';
+  entryData.event  = MK.event || entryData.event || 'Social';
+  entryData.sets   = MK.scores.length;
+  entryData.t1p1   = MK.players.t1p1;
+  entryData.t1p2   = sing ? null : MK.players.t1p2;
+  entryData.t2p1   = MK.players.t2p1;
+  entryData.t2p2   = sing ? null : MK.players.t2p2;
+  entryData.t1sets = g1; entryData.t2sets = g2;
+  entryData.t1games= p1; entryData.t2games= p2;
+  const parsed=[];
+  MK.scores.forEach((sc,idx)=>{
+    const [a,b]=sc.replace('*','').split('-');
+    entryData['set'+(idx+1)+'t1']=a;
+    entryData['set'+(idx+1)+'t2']=b;
+    parsed.push([Number(a),Number(b)]);
+  });
+  if(typeof liveFinish==='function' && typeof LIVE!=='undefined' && LIVE.active) liveFinish('finished');
+  MK.returnToEntry=false;
+  // show entry screen at Step 3 WITHOUT showScreen('entryScreen') (which calls renderStep1
+  // and would reset the flow). Un-hide entry, hide marker, render Step 3, pre-fill scores.
+  document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.classList.add('hidden');});
+  const es=document.getElementById('entryScreen'); es.classList.remove('hidden'); es.classList.add('active');
+  window.scrollTo(0,0);
+  renderStep3();
+  setTimeout(()=>{
+    parsed.forEach(([a,b],idx)=>{
+      const i1=document.getElementById('s'+(idx+1)+'t1'), i2=document.getElementById('s'+(idx+1)+'t2');
+      if(i1) i1.value=a; if(i2) i2.value=b;
+      if(typeof hlWin==='function') hlWin(idx+1);
+    });
+  }, 30);
 }
 
 
@@ -1601,9 +1878,9 @@ async function watchLoadLiveList(){
   try{
     const rows = await sbGet(`live_matches?select=id,match_code,format,category,t1p1,t1p2,t2p1,t2p2,games_t1,games_t2&status=eq.live&club_id=eq.${CLUB_ID}&order=updated_at.desc`);
     if(!rows || !rows.length){ box.innerHTML='<div style="color:#9a8578;font-size:13px;">No live matches right now.</div>'; return; }
-    box.innerHTML = rows.map(r=>{
-      const t1 = r.format==='singles' ? r.t1p1 : (r.t1p1+' & '+r.t1p2);
-      const t2 = r.format==='singles' ? r.t2p1 : (r.t2p1+' & '+r.t2p2);
+    box.innerHTML = singlesCard + rows.map(r=>{
+      const t1 = r.format==='singles' ? r.t1p1 : pairName(r.t1p1,r.t1p2);
+      const t2 = r.format==='singles' ? r.t2p1 : pairName(r.t2p1,r.t2p2);
       return `<button onclick="watchJoin('${r.id}')" style="width:100%;text-align:left;background:#241509;border:1.5px solid rgba(255,160,60,.25);border-radius:11px;padding:12px;margin-bottom:8px;color:#fff;cursor:pointer;">
         <div style="font-size:11px;color:#FFA033;font-weight:800;">${r.match_code} · ${r.category||''}</div>
         <div style="font-size:14px;margin-top:3px;">${t1} <span style="color:#9a8578;">${r.games_t1}–${r.games_t2}</span> ${t2}</div>
@@ -1694,17 +1971,213 @@ function adminExit(){
   if(confirm('Exit the Admin Control Room?')) goHome();
 }
 function acRoom(which){
-  ['members','tours','matches','club'].forEach(r=>{
+  ['members','pairs','tours','matches','club'].forEach(r=>{
     const el=document.getElementById('acRoom'+r.charAt(0).toUpperCase()+r.slice(1));
     if(el) el.classList.toggle('active', r===which);
   });
   document.getElementById('acTabMembers').classList.toggle('active', which==='members');
+  const pt=document.getElementById('acTabPairs'); if(pt) pt.classList.toggle('active', which==='pairs');
   document.getElementById('acTabTours').classList.toggle('active', which==='tours');
   document.getElementById('acTabMatches').classList.toggle('active', which==='matches');
   document.getElementById('acTabClub').classList.toggle('active', which==='club');
   if(which==='club') renderClubDetails();
   if(which==='matches') adminLoadMatches();
+  if(which==='pairs') odrLoadPairsRoom();
   if(which==='tours' && typeof atToggleType==='function') atToggleType();
+}
+
+// ============================================================
+// ODR PAIRS — individuals combine into rated pairs (the one net-new module).
+// Individuals live in the `individuals` table (read/written via REST). A pair is
+// born as a normal players row via adminCall('add_member') so it flows through the
+// deployed admin function (which also seeds player_results). Name is A→Z; category
+// is M/L/X from the two genders; initial rating is stronger×0.6 + weaker×0.4.
+// ============================================================
+let ODR_INDIV=[], ODR_PAIRS=[], odrSelA=null, odrSelB=null, odrSearchWired=false;
+function odrRhu(x){ return Math.floor(x+0.5); }
+function odrWeighted(a,b){ return odrRhu(Math.max(a,b)*0.6 + Math.min(a,b)*0.4); }
+function odrPairCat(gA,gB){ if(gA==='M'&&gB==='M')return'M'; if(gA==='F'&&gB==='F')return'L'; return'X'; }
+function odrCatLabel(c){ return c==='M'?"Men's":c==='L'?'Ladies':'Mixed'; }
+function odrPairName(nA,nB){ return [nA,nB].sort(function(x,y){return x.localeCompare(y);}).join(' & '); }
+function odrCid(){ return Number(document.getElementById('adminClubSelect').value)||1; }
+
+async function odrRestGet(path){
+  const r=await fetch(SB_URL+'/rest/v1/'+path,{ headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON } });
+  if(!r.ok) throw new Error('GET '+path+' → '+r.status+' '+(await r.text())); return r.json();
+}
+async function odrRestPost(table,row){
+  const r=await fetch(SB_URL+'/rest/v1/'+table,{ method:'POST', headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON, 'Content-Type':'application/json', Prefer:'return=representation' }, body:JSON.stringify(row) });
+  if(!r.ok) throw new Error(await r.text()); return r.json();
+}
+
+async function odrLoadPairsRoom(){
+  const cid=odrCid();
+  try{
+    ODR_INDIV = await odrRestGet('individuals?club_id=eq.'+cid+'&order=full_name.asc');
+  }catch(e){ ODR_INDIV=[]; }
+  try{
+    const pl = await odrRestGet('players?club_id=eq.'+cid+'&select=id,name,gender,initial_rating,pin,member_a_id,member_b_id&order=name.asc');
+    ODR_PAIRS = (pl||[]).filter(function(p){ return p.member_a_id!=null && p.member_b_id!=null; });
+    const pr = await odrRestGet('player_results?club_id=eq.'+cid+'&select=player_id,current_rating');
+    const cur={}; (pr||[]).forEach(function(r){ cur[r.player_id]=r.current_rating; });
+    ODR_PAIRS.forEach(function(p){ p._cur=(cur[p.id]!=null?cur[p.id]:p.initial_rating); });
+  }catch(e){ ODR_PAIRS=[]; }
+  if(!odrSearchWired){ odrWireSearch(); odrSearchWired=true; }
+  odrRenderPairList();
+  odrRefreshBirthPreview();
+}
+
+function odrRenderPairList(){
+  const box=document.getElementById('odrPairList'); if(!box) return;
+  const cnt=document.getElementById('odrPairCount'); if(cnt) cnt.textContent='('+ODR_PAIRS.length+')';
+  if(!ODR_PAIRS.length){ box.innerHTML='<span style="color:#7a6688;">No pairs yet. Create one above.</span>'; return; }
+  box.innerHTML = ODR_PAIRS.map(function(p){ const mv=(p._cur-p.initial_rating);
+    return '<div class="odr-pair-row"><span style="flex:1;font-weight:600;">'+p.name+'</span>'+
+      '<span class="odr-cat-pill odr-cat-'+p.gender+'">'+odrCatLabel(p.gender)+'</span>'+
+      '<span style="width:52px;text-align:right;color:#7a6688;">'+p.initial_rating+'</span>'+
+      '<span style="width:52px;text-align:right;font-weight:800;color:#D35400;">'+p._cur+'</span>'+
+      '<span style="width:46px;text-align:right;font-size:12px;color:'+(mv>=0?'#1e8449':'#c0392b')+';">'+(mv>0?'+':'')+mv+'</span></div>';
+  }).join('');
+}
+
+function odrWireSearch(){
+  function wire(inputId,listId,setter,excludeGetter){
+    const inp=document.getElementById(inputId), list=document.getElementById(listId);
+    if(!inp||!list) return;
+    function render(q){
+      const ql=(q||'').toLowerCase();
+      const exclId = excludeGetter ? (excludeGetter() ? excludeGetter().id : null) : null;
+      const ms=ODR_INDIV.filter(function(i){
+        if(exclId!=null && i.id===exclId) return false;         // don't offer the already-picked partner
+        return i.full_name.toLowerCase().startsWith(ql);
+      });
+      list.innerHTML=ms.map(function(i){ return '<div data-id="'+i.id+'">'+i.full_name+' <span style="color:#9a8578;">('+i.gender+' '+i.seed_rating+')</span></div>'; }).join('');
+      list.classList.add('show');
+      list.querySelectorAll('div').forEach(function(d){ d.onclick=function(){ const id=+d.getAttribute('data-id'); const ind=ODR_INDIV.find(function(x){return x.id===id;}); inp.value=ind.full_name; list.classList.remove('show'); setter(ind); odrRefreshBirthPreview(); }; });
+    }
+    inp.addEventListener('focus',function(){ render(inp.value); });
+    inp.addEventListener('input',function(){ render(inp.value); setter(null); odrRefreshBirthPreview(); });
+    document.addEventListener('click',function(e){ if(e.target!==inp && !list.contains(e.target)) list.classList.remove('show'); });
+  }
+  // Member A: always the full roster. Member B: excludes whoever A is.
+  wire('pAsearch','pAlist',function(v){ odrSelA=v; refreshBList(); },null);
+  wire('pBsearch','pBlist',function(v){ odrSelB=v; },function(){ return odrSelA; });
+  // when A changes, if B's list is open, re-render it so the new A is excluded
+  window.__odrRefreshBList = function(){
+    const inp=document.getElementById('pBsearch'), list=document.getElementById('pBlist');
+    if(inp && list && list.classList.contains('show')) inp.dispatchEvent(new Event('input'));
+  };
+}
+function refreshBList(){ if(window.__odrRefreshBList) window.__odrRefreshBList(); }
+
+function odrRefreshBirthPreview(){
+  const el=document.getElementById('pairBirthPreview'); if(!el) return;
+  if(!odrSelA||!odrSelB){ el.textContent='Pick two individuals to preview the birth.'; return; }
+  if(odrSelA.id===odrSelB.id){ el.innerHTML='<span style="color:#c0392b;">Pick two <b>different</b> people.</span>'; return; }
+  const init=odrWeighted(odrSelA.seed_rating,odrSelB.seed_rating), cat=odrPairCat(odrSelA.gender,odrSelB.gender);
+  el.innerHTML='Will create: <b>'+odrPairName(odrSelA.full_name,odrSelB.full_name)+'</b> · '+
+    '<span class="odr-cat-pill odr-cat-'+cat+'">'+odrCatLabel(cat)+'</span> · initial <b>'+init+'</b> '+
+    '('+Math.max(odrSelA.seed_rating,odrSelB.seed_rating)+'×0.6 + '+Math.min(odrSelA.seed_rating,odrSelB.seed_rating)+'×0.4)';
+}
+
+async function odrBirthPair(a,b,pin){
+  if(!a||!b) throw new Error('two individuals required');
+  if(a.id===b.id) throw new Error('a pair needs two different people');
+  const lo=a.id<b.id?a.id:b.id, hi=a.id<b.id?b.id:a.id;
+  if(ODR_PAIRS.find(function(p){ return p.member_a_id===lo && p.member_b_id===hi; })) throw new Error('that pair already exists');
+  const init=odrWeighted(a.seed_rating,b.seed_rating), cat=odrPairCat(a.gender,b.gender), nm=odrPairName(a.full_name,b.full_name);
+  // Create the pair as a players row via the deployed admin function (seeds player_results too).
+  const r=await adminCall('add_member',{ club_id:odrCid(), name:nm, gender:cat, initial_rating:init, pin:(pin||'') });
+  if(!r.ok) throw new Error(r.error||'add_member failed');
+  const pid = r.member ? r.member.id : null;
+  // Stamp the member link so this players row is recognised as a pair (REST patch).
+  if(pid!=null){
+    await fetch(SB_URL+'/rest/v1/players?id=eq.'+pid,{ method:'PATCH', headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON, 'Content-Type':'application/json' }, body:JSON.stringify({ member_a_id:lo, member_b_id:hi }) });
+  }
+  return { name:nm, cat:cat, init:init };
+}
+
+async function odrCreatePair(){
+  const msg=document.getElementById('pairMsg');
+  try{
+    const pin=document.getElementById('pPin').value.trim();
+    const res=await odrBirthPair(odrSelA,odrSelB,pin);
+    msg.innerHTML='<span style="color:#1e8449;">Born: <b>'+res.name+'</b> · '+odrCatLabel(res.cat)+' · initial '+res.init+'.</span>';
+    document.getElementById('pAsearch').value=''; document.getElementById('pBsearch').value=''; document.getElementById('pPin').value='';
+    odrSelA=null; odrSelB=null; odrRefreshBirthPreview();
+    await odrLoadPairsRoom();
+  }catch(e){
+    const em=(e.message||String(e));
+    msg.innerHTML='<span style="color:#c0392b;">'+(em.indexOf('players_pair_unique')>=0?'That pair already exists.':em)+'</span>';
+  }
+}
+
+async function odrBulkCreatePairs(){
+  const msg=document.getElementById('bulkPairMsg');
+  const raw=document.getElementById('bulkPairText').value;
+  const lines=raw.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length;});
+  if(!lines.length){ msg.innerHTML='<span style="color:#c0392b;">Paste some rows first.</span>'; return; }
+  const byName={}; ODR_INDIV.forEach(function(i){ byName[i.full_name.toLowerCase()]=i; });
+  const jobs=[], errs=[];
+  lines.forEach(function(ln,i){
+    const parts=ln.split(/\t|,/).map(function(p){return p.trim();}).filter(function(p){return p!=='';});
+    if(parts.length<2){ errs.push('Line '+(i+1)+': need Person A, Person B.'); return; }
+    const a=byName[(parts[0]||'').toLowerCase()], b=byName[(parts[1]||'').toLowerCase()], pin=parts[2]||'';
+    if(!a){ errs.push('Line '+(i+1)+': "'+parts[0]+'" not a registered individual.'); return; }
+    if(!b){ errs.push('Line '+(i+1)+': "'+parts[1]+'" not a registered individual.'); return; }
+    jobs.push({a:a,b:b,pin:pin});
+  });
+  if(errs.length){ msg.innerHTML='<span style="color:#c0392b;">'+errs.join('<br>')+'</span>'; return; }
+  msg.innerHTML='Creating '+jobs.length+' pairs…';
+  let ok=0, fail=0, failN=[];
+  for(const j of jobs){ try{ await odrBirthPair(j.a,j.b,j.pin); ok++; await odrLoadPairsRoom(); }catch(e){ fail++; failN.push(odrPairName(j.a.full_name,j.b.full_name)+' ('+(e.message||e)+')'); } }
+  let out='<span style="color:#1e8449;">Created '+ok+' pair'+(ok===1?'':'s')+'.</span>';
+  if(fail) out+=' <span style="color:#c0392b;">'+fail+' failed:<br>'+failN.join('<br>')+'</span>';
+  msg.innerHTML=out;
+  if(ok){ document.getElementById('bulkPairText').value=''; await odrLoadPairsRoom(); }
+}
+
+async function odrRederiveAll(){
+  const msg=document.getElementById('odrRederiveMsg');
+  try{
+    // current seeds of every individual in this club
+    const inds = await odrRestGet('individuals?club_id=eq.'+odrCid()+'&select=id,seed_rating,full_name');
+    const seedById={}; (inds||[]).forEach(x=>{ seedById[x.id]=x.seed_rating; });
+    // every pair (players row with two component links)
+    const pairs = await odrRestGet('players?club_id=eq.'+odrCid()+'&select=id,name,initial_rating,member_a_id,member_b_id');
+    const realPairs = (pairs||[]).filter(p=>p.member_a_id!=null && p.member_b_id!=null);
+    if(!realPairs.length){ msg.innerHTML='<span style="color:#c0392b;">No pairs to re-derive.</span>'; return; }
+    // compute the new initial for each; collect changes
+    const changes=[];
+    for(const p of realPairs){
+      const sa=seedById[p.member_a_id], sb=seedById[p.member_b_id];
+      if(sa==null || sb==null) continue;                 // component missing — skip
+      const newInit=odrWeighted(sa,sb);
+      if(Number(p.initial_rating)!==newInit){ changes.push({p, from:Math.round(p.initial_rating), to:newInit}); }
+    }
+    if(!changes.length){ msg.innerHTML='<span style="color:#1e8449;">All pairs already match their components\u2019 current seeds. Nothing to change.</span>'; return; }
+    // confirm with a before/after summary
+    const preview = changes.slice(0,12).map(c=>c.p.name+': '+c.from+' \u2192 '+c.to).join('\n')+(changes.length>12?('\n\u2026and '+(changes.length-12)+' more'):'');
+    if(!confirm('This will overwrite the initial rating of '+changes.length+' pair'+(changes.length===1?'':'s')+' and replay all their matches:\n\n'+preview+'\n\nContinue?')) { msg.innerHTML='Cancelled.'; return; }
+    msg.innerHTML='Re-deriving '+changes.length+' pair'+(changes.length===1?'':'s')+'\u2026';
+    // write the new initial + season_initial for each changed pair
+    for(const c of changes){
+      await fetch(SB_URL+'/rest/v1/players?id=eq.'+c.p.id,{ method:'PATCH', headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON, 'Content-Type':'application/json' }, body:JSON.stringify({ initial_rating:c.to, season_initial:c.to }) });
+    }
+    // Fire recompute WITHOUT blocking on it — it takes several seconds and awaiting it
+    // was throwing "failed to fetch" even though the writes land. Fire-and-forget, then
+    // refresh the table after a short delay so the new ratings are visible in place.
+    fetch(SB_URL+'/functions/v1/recompute',{ method:'POST', headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON, 'Content-Type':'application/json' }, body:JSON.stringify({ club_id:odrCid() }) }).catch(()=>{});
+    let out='<span style="color:#1e8449;">Re-derived '+changes.length+' pair'+(changes.length===1?'':'s')+'. Recomputing ratings in the background\u2026 (this table refreshes in a few seconds).</span><br>';
+    out+=changes.slice(0,20).map(c=>c.p.name+': <b>'+c.from+' \u2192 '+c.to+'</b>').join('<br>');
+    if(changes.length>20) out+='<br>\u2026and '+(changes.length-20)+' more';
+    msg.innerHTML=out;
+    await odrLoadPairsRoom();                 // immediate: shows the new INITIALS at once
+    setTimeout(async()=>{                       // delayed: shows the recomputed CURRENT ratings
+      try{ await odrLoadPairsRoom(); const m=document.getElementById('odrRederiveMsg'); if(m) m.innerHTML='<span style="color:#1e8449;">Done \u2014 ratings recomputed and updated below.</span>'; }catch(_e){}
+    }, 4000);
+    return;
+  }catch(e){ msg.innerHTML='<span style="color:#c0392b;">'+(e.message||e)+'</span>'; }
 }
 function acUpdateContext(){
   const sel=document.getElementById('adminClubSelect');
@@ -1763,30 +2236,71 @@ async function adminDeleteClub(){
   await refreshClubs();
 }
 async function adminLoadMembers(){
+  // ODR: the "Individuals" tab lists INGREDIENTS from the individuals table.
   const cid=document.getElementById('adminClubSelect').value; if(!cid) return;
   const box=document.getElementById('adminMembers'); box.innerHTML='Loading...';
-  const r=await adminCall('list_members',{ club_id:Number(cid) });
-  if(!r.ok){ box.innerHTML='<span style="color:#c0392b;">'+r.error+'</span>'; return; }
-  if(r.members.length===0){ box.innerHTML='<div style="color:#888;padding:6px 0;">No members yet.</div>'; return; }
-  // Pull sets-played per member (from player_results) so an admin can spot under-12-set players after a bulk reset.
-  const setsByName={};
-  try{
-    const pr=await sbGet('player_results?select=name,sets_played&club_id=eq.'+Number(cid))||[];
-    pr.forEach(p=>{ setsByName[p.name]=p.sets_played||0; });
-  }catch(e){}
-  let html='<table class="ladder-table"><thead><tr><th>Name</th><th>G</th><th>Rating</th><th>Games</th><th>PIN</th><th></th></tr></thead><tbody>';
-  r.members.forEach(m=>{
-    const sets = setsByName[m.name]||0;
-    const lowFlag = sets<12 ? ' style="color:#c0392b;font-weight:700;" title="Under 12 games — not yet proven; consider adjusting initial rating"' : '';
-    html+='<tr><td>'+m.name+'</td><td>'+m.gender+'</td><td>'+Math.round(m.initial_rating)+'</td>'
-      +'<td'+lowFlag+'>'+sets+(sets<12?' ⚠':'')+'</td><td>'+(m.pin||'—')+'</td>'
-      +'<td style="white-space:nowrap;"><button onclick="adminEditMember('+m.id+',\''+m.name.replace(/'/g,"\\'")+'\','+m.initial_rating+',\''+(m.pin||'')+'\')" style="background:none;border:none;color:#D35400;cursor:pointer;">edit</button> '
-      +'<button onclick="adminDeleteMember('+m.id+',\''+m.name.replace(/'/g,"\\'")+'\')" style="background:none;border:none;color:#c0392b;cursor:pointer;">del</button></td></tr>';
+  let inds=[];
+  try{ inds=await odrRestGet('individuals?club_id=eq.'+Number(cid)+'&order=full_name.asc'); }
+  catch(e){ box.innerHTML='<span style="color:#c0392b;">'+(e.message||e)+'</span>'; adminLoadTournaments(); return; }
+  if(!inds.length){ box.innerHTML='<div style="color:#888;padding:6px 0;">No individuals yet. Add them above, then build pairs in the Pairs tab.</div>'; adminLoadTournaments(); return; }
+  let html='<table class="ladder-table"><thead><tr><th>Name</th><th>G</th><th>Seed</th><th>PIN</th><th></th></tr></thead><tbody>';
+  inds.forEach(m=>{
+    html+='<tr><td>'+m.full_name+'</td><td>'+m.gender+'</td><td>'+Math.round(m.seed_rating)+'</td><td>'+(m.pin||'—')+'</td>'
+      +'<td style="white-space:nowrap;"><button onclick="odrEditIndividual('+m.id+',\''+m.full_name.replace(/'/g,"\\'")+'\','+m.seed_rating+',\''+(m.pin||'')+'\',\''+m.gender+'\')" style="background:none;border:none;color:#D35400;cursor:pointer;">edit</button> '
+      +'<button onclick="odrDeleteIndividual('+m.id+',\''+m.full_name.replace(/'/g,"\\'")+'\')" style="background:none;border:none;color:#c0392b;cursor:pointer;">del</button></td></tr>';
   });
   html+='</tbody></table>';
-  html+='<div style="font-size:11px;color:#7a6688;margin-top:6px;">⚠ = under 12 games played (not yet proven — a good candidate for a manual initial-rating check after a bulk reset).</div>';
+  html+='<div style="font-size:11px;color:#7a6688;margin-top:6px;">Individuals are the ingredients — never entered in matches directly. Build pairs from them in the Pairs tab. Editing a seed re-derives any pairs they are in on the next recompute.</div>';
   box.innerHTML=html;
   adminLoadTournaments();
+}
+// ODR individual edit/delete (REST; the individuals table is net-new).
+async function odrEditIndividual(id,name,seed,pin,gender){
+  const newName=prompt('Full name:',name); if(newName===null) return;
+  const newSeed=prompt('Seed rating:',seed); if(newSeed===null) return;
+  const newPin=prompt('PIN (blank = none):',pin||''); if(newPin===null) return;
+  const seedNum = Number(newSeed)||seed;
+  const seedChanged = (Number(seed) !== seedNum);
+  // If the SEED changed, this recalibrates every team this individual is a component of:
+  // each such team's initial re-derives from the 60/40 of its two components' CURRENT seeds,
+  // and the whole club replays from there. Warn, because it moves history across the board.
+  if(seedChanged){
+    if(!confirm('Changing '+name+'\u2019s seed rating to '+seedNum+' will RE-DERIVE the initial rating of every team '+name+' is part of (60/40 of the two components) and REPLAY all their matches from the new starting point.\n\nThis moves ratings across the board. Use it mainly early on, when a person\u2019s true strength wasn\u2019t known.\n\nContinue?')) return;
+  }
+  const patch={ full_name:newName.trim(), seed_rating:seedNum, pin:(newPin.trim()||null) };
+  try{
+    // 1) update the individual (the component)
+    await fetch(SB_URL+'/rest/v1/individuals?id=eq.'+id,{ method:'PATCH', headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON, 'Content-Type':'application/json' }, body:JSON.stringify(patch) });
+
+    if(seedChanged){
+      // 2) fetch this club's individuals (so we have every component's CURRENT seed)
+      const inds = await odrRestGet('individuals?club_id=eq.'+odrCid()+'&select=id,seed_rating');
+      const seedById={}; (inds||[]).forEach(x=>{ seedById[x.id]=x.seed_rating; });
+      // 3) find every team this individual is a component of
+      const teams = await odrRestGet('players?club_id=eq.'+odrCid()+'&select=id,name,member_a_id,member_b_id&or=(member_a_id.eq.'+id+',member_b_id.eq.'+id+')');
+      // 4) re-derive each team's initial from the 60/40 of BOTH current component seeds,
+      //    overwrite initial_rating AND season_initial (engine replays from season_initial)
+      for(const t of (teams||[])){
+        const sa = seedById[t.member_a_id], sb = seedById[t.member_b_id];
+        if(sa==null || sb==null) continue;
+        const newInit = odrWeighted(sa, sb);
+        await fetch(SB_URL+'/rest/v1/players?id=eq.'+t.id,{ method:'PATCH', headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON, 'Content-Type':'application/json' }, body:JSON.stringify({ initial_rating:newInit, season_initial:newInit }) });
+      }
+      // fire recompute WITHOUT blocking (it's slow; awaiting threw "failed to fetch")
+      fetch(SB_URL+'/functions/v1/recompute',{ method:'POST', headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON, 'Content-Type':'application/json' }, body:JSON.stringify({ club_id:odrCid() }) }).catch(()=>{});
+      alert('Re-derived '+((teams||[]).length)+' team'+(((teams||[]).length)===1?'':'s')+'. Ratings are recomputing in the background and will update shortly.');
+    }
+    _playersLoaded=false;   // roster (name/seed) changed — refresh cached player list on next open
+    adminLoadMembers();
+  }catch(e){ alert(e.message||e); }
+}
+async function odrDeleteIndividual(id,name){
+  if(!confirm('Delete individual "'+name+'"? (Pairs already built from them are unaffected.)')) return;
+  try{
+    await fetch(SB_URL+'/rest/v1/individuals?id=eq.'+id,{ method:'DELETE', headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON } });
+    _playersLoaded=false;   // roster changed — refresh cached player list on next open
+    adminLoadMembers();
+  }catch(e){ alert(e.message||e); }
 }
 async function adminLoadTournaments(){
   const cid=document.getElementById('adminClubSelect').value; if(!cid) return;
@@ -2083,18 +2597,22 @@ async function adminDeleteTournament(id, name){
   adminLoadTournaments();
 }
 async function adminAddMember(){
+  // ODR: the "Individuals" tab registers an INGREDIENT into the individuals table
+  // (not a players row). Default rating 1500 (M) / 1300 (F) when left blank.
   const cid=document.getElementById('adminClubSelect').value;
   const name=document.getElementById('amName').value.trim();
   const gender=document.getElementById('amGender').value;
-  const rating=document.getElementById('amRating').value||1200;
-  const pin=document.getElementById('amPin').value.trim();
+  let rating=parseInt(document.getElementById('amRating').value); if(isNaN(rating)) rating=(gender==='M'?1500:1300);
+  const pin=document.getElementById('amPin').value.trim()||null;
   const msg=document.getElementById('adminMsg');
   if(!name){ msg.innerHTML='<span style="color:#c0392b;">Name required.</span>'; return; }
-  const r=await adminCall('add_member',{ club_id:Number(cid), name, gender, initial_rating:Number(rating), pin });
-  if(!r.ok){ msg.innerHTML='<span style="color:#c0392b;">'+r.error+'</span>'; return; }
-  msg.innerHTML='<span style="color:#1e8449;">Added '+name+'.</span>';
-  document.getElementById('amName').value=''; document.getElementById('amRating').value=''; document.getElementById('amPin').value='';
-  adminLoadMembers();
+  try{
+    await odrRestPost('individuals',{ club_id:Number(cid), full_name:name, gender:gender, seed_rating:rating, pin:pin });
+    _playersLoaded=false;   // roster changed — refresh cached player list on next open
+    msg.innerHTML='<span style="color:#1e8449;">Added '+name+' ('+gender+' '+rating+').</span>';
+    document.getElementById('amName').value=''; document.getElementById('amRating').value=''; document.getElementById('amPin').value='';
+    adminLoadMembers();
+  }catch(e){ msg.innerHTML='<span style="color:#c0392b;">'+(e.message||e)+'</span>'; return; }
 }
 
 // Bulk reset all Men's or Ladies' initial ratings, then recompute. Double-guarded.
@@ -2130,27 +2648,27 @@ async function adminBulkAdd(){
   const errs=[];
   lines.forEach((ln,i)=>{
     const parts=ln.split(/\t|,/).map(p=>p.trim()).filter(p=>p!=='');
-    if(parts.length<3){ errs.push('Line '+(i+1)+': need Name, Gender, Initial Rating (PIN optional).'); return; }
+    if(parts.length<2){ errs.push('Line '+(i+1)+': need at least Name, Gender.'); return; }
     let [name,gender,rating,pin]=parts;
     gender=(gender||'').toUpperCase().charAt(0);
     if(gender!=='M'&&gender!=='F'){ errs.push('Line '+(i+1)+' ('+name+'): gender must be M or F.'); return; }
-    const rnum=Number(rating);
-    if(!rnum || isNaN(rnum)){ errs.push('Line '+(i+1)+' ('+name+'): initial rating must be a number (e.g. 1350).'); return; }
-    rows.push({ name, gender, rating:rnum, pin:(pin||'').trim() });
+    // ODR: rating optional — default 1500 (M) / 1300 (F) when blank/omitted.
+    let rnum=Number(rating); if(!rnum || isNaN(rnum)){ rnum=(gender==='M'?1500:1300); }
+    rows.push({ name, gender, rating:rnum, pin:(pin||'').trim()||null });
   });
   if(errs.length){ msg.innerHTML='<span style="color:#c0392b;">'+errs.join('<br>')+'</span>'; return; }
-  msg.innerHTML='Adding '+rows.length+' members…';
+  msg.innerHTML='Adding '+rows.length+' individuals…';
   let ok=0, fail=0; const failNames=[];
   for(const r of rows){
     try{
-      const res=await adminCall('add_member',{ club_id:Number(cid), name:r.name, gender:r.gender, initial_rating:r.rating, pin:r.pin });
-      if(res.ok) ok++; else { fail++; failNames.push(r.name); }
+      await odrRestPost('individuals',{ club_id:Number(cid), full_name:r.name, gender:r.gender, seed_rating:r.rating, pin:r.pin });
+      ok++;
     }catch(e){ fail++; failNames.push(r.name); }
   }
-  let out='<span style="color:#1e8449;">Added '+ok+' member'+(ok===1?'':'s')+'.</span>';
+  let out='<span style="color:#1e8449;">Added '+ok+' individual'+(ok===1?'':'s')+'.</span>';
   if(fail){ out+=' <span style="color:#c0392b;">'+fail+' failed'+(failNames.length?': '+failNames.join(', '):'')+'.</span>'; }
   msg.innerHTML=out;
-  if(ok){ document.getElementById('bulkText').value=''; adminLoadMembers(); }
+  if(ok){ document.getElementById('bulkText').value=''; _playersLoaded=false; adminLoadMembers(); }
 }
 
 // Rename the club (master PIN required by the backend). Updates the front-page name.
@@ -2194,7 +2712,7 @@ async function loadFormWall(type, title) {
   try {
     const note = '<div style="padding:10px 14px;background:rgba(211,84,0,.08);border:1px solid rgba(211,84,0,.30);border-radius:10px;margin:14px 12px 12px;font-size:12px;color:#0d4a38;line-height:1.5;">'
       + (type==='individual'
-          ? 'Individual Form — overall player performance. Minimum 12 games.'
+          ? 'Pairs Form — overall pair performance across all categories. Minimum 12 games.'
           : 'Doubles Form — how this pairing performs <em>as a team</em>. Minimum 12 team games.')
       + '</div>';
     let html = note;
@@ -2207,7 +2725,7 @@ async function loadFormWall(type, title) {
       const uf = (data||[]).filter(p=>!(p.form_npi!=null && (p.sets_played||0)>=FORM_MIN));
       qf.sort((a,b)=>(b.form_npi-a.form_npi)||((b.set_win_pct||0)-(a.set_win_pct||0))||((b.game_diff_per_set||0)-(a.game_diff_per_set||0))||((b.sets_won||0)-(a.sets_won||0)));
       uf.sort((a,b)=>((b.set_win_pct||0)-(a.set_win_pct||0))||((b.sets_won||0)-(a.sets_won||0)));
-      html += '<table class="ladder-table"><thead><tr><th>Player</th><th>Games</th><th>Games Won</th><th>Win %</th><th>Point Diff/Game</th><th>Form</th></tr></thead><tbody>';
+      html += '<table class="ladder-table"><thead><tr><th>Pair</th><th>Games</th><th>Games Won</th><th>Win %</th><th>Point Diff/Game</th><th>Form</th></tr></thead><tbody>';
       const frow=(p,style)=>{
         const winpct = p.set_win_pct==null?'—':Number(p.set_win_pct).toFixed(1);
         const gdps = p.game_diff_per_set==null?'—':Number(p.game_diff_per_set).toFixed(2);
@@ -2235,7 +2753,7 @@ async function loadFormWall(type, title) {
         const winpct = p.set_win_pct==null?'—':Number(p.set_win_pct).toFixed(1);
         const gdps = p.game_diff_per_set==null?'—':Number(p.game_diff_per_set).toFixed(2);
         const fv = p.team_form==null?'—':Number(p.team_form).toFixed(3);
-        return `<tr style="${style}"><td>${p.p1} & ${p.p2}</td><td>${p.sets}</td><td>${p.sets_won==null?'—':Math.round(p.sets_won)}</td><td>${winpct}</td><td>${gdps}</td><td><strong>${fv}</strong></td></tr>`;
+        return `<tr style="${style}"><td>${pairName(p.p1,p.p2)}</td><td>${p.sets}</td><td>${p.sets_won==null?'—':Math.round(p.sets_won)}</td><td>${winpct}</td><td>${gdps}</td><td><strong>${fv}</strong></td></tr>`;
       };
       qf.forEach(p=>{ html+=frow(p,''); });
       if(uf.length){
@@ -2264,18 +2782,19 @@ const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 // so ONE file serves every club. Falls back to Demo (1) if none given.
 // Map of club code -> {id, name}. Add clubs here as they onboard.
 const CLUBS = {
-  '1':  {id:1,  name:'Demo'},
-  // Squash clubs are added here as they onboard. New numeric ids also work automatically.
-  'demo':{id:1,name:'Demo'}
+  '1':    {id:1, name:'Demo'},
+  'demo': {id:1, name:'Demo'},
+  '2':    {id:2, name:'OSR-Club 2'},
+  // Squash clubs are added here as they onboard. New numeric ids (?club=N) also work automatically.
 };
 const _clubParam = (new URLSearchParams(window.location.search).get('club') || '1').toLowerCase();
 // Known clubs come from the map; any OTHER numeric id (new clubs 20+) is used directly —
 // the real name is fetched from the database on load. Non-numeric unknowns fall back to Demo.
-const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubParam), name:'OSR Club '+_clubParam} : CLUBS['1']);
+const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubParam), name:'ODR Club '+_clubParam} : CLUBS['1']);
 const CLUB_ID = _club.id;
-document.title = 'OSR · ' + _club.name;
+document.title = 'ODR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.01-03";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.13-03 · Singles now renders as a clickable, expandable card (Rating/Matches/Move + gender pill) matching OTR, above the Partnerships section. Demo(1)/OSR-Club 2(2).";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -2371,7 +2890,7 @@ function printTable(containerId, title){
     +'td{padding:7px 10px;border-bottom:1px solid #eee;}'
     +'tr:nth-child(even) td{background:#f5f2fb;}'
     +'</style></head><body>'
-    +'<h1>OSR · '+CLUB_NAME+' — '+title+'</h1>'
+    +'<h1>ODR · '+CLUB_NAME+' — '+title+'</h1>'
     +'<div class="meta">Generated '+today+' · '+OPR_VERSION+'</div>'
     +tbl.outerHTML+'</body></html>');
   w.document.close(); w.focus(); setTimeout(()=>w.print(),300);
@@ -2382,7 +2901,14 @@ async function sbGet(pathq){
   return await r.json();
 }
 // Singles-aware side name: "A & B" for doubles, just "A" when the partner slot is null.
-function sideName(p1,p2,sep){ sep=sep||" & "; return p2?((p1||"")+sep+p2):(p1||""); }
+// Robust pair-name guard (the "& null" fix): only append the partner when p2 is a real name —
+// not empty, not whitespace, not the literal string "null". Used everywhere a pair name is built.
+function pairName(p1,p2,sep){ sep=sep||" & ";
+  const a=(p1==null?"":String(p1));
+  const ok=(p2!=null && String(p2).trim() && String(p2).trim().toLowerCase()!=="null");
+  return ok ? (a+sep+String(p2)) : a;
+}
+function sideName(p1,p2,sep){ return pairName(p1,p2,sep); }
 function rankBadge(n){ const cls=n===1?'rank-1':n===2?'rank-2':n===3?'rank-3':''; return `<span class="rank-badge ${cls}">${n}</span>`; }
 
 async function togglePairMatches(i){
@@ -2485,22 +3011,69 @@ async function loadLadder(type, title) {
   document.getElementById('ladderTitle').textContent = title;
   try {
     let html = '';
-    if(type==='mens' || type==='ladies'){
-      // SINGLES ladder — unified headings: Rank, Name, Rating, Level, Sets Played, Sets Won, % Won
-      const g = (type==='mens') ? 'M' : 'F';
-      const data = await sbGet(`player_results?select=name,current_rating&gender=eq.${g}&order=current_rating.desc&club_id=eq.${CLUB_ID}`);
+    // OSR SINGLES ratings — individual players by gender (distinct from the pair views below).
+    // Triggered by the "Singles Ratings" menu group. Renders one row per individual.
+    if(type==='mens_singles' || type==='ladies_singles'){
+      const g = (type==='mens_singles') ? 'M' : 'F';
+      const data = await sbGet(`player_results?select=name,current_rating,initial_rating&gender=eq.${g}&order=current_rating.desc&club_id=eq.${CLUB_ID}`) || [];
       window._singlesRows = data; window._singlesGender = g;
-      html = ladderNoteHTML();
-      html += '<table class="ladder-table"><thead><tr><th>Rank</th><th>Name</th><th>Rating</th><th>Level</th></tr></thead><tbody>';
+      html = (typeof ladderNoteHTML==='function'? ladderNoteHTML() : '');
+      html += '<table class="ladder-table"><thead><tr><th>Rank</th><th>Name</th><th>Rating</th><th>Level</th><th>Move</th></tr></thead><tbody>';
       data.forEach((p,i)=>{
-        const lvl = (p.current_rating/200).toFixed(1);
-        html += `<tr style="cursor:pointer;" onclick="ladProfile(${i})"><td>${rankBadge(i+1)}</td><td>${p.name}</td><td>${Math.round(p.current_rating)}</td><td>${lvl}</td></tr>`;
+        const lvl=(p.current_rating/200).toFixed(1);
+        const mv=Math.round((p.current_rating||0)-(p.initial_rating||0));
+        const mvStr=(mv>0?'+':'')+mv; const mvCol=mv>=0?'#1e8449':'#c0392b';
+        html += `<tr style="cursor:pointer;" onclick="ladProfile(${i})"><td>${rankBadge(i+1)}</td><td>${p.name}</td><td>${Math.round(p.current_rating)}</td><td>${lvl}</td><td style="color:${mvCol};">${mvStr}</td></tr>`;
       });
       html += '</tbody></table>';
+      if(!data.length) html += '<div style="padding:16px;color:#9a8578;text-align:center;">No singles players in this category yet.</div>';
+      document.getElementById('ladderContent').className='';
+      document.getElementById('ladderContent').innerHTML = html;
+      addExportBar('ladderContent','Ratings','Ratings & Ladder');
+      return;
+    }
+    // ODR: all rated entities are PAIRS (players rows), stored in player_results with
+    // gender code M / L / X. The ratings menu shows pairs by category.
+    const catCode = { mens:'M', ladies:'L', mixed:'X' };
+    if(type==='mens' || type==='ladies' || type==='mixed' || type==='allsorts' || type==='universal'){
+      let data = [];
+      if(type==='allsorts'){
+        // ALL SORTS is its own CATEGORY: pairs that have actually played an All Sorts
+        // match (match_type = 'All Sorts'). Any pair can play it regardless of M/L/X.
+        const asMatches = await sbGet(`matches?select=t1p1,t2p1&match_type=eq.All%20Sorts&club_id=eq.${CLUB_ID}`) || [];
+        const names = new Set();
+        asMatches.forEach(m=>{ if(m.t1p1) names.add(m.t1p1); if(m.t2p1) names.add(m.t2p1); });
+        if(names.size){
+          const all = await sbGet(`player_results?select=name,current_rating,gender,initial_rating&order=current_rating.desc&club_id=eq.${CLUB_ID}`) || [];
+          data = all.filter(p=>names.has(p.name));
+        }
+      } else {
+        // Men's/Ladies/Mixed filter by the pair's fixed category code; Universal = every pair.
+        let q = `player_results?select=name,current_rating,gender,initial_rating&order=current_rating.desc&club_id=eq.${CLUB_ID}`;
+        if(type!=='universal'){ q += `&gender=eq.${catCode[type]}`; }
+        data = await sbGet(q) || [];
+      }
+      window._singlesRows = data; window._singlesGender = (catCode[type]||'M');
+      html = ladderNoteHTML();
+      html += '<table class="ladder-table"><thead><tr><th>Rank</th><th>Pair</th><th>Rating</th><th>Level</th><th>Move</th></tr></thead><tbody>';
+      data.forEach((p,i)=>{
+        const lvl = (p.current_rating/200).toFixed(1);
+        const mv = Math.round((p.current_rating||0) - (p.initial_rating||0));
+        const mvStr = (mv>0?'+':'')+mv;
+        const mvCol = mv>=0 ? '#1e8449' : '#c0392b';
+        html += `<tr style="cursor:pointer;" onclick="ladProfile(${i})"><td>${rankBadge(i+1)}</td><td>${p.name}</td><td>${Math.round(p.current_rating)}</td><td>${lvl}</td><td style="color:${mvCol};">${mvStr}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      if(!data.length) html += '<div style="padding:16px;color:#9a8578;text-align:center;">'+(type==='allsorts'?'No pairs have played an All Sorts match yet.':'No pairs in this category yet.')+'</div>';
+      document.getElementById('ladderContent').innerHTML = html || '<div class="empty-state"><p>Nothing yet.</p></div>';
+      return;
+    }
+    if(false){
+      // (legacy singles branch retained but unreachable in ODR)
     } else {
       // DOUBLES — unified headings: Rank, Pair, Rating, Level, Sets, Won, % Won (+ expandable match history)
-      const catMap={'mensdoubles':"Men's",'ladiesdoubles':'Ladies','mixed':'Mixed','allsorts':'All Sorts','universal':'Universal'};
-      const cat = catMap[type];
+      const catMap={'mensdoubles':"Men's",'ladiesdoubles':'Ladies','mixeddoubles':'Mixed','allsortsd':'All Sorts','universal':'Universal'};
+      const cat = catMap[type] || "Men's";
       const usesCombined = (cat==="Men's" || cat==='Ladies');
       const data = await sbGet(`doubles_results?select=rank,p1,p2,combined,weighted,level,sets,sets_won,set_win_pct,matches&category=eq.${encodeURIComponent(cat)}&order=rank.asc&club_id=eq.${CLUB_ID}`);
       window._doublesRows = data;
@@ -2533,13 +3106,140 @@ async function loadLadder(type, title) {
   }
 }
 
-function showProfileSearch() {
+async function showProfileSearch() {
   showScreen('profileSearchScreen');
-  const all=[...MEN.map(n=>({name:n,gender:'M'})),...LADIES.map(n=>({name:n,gender:'F'}))].sort((a,b)=>a.name.localeCompare(b.name));
-  renderPlayerList(all);
+  // ODR person-first: the search lists INDIVIDUALS. Picking one shows all their teams.
+  try{
+    const inds = await sbGet(`individuals?select=id,full_name,gender,seed_rating&club_id=eq.${CLUB_ID}&order=full_name.asc`) || [];
+    window._profileIndivs = inds;
+    renderIndivList(inds);
+  }catch(e){
+    document.getElementById('playerList').innerHTML='<li style="padding:12px;color:#c0392b;">Could not load individuals.</li>';
+  }
+}
+function renderIndivList(inds){
+  document.getElementById('playerList').innerHTML = inds.map(p=>`
+    <li class="player-item" onclick="showPartnerships(${p.id})">
+      <div class="player-avatar">${(p.full_name||'?')[0]}</div>
+      <div><div class="player-name">${p.full_name}</div><div class="player-gender">${p.gender==='M'?'Male':p.gender==='F'?'Female':''}</div></div>
+    </li>`).join('') || '<li style="padding:12px;color:#9a8578;">No individuals registered yet.</li>';
+}
+async function showPartnerships(indivId){
+  const ind=(window._profileIndivs||[]).find(x=>x.id===indivId);
+  const who = ind ? ind.full_name : '';
+  window._partnerFor = who;
+  showScreen('partnershipsScreen');
+  document.getElementById('partnershipsTitle').textContent = who;
+  const box=document.getElementById('partnershipsList'); box.innerHTML='Loading…';
+  try{
+    // Fetch the independent datasets in PARALLEL (was sequential). Pure speed; data identical.
+    const _encWho = encodeURIComponent(who);
+    const [teams, pr, myMatches, singlesMatches] = await Promise.all([
+      sbGet(`players?select=id,name,gender,initial_rating,member_a_id,member_b_id&club_id=eq.${CLUB_ID}&or=(member_a_id.eq.${indivId},member_b_id.eq.${indivId})`).then(r=>r||[]),
+      sbGet(`player_results?select=name,current_rating,initial_rating&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
+      sbGet(`matches?select=t1p1,t2p1,t1_sets,t2_sets,t1_games,t2_games&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
+      // OSR: this individual's SINGLES matches (match_format='singles', they are t1p1 or t2p1).
+      sbGet(`matches?select=match_date,t1p1,t2p1,t1_sets,t2_sets,t1_games,t2_games,event&match_format=eq.singles&club_id=eq.${CLUB_ID}&or=(t1p1.eq.${_encWho},t2p1.eq.${_encWho})&order=match_date.desc`).then(r=>r||[])
+    ]);
+    const _noTeams = !teams.length;
+    const curBy={}; pr.forEach(r=>{ curBy[r.name]={cur:r.current_rating, init:r.initial_rating}; });
+    const catLabel=c=>c==='M'?"Men's":c==='L'?'Ladies':c==='X'?'Mixed':'';
+    const catCls=c=>c==='M'?'odr-cat-M':c==='L'?'odr-cat-L':'odr-cat-X';
+    const teamNames = teams.map(t=>t.name);
+    const mcount={}; myMatches.forEach(m=>{ if(m.t1p1) mcount[m.t1p1]=(mcount[m.t1p1]||0)+1; if(m.t2p1) mcount[m.t2p1]=(mcount[m.t2p1]||0)+1; });
+    // ----- INDIVIDUAL DERIVED CARD (seed + sum of this person's pair moves) -----
+    const seed = ind && ind.seed_rating!=null ? ind.seed_rating : 1500;
+    let totalMove=0, matches=0, setsFor=0, setsAgainst=0, gamesFor=0, gamesAgainst=0, setsWon=0, setsPlayed=0;
+    teams.forEach(t=>{ const pd=curBy[t.name]||{}; const cur=(pd.cur!=null?pd.cur:t.initial_rating); const init=(pd.init!=null?pd.init:t.initial_rating); totalMove+=(cur-init); });
+    const isMine=m=>teamNames.includes(m.t1p1)||teamNames.includes(m.t2p1);
+    myMatches.filter(isMine).forEach(m=>{
+      matches++; const mineIsT1=teamNames.includes(m.t1p1);
+      const sf=mineIsT1?(m.t1_sets||0):(m.t2_sets||0), sa=mineIsT1?(m.t2_sets||0):(m.t1_sets||0);
+      const gf=mineIsT1?(m.t1_games||0):(m.t2_games||0), ga=mineIsT1?(m.t2_games||0):(m.t1_games||0);
+      setsFor+=sf; setsAgainst+=sa; gamesFor+=gf; gamesAgainst+=ga; setsPlayed+=sf+sa; setsWon+=sf;
+    });
+    const curRating=Math.round(seed+totalMove), level=(curRating/200).toFixed(1);
+    const cat=ind?(ind.gender==='M'?"Men's":ind.gender==='F'?'Ladies':''):'';
+    const winPct=setsPlayed>0?(setsWon/setsPlayed*100).toFixed(1):'0.0';
+    const gdps=setsPlayed>0?((gamesFor-gamesAgainst)/setsPlayed).toFixed(2):'0.00';
+    const mvColI=totalMove>=0?'#bff3d8':'#ffd0c8', mvStrI=(totalMove>0?'+':'')+Math.round(totalMove);
+    const indivCard=`
+      <div style="background:linear-gradient(135deg,#D35400,#B8480A);border-radius:16px;padding:20px;margin-bottom:8px;color:#fff;text-align:center;">
+        <div style="font-size:20px;font-weight:800;">${who}</div>
+        <div style="font-size:40px;font-weight:800;line-height:1.1;margin:6px 0;">${curRating}</div>
+        <div style="font-size:14px;opacity:.95;">Level ${level}</div>
+        <div style="font-size:13px;margin-top:4px;opacity:.95;">${cat}${cat?' · ':''}<span style="color:${mvColI};font-weight:800;">${mvStrI}</span> since inception</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <div style="flex:1;background:#fdf3ec;border-radius:10px;padding:10px;text-align:center;"><div style="font-weight:800;color:#D35400;">${matches}</div><div style="font-size:11px;color:#7a6045;">Matches</div></div>
+        <div style="flex:1;background:#fdf3ec;border-radius:10px;padding:10px;text-align:center;"><div style="font-weight:800;color:#D35400;">${setsPlayed}</div><div style="font-size:11px;color:#7a6045;">Games</div></div>
+        <div style="flex:1;background:#fdf3ec;border-radius:10px;padding:10px;text-align:center;"><div style="font-weight:800;color:#D35400;">${setsWon}</div><div style="font-size:11px;color:#7a6045;">Games Won</div></div>
+        <div style="flex:1;background:#fdf3ec;border-radius:10px;padding:10px;text-align:center;"><div style="font-weight:800;color:#D35400;">${winPct}%</div><div style="font-size:11px;color:#7a6045;">Win %</div></div>
+        <div style="flex:1;background:#fdf3ec;border-radius:10px;padding:10px;text-align:center;"><div style="font-weight:800;color:#D35400;">${gdps}</div><div style="font-size:11px;color:#7a6045;">Pt Diff/Game</div></div>
+      </div>
+      `;
+    const rows = teams.map(t=>{
+      const pd=curBy[t.name]||{}; const cur=(pd.cur!=null?Math.round(pd.cur):Math.round(t.initial_rating));
+      const init=(pd.init!=null?Math.round(pd.init):Math.round(t.initial_rating));
+      return {t, cur, mv:cur-init, mc:(mcount[t.name]||0)};
+    }).filter(r=> r.mc>0)                          // drop ghost pairs: 0 matches left (all deleted)
+      .sort((a,b)=> b.mc-a.mc || b.cur-a.cur);   // most matches first; rating breaks ties
+    // OSR SINGLES CARD — OTR-style: a clickable card (Rating / Matches / Move + gender pill)
+    // that expands inline to show the singles match history. Only shown if singles matches exist.
+    let singlesCard = '';
+    if(singlesMatches && singlesMatches.length){
+      let sP=0,sW=0;
+      const rowsS = singlesMatches.map(mm=>{
+        const meT1=(mm.t1p1===who);
+        const my=meT1?mm.t1_sets:mm.t2_sets, opp=meT1?mm.t2_sets:mm.t1_sets;
+        const oppName=meT1?mm.t2p1:mm.t1p1;
+        sP+=(my||0)+(opp||0); sW+=(my||0);
+        const win=(my||0)>(opp||0);
+        const dt=(mm.match_date||'').slice(0,10);
+        return `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:13px;"><span>vs ${oppName||'?'}${dt?' <span style=\'color:#9a8578;font-size:11px;\'>'+dt+'</span>':''}</span><span style="font-weight:700;color:${win?'#1e8449':'#c0392b'};">${my||0}\u2013${opp||0}</span></div>`;
+      }).join('');
+      // Move for singles = seed→current for THIS individual (their singles rating movement is the
+      // individual rating movement, already in totalMove). Show it like a partnership card.
+      const sMv = Math.round(totalMove);
+      const sMvCol = sMv>=0 ? '#1e8449' : '#c0392b';
+      // Individuals use gender M/F (not the pair M/L/X scheme), so map directly for the singles pill.
+      const _ig = (ind && ind.gender) ? ind.gender : 'M';
+      const sLabel = _ig==='F' ? 'Ladies' : _ig==='L' ? 'Ladies' : _ig==='X' ? 'Mixed' : "Men's";
+      const sCls = _ig==='F' ? 'odr-cat-L' : _ig==='L' ? 'odr-cat-L' : _ig==='X' ? 'odr-cat-X' : 'odr-cat-M';
+      const gPill = `<span class="odr-cat-pill ${sCls}">${sLabel}</span>`;
+      singlesCard = `<div style="font-weight:700;color:#5a4636;margin:4px 0 8px;font-size:14px;">SINGLES</div>`
+        + `<div onclick="var d=document.getElementById('osrSinglesDetail'); if(d) d.style.display=(d.style.display==='none'?'block':'none');" style="cursor:pointer;background:#fff;border:1px solid rgba(211,84,0,.16);border-radius:12px;padding:12px 14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="font-weight:700;flex:1;">Singles <span style="color:#B8480A;font-size:10px;">▼</span></span>${gPill}
+          </div>
+          <div style="display:flex;gap:16px;font-size:13px;color:#6b5647;">
+            <span>Rating <b style="color:#B8480A;">${curRating}</b></span>
+            <span>Matches <b>${singlesMatches.length}</b></span>
+            <span>Move <b style="color:${sMvCol};">${sMv>0?'+':''}${sMv}</b></span>
+          </div>
+          <div id="osrSinglesDetail" style="display:none;margin-top:10px;padding-top:8px;border-top:1px solid rgba(0,0,0,.08);">${rowsS}</div>
+        </div>`;
+    }
+    const partHdr = '<div style="font-weight:700;color:#5a4636;margin:4px 0 8px;font-size:14px;">Partnerships</div>';
+    if(_noTeams || !rows.length){ box.innerHTML = indivCard + singlesCard + partHdr + '<div style="padding:16px;color:#9a8578;text-align:center;">No partnerships yet for '+who+'.</div>'; return; }
+    box.innerHTML = indivCard + singlesCard + partHdr + rows.map(r=>{
+      const t=r.t; const mc=r.mc; const mvCol = r.mv>=0 ? '#1e8449' : '#c0392b';
+      return `<div onclick="window._profileFrom='partnerships';loadProfile('${t.name.replace(/'/g,"\\'")}','${t.gender}')" style="cursor:pointer;background:#fff;border:1px solid rgba(211,84,0,.16);border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="font-weight:700;flex:1;">${t.name}</span>
+          <span class="odr-cat-pill ${catCls(t.gender)}">${catLabel(t.gender)}</span>
+        </div>
+        <div style="display:flex;gap:16px;font-size:13px;color:#5a4636;">
+          <span>Rating <b style="color:#D35400;">${r.cur}</b></span>
+          <span>Matches <b>${mc}</b></span>
+          <span>Move <b style="color:${mvCol};">${r.mv>0?'+':''}${r.mv}</b></span>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){ box.innerHTML='<div style="padding:16px;color:#c0392b;">'+(e.message||e)+'</div>'; }
 }
 
-let TOURNAMENT_EVENT = 'Open Challenge 2026';
+let TOURNAMENT_EVENT = '';   // no auto-default; user picks from the dropdown (placeholder shown first)
 let TOURNAMENT_ARCHIVED = false;  // true when viewing a frozen (closed) tournament
 function tourTable(){ return TOURNAMENT_ARCHIVED ? 'tournament_archive' : 'tournament_results'; }
 
@@ -2562,12 +3262,13 @@ async function loadTournamentPicker(){
   }
   body.style.display='';
   // The viewable set is BOTH active and archived — an archived (closed) tournament must
-  // stay selectable and viewable read-only. Only fall back to a default when the currently
-  // viewed event exists in NEITHER list (e.g. first load, or it was deleted).
+  // stay selectable and viewable read-only. Do NOT auto-pick a default: if nothing is
+  // currently selected (or the selection no longer exists), show a "Select tournament…"
+  // placeholder and keep the detail body hidden until the user chooses one. This prevents
+  // the picker silently defaulting to an archived event.
   const all = active.concat(archived);
-  if(!all.find(t=>t.name===TOURNAMENT_EVENT)){
-    TOURNAMENT_EVENT = (active.length ? active[0].name : archived[0].name);
-  }
+  const validSelection = TOURNAMENT_EVENT && all.find(t=>t.name===TOURNAMENT_EVENT);
+  if(!validSelection){ TOURNAMENT_EVENT=''; }
   // is the currently-viewed event an archived one?
   TOURNAMENT_ARCHIVED = !!archived.find(t=>t.name===TOURNAMENT_EVENT) && !active.find(t=>t.name===TOURNAMENT_EVENT);
   // remember the type of the currently-viewed tournament (internal vs external)
@@ -2576,6 +3277,7 @@ async function loadTournamentPicker(){
   let html='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
     +'<span style="font-size:12px;color:#0d4a38;">Viewing:</span>'
     +'<select id="tournamentSelect" onchange="onTournamentPick()" style="flex:1;min-width:160px;padding:8px;border:1.5px solid #B8480A;border-radius:8px;font-size:14px;font-weight:700;color:#0d4a38;">';
+  html+=`<option value="" ${TOURNAMENT_EVENT===''?'selected':''}>Select tournament…</option>`;
   active.forEach(t=>{ html+=`<option value="${t.name}" ${t.name===TOURNAMENT_EVENT?'selected':''}>${t.name}</option>`; });
   if(archived.length){
     html+='<optgroup label="Past (archived)">';
@@ -2583,6 +3285,13 @@ async function loadTournamentPicker(){
     html+='</optgroup>';
   }
   html+='</select></div>';
+  // Nothing chosen yet → show the picker with placeholder, hide the detail body, stop here.
+  if(TOURNAMENT_EVENT===''){
+    picker.innerHTML=html;
+    body.style.display='none';
+    const intDiv=document.getElementById('tournamentInternal'); if(intDiv) intDiv.style.display='none';
+    return;
+  }
   html+='<div style="text-align:center;font-size:18px;font-weight:800;color:#D35400;margin:12px 0 4px;">'+TOURNAMENT_EVENT+'</div>';
   picker.innerHTML=html;
   // Toggle between the external standings buttons (tournamentBody) and an
@@ -2729,7 +3438,7 @@ async function loadTournament(category, title) {
     const rowFor=(p,rankCell,rowStyle)=>{
       const rating = isSingles ? Math.round(p.combined) : (usesCombined ? Math.round(p.combined) : Math.round(p.weighted));
       const swp = p.set_win_pct==null?'—':Number(p.set_win_pct).toFixed(1);
-      const nameCell = isSingles ? p.p1 : (p.p1+' & '+p.p2);
+      const nameCell = isSingles ? p.p1 : pairName(p.p1,p.p2);
       return `<tr style="${rowStyle}"><td>${rankCell}</td><td>${nameCell}</td><td>${swp}</td><td>${p.sets}</td><td>${p.sets_won==null?'—':Math.round(p.sets_won)}</td><td>${rating}</td><td>${Number(p.level).toFixed(1)}</td></tr>`;
     };
     let pos=0;
@@ -2766,7 +3475,7 @@ async function loadTournamentForm(category, title) {
       const winpct = p.set_win_pct==null?'—':Number(p.set_win_pct).toFixed(1);
       const gdps = p.game_diff_per_set==null?'—':Number(p.game_diff_per_set).toFixed(2);
       const fv = p.team_form==null?'—':Number(p.team_form).toFixed(3);
-      const nameCell = isSingles ? p.p1 : (p.p1+' & '+p.p2);
+      const nameCell = isSingles ? p.p1 : pairName(p.p1,p.p2);
       return `<tr style="${style}"><td>${nameCell}</td><td>${p.sets}</td><td>${p.sets_won==null?'—':Math.round(p.sets_won)}</td><td>${winpct}</td><td>${gdps}</td><td><strong>${fv}</strong></td></tr>`;
     };
     qf.forEach(p=>{ html+=frow(p,''); });
@@ -2788,22 +3497,24 @@ function renderPlayerList(players) {
   document.getElementById('playerList').innerHTML = players.map(p=>`
     <li class="player-item" onclick="window._profileFrom='search';loadProfile('${p.name.replace(/'/g,"\\'")}','${p.gender}')">
       <div class="player-avatar">${p.name[0]}</div>
-      <div><div class="player-name">${p.name}</div><div class="player-gender">${p.gender==='M'?"Men's":"Ladies"}</div></div>
+      <div><div class="player-name">${p.name}</div><div class="player-gender">${p.gender==='M'?"Men's":p.gender==='L'?'Ladies':p.gender==='X'?'Mixed':''}</div></div>
     </li>`).join('');
 }
 
 function filterPlayers() {
-  const q=document.getElementById('playerSearch').value.toLowerCase();
-  const all=[...MEN.map(n=>({name:n,gender:'M'})),...LADIES.map(n=>({name:n,gender:'F'}))].sort((a,b)=>a.name.localeCompare(b.name));
-  renderPlayerList(q?all.filter(p=>p.name.toLowerCase().split(' ')[0].startsWith(q)):all);
+  const q=document.getElementById('playerSearch').value.toLowerCase().trim();
+  const inds=window._profileIndivs||[];
+  renderIndivList(q ? inds.filter(p=>p.full_name.toLowerCase().startsWith(q)) : inds);
 }
 
 function profileBack(){
   // If this profile was opened from a rating table, go back to that exact table.
-  // Otherwise (opened from the Members Profile search list) keep the original behaviour.
   if(window._profileFrom==='ladder' && window._lastLadder){
     window._profileFrom=null;
     loadLadder(window._lastLadder.type, window._lastLadder.title);
+  } else if(window._profileFrom==='partnerships'){
+    window._profileFrom=null;
+    showScreen('partnershipsScreen');   // back to the person's team list
   } else {
     window._profileFrom=null;
     showScreen('profileSearchScreen');
@@ -2811,7 +3522,7 @@ function profileBack(){
 }
 
 async function loadProfile(name, gender) {
-  document.getElementById('profileTitle').textContent = name.split(' ')[0];
+  document.getElementById('profileTitle').textContent = name;
   window._profileName = name;
   window._profileGender = gender;
   window._profileTab = 'individual';
@@ -2833,21 +3544,27 @@ function profileSetTab(tab){
 }
 
 function profileTabsHTML(active){
+  // ODR: a pair IS the entity — there is no separate "with partner" breakdown.
+  // Show a single Team header; the full match history renders below it.
   return '<div class="tm-nav" style="margin-bottom:12px;">'
-    + '<button class="'+(active==='individual'?'active':'')+'" onclick="profileSetTab(\'individual\')">👤 Individual</button>'
-    + '<button class="'+(active==='partner'?'active':'')+'" onclick="profileSetTab(\'partner\')">👥 With Partner</button>'
+    + '<button class="active" style="width:100%;">👥 Team Profile</button>'
     + '</div>';
 }
 
 async function loadProfileIndividual(name, gender) {
   document.getElementById('profileContent').innerHTML = profileTabsHTML('individual') + '<div class="loading"><span class="loading-spinner">⏳</span>Loading...</div>';
   try {
-    const isMen = gender==='M';
-    // Player rating/form from player_results
-    const prArr = await sbGet(`player_results?select=current_rating,form_npi,form_sets&name=eq.${encodeURIComponent(name)}&club_id=eq.${CLUB_ID}`);
+    // Pair rating/category/initial from player_results (ODR: the entity is a pair).
+    const prArr = await sbGet(`player_results?select=current_rating,initial_rating,gender,form_npi,form_sets&name=eq.${encodeURIComponent(name)}&club_id=eq.${CLUB_ID}`);
     const pr = prArr[0]||{};
     const rating = pr.current_rating!=null ? Math.round(pr.current_rating) : '-';
     const level = pr.current_rating!=null ? (pr.current_rating/200).toFixed(1) : '-';
+    const catCode = pr.gender || gender || 'M';
+    const catLabel = catCode==='M' ? "Men's" : catCode==='L' ? 'Ladies' : catCode==='X' ? 'Mixed' : "Men's";
+    const initR = pr.initial_rating!=null ? Math.round(pr.initial_rating) : null;
+    const moveVal = (pr.current_rating!=null && initR!=null) ? (Math.round(pr.current_rating) - initR) : null;
+    const moveStr = moveVal==null ? '' : ((moveVal>0?'+':'')+moveVal);
+    const moveCol = (moveVal==null||moveVal>=0) ? '#bff3d8' : '#ffd0c8';
 
     // Match history from matches (player on any of the 4 slots)
     const enc=encodeURIComponent(name);
@@ -2891,7 +3608,8 @@ async function loadProfileIndividual(name, gender) {
       if(delta==null) return '';
       const d = onT1 ? Number(delta) : -Number(delta);
       const txt = (d>0?'+':'') + d.toFixed(1);
-      return `<span class="rating-move">(${txt})</span>`;
+      const col = d<0 ? '#c0392b' : '#1e8449';
+      return `<span class="rating-move" style="color:${col};">(${txt})</span>`;
     };
 
     let matchHTML='';
@@ -2913,7 +3631,7 @@ async function loadProfileIndividual(name, gender) {
         matchHTML+=`<div class="match-row" onclick="toggleProfileMatch(${midx})" style="cursor:pointer;" id="pmatch_${midx}">
             <span class="${won?'win-badge':'loss-badge'}">${won?'W':'L'}</span>
             <div class="match-info">
-              <div class="partners">${partner!=null?('With '+partner):'Singles'}</div>
+              <div class="partners">${type||'Match'}</div>
               <div class="opponents amr-prof"><span class="amr-pnm">vs ${oppNames}</span><span class="amr-rl">${olTag}</span><span class="amr-mv">${mvTag}</span></div>
             </div>
             <div class="match-meta">
@@ -2932,7 +3650,7 @@ async function loadProfileIndividual(name, gender) {
         <div class="profile-name">${name}</div>
         <div class="profile-rating">${rating}</div>
         <div class="profile-level">Level ${level}</div>
-        <div class="profile-rank">${isMen?"Men's":"Ladies"}</div>
+        <div class="profile-rank">${catLabel}${moveStr?` · <span style="color:${moveCol};font-weight:800;">${moveStr}</span> Move`:''}</div>
       </div>
       <div class="stat-grid">
         <div class="stat-card"><div class="stat-value">${matchesPlayed}</div><div class="stat-label">Matches</div></div>
@@ -2973,7 +3691,7 @@ function profilePickPartner(){
     });
   };
   if(players.length) go(players);
-  else sbGet(`players_public?select=name,gender&order=name.asc&club_id=eq.${CLUB_ID}`).then(l=>{ window._clPlayers=l||[]; go(window._clPlayers); });
+  else sbGet(`individuals?select=full_name,gender&order=full_name.asc&club_id=eq.${CLUB_ID}`).then(l=>{ window._clPlayers=(l||[]).map(x=>({name:x.full_name,gender:x.gender})); go(window._clPlayers); });
 }
 
 async function profileShowPartner(partner){
@@ -3045,7 +3763,7 @@ async function profileShowPartner(partner){
         let mvTag2='';
         if(m.rating_delta!=null){
           const d2 = onT1 ? Number(m.rating_delta) : -Number(m.rating_delta);
-          mvTag2 = `<span class="rating-move">(${(d2>0?'+':'')+d2.toFixed(1)})</span>`;
+          mvTag2 = `<span class="rating-move" style="color:${d2<0?'#c0392b':'#1e8449'};">(${(d2>0?'+':'')+d2.toFixed(1)})</span>`;
         }
         matchHTML+=`<div class="match-row" onclick="togglePartnerMatch(${midx})" style="cursor:pointer;" id="ppmatch_${midx}">
             <span class="${won?'win-badge':'loss-badge'}">${won?'W':'L'}</span>
@@ -3096,6 +3814,8 @@ function setStep(n){
 
 async function renderStep1(){
   setStep(1);
+  await loadPlayers();   // ODR: refresh pairs so newly-created pairs appear in pickers
+  odrBuildIndivRatings();   // ODR: build name->derived rating for the entry display
   // FULL RESET — clear any state left over from a previous entry so the form
   // never gets "stuck" (stale ladder lists, format filter, or division set).
   entryData = {};
@@ -3110,7 +3830,7 @@ async function renderStep1(){
         <option value="">Select event...</option>
       </select>
     </div>
-    <div class="field"><label>Format</label>
+    <div class="field" style="display:none;"><label>Format</label>
       <select id="matchFormat" onchange="onFormatChange()">
         <option value="doubles">Doubles (2 v 2)</option>
         <option value="singles">Singles (1 v 1)</option>
@@ -3364,7 +4084,7 @@ function renderRecentList(){
         <span class="match-type">${m.match_type||''}</span>${tag}
         <span style="color:#D35400;font-size:11px;">▼</span>
       </div>
-      <div class="match-teams"><strong>${m.t1p2?((m.t1p1||'')+' & '+m.t1p2):(m.t1p1||'')}</strong> ${m.t1_sets||0}-${m.t2_sets||0} <strong>${m.t2p2?((m.t2p1||'')+' & '+m.t2p2):(m.t2p1||'')}</strong></div>
+      <div class="match-teams"><strong>${pairName(m.t1p1,m.t1p2)}</strong> ${m.t1_sets||0}-${m.t2_sets||0} <strong>${pairName(m.t2p1,m.t2p2)}</strong></div>
       <div class="match-detail" id="detail_${idx}" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid rgba(211,84,0,.30);"></div>
     </div>`;}).join('');
 }
@@ -3403,15 +4123,10 @@ function onFormatChange(){
   const mt=document.getElementById('matchType');
   if(!mt) return;
   const cur=mt.value;
-  // Singles only exists as Men's / Ladies (there is no Mixed/All-Sorts singles).
-  // Doubles offers all four. This holds for every event type.
-  const opts = (fmt==='singles')
-    ? [["","Select type..."],["Men's","Men's"],["Ladies","Ladies"]]
-    : [["","Select type..."],["Men's","Men's"],["Ladies","Ladies"],["Mixed","Mixed"],["All Sorts","All Sorts"]];
+  // ODR entry is doubles (4 individuals). Categories: Men's/Ladies/Mixed/All Sorts.
+  const opts = [["","Select type..."],["Men's","Men's"],["Ladies","Ladies"],["Mixed","Mixed"],["All Sorts","All Sorts"]];
   mt.innerHTML = opts.map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('');
   if(opts.some(o=>o[0]===cur)) mt.value=cur; else mt.value='';
-  // Only for a LADDER MATCH does the active-ladder set further restrict things —
-  // re-run the event handler so the division list matches active ladders.
   const evSel=document.getElementById('matchEvent');
   if(evSel && (evSel.value||'')==='Ladder Match' && typeof evSel.onchange==='function'){ evSel.onchange(); }
 }
@@ -3516,7 +4231,9 @@ function renderStep2(){
       <div class="nav-row">
         <button class="btn btn-secondary" onclick="renderStep1()">&larr; Back</button>
         <button class="btn btn-primary" onclick="step2NextLadder()">Next: Enter Scores &rarr;</button>
-      </div>`;
+      </div>
+      <button class="btn" onclick="markerFromEntry()" style="width:100%;margin-top:10px;background:linear-gradient(180deg,#3a2416,#20130a);color:#FFA033;border:1.5px solid rgba(255,160,60,.35);box-shadow:0 8px 22px rgba(126,50,0,.35);">◉ Live Marker (score the match live)</button>
+      <button class="btn" onclick="watchOpen()" style="width:100%;margin-top:8px;background:linear-gradient(180deg,#241509,#160d06);color:#e8d9cc;border:1.5px solid rgba(255,160,60,.22);box-shadow:0 6px 18px rgba(0,0,0,.3);font-size:15px;">👁 Watch a live match</button>`;
     return;
   }
   // SINGLES LADDER MATCH: pick two players from the singles ladder, shown in
@@ -3546,7 +4263,9 @@ function renderStep2(){
       <div class="nav-row">
         <button class="btn btn-secondary" onclick="renderStep1()">&larr; Back</button>
         <button class="btn btn-primary" onclick="step2NextSinglesLadder()">Next: Enter Scores &rarr;</button>
-      </div>`;
+      </div>
+      <button class="btn" onclick="markerFromEntry()" style="width:100%;margin-top:10px;background:linear-gradient(180deg,#3a2416,#20130a);color:#FFA033;border:1.5px solid rgba(255,160,60,.35);box-shadow:0 8px 22px rgba(126,50,0,.35);">◉ Live Marker (score the match live)</button>
+      <button class="btn" onclick="watchOpen()" style="width:100%;margin-top:8px;background:linear-gradient(180deg,#241509,#160d06);color:#e8d9cc;border:1.5px solid rgba(255,160,60,.22);box-shadow:0 6px 18px rgba(0,0,0,.3);font-size:15px;">👁 Watch a live match</button>`;
     return;
   }
   const _singles = (entryData.format==='singles');
@@ -3579,6 +4298,7 @@ function renderStep2(){
           <span id="t1p1_lbl">Tap to select...</span><span class="arrow">&#9660;</span>
         </button>
       </div>${_p2slotT1}
+      <div id="odrCombined1" style="display:none;font-size:12px;color:#5a4636;background:#fff;border-radius:8px;padding:6px 10px;margin-top:2px;"></div>
     </div>
     <div class="team-card">
       <div class="team-label"><span>2</span>${_t2label}</div>
@@ -3589,12 +4309,15 @@ function renderStep2(){
           <span id="t2p1_lbl">Tap to select...</span><span class="arrow">&#9660;</span>
         </button>
       </div>${_p2slotT2}
+      <div id="odrCombined2" style="display:none;font-size:12px;color:#5a4636;background:#fff;border-radius:8px;padding:6px 10px;margin-top:2px;"></div>
     </div>
     <div id="err2" class="error-msg">${_singles?'Please select both players.':'Please select all four players.'}</div>
     <div class="nav-row">
       <button class="btn btn-secondary" onclick="renderStep1()">&larr; Back</button>
       <button class="btn btn-primary" onclick="step2Next()">Next: Enter Scores &rarr;</button>
-    </div>`;
+    </div>
+    <button class="btn" onclick="markerFromEntry()" style="width:100%;margin-top:10px;background:linear-gradient(180deg,#3a2416,#20130a);color:#FFA033;border:1.5px solid rgba(255,160,60,.35);box-shadow:0 8px 22px rgba(126,50,0,.35);">◉ Live Marker (score the match live)</button>
+    <button class="btn" onclick="watchOpen()" style="width:100%;margin-top:8px;background:linear-gradient(180deg,#241509,#160d06);color:#e8d9cc;border:1.5px solid rgba(255,160,60,.22);box-shadow:0 6px 18px rgba(0,0,0,.3);font-size:15px;">👁 Watch a live match</button>`;
 }
 
 function step2NextLadder(){
@@ -3646,6 +4369,97 @@ function step2Next(){
   entryData.t1p1=vals[0];entryData.t1p2=vals[1];entryData.t2p1=vals[2];entryData.t2p2=vals[3];
   renderStep3();
 }
+
+// LIVE MARKER from inside the +Enter Score flow. Everything the setup sheet would ask for
+// (event, category, format, games-played, teams) was ALREADY chosen on the entry pages, so
+// we SKIP the marker's setup screen entirely: validate the selected players, preload MK from
+// entryData, and go straight to a one-tap "Who serves first?" prompt, then live scoring.
+// On "End & enter score" the marker returns to Step 3 pre-filled (see mkEnd / mkReturnToStep3).
+// NOTE (Option 2): mkCheckGame is UNTOUCHED — no majority auto-stop is wired for from-entry
+// matches; the marker keeps scoring games until the user taps End. Scoring code unchanged.
+function markerFromEntry(){
+  const err=document.getElementById('err2');
+  const singles=(entryData.format==='singles');
+  let t1p1=null,t1p2=null,t2p1=null,t2p2=null;
+  const isLadder=(entryData.event||'')==='Ladder Match' && Array.isArray(window._ladderTeams) && window._ladderTeams.length;
+
+  if(isLadder && !singles){
+    const teams=window._ladderTeams;
+    const i1=document.getElementById('ladderT1'), i2=document.getElementById('ladderT2');
+    const v1=i1?i1.value:'', v2=i2?i2.value:'';
+    if(v1===''||v2===''){ if(err){err.textContent='Please select both teams first.';err.style.display='block';} return; }
+    if(v1===v2){ if(err){err.textContent='A team cannot play itself — pick two different teams.';err.style.display='block';} return; }
+    const a=teams[Number(v1)], b=teams[Number(v2)];
+    t1p1=a.p1; t1p2=a.p2; t2p1=b.p1; t2p2=b.p2;
+  } else if(isLadder && singles){
+    const players=window._ladderTeams;
+    const i1=document.getElementById('ladderS1'), i2=document.getElementById('ladderS2');
+    const v1=i1?i1.value:'', v2=i2?i2.value:'';
+    if(v1===''||v2===''){ if(err){err.textContent='Please select both players first.';err.style.display='block';} return; }
+    if(v1===v2){ if(err){err.textContent='A player cannot play themselves — pick two different players.';err.style.display='block';} return; }
+    t1p1=players[Number(v1)].p1; t1p2=null; t2p1=players[Number(v2)].p1; t2p2=null;
+  } else if(singles){
+    const a=(document.getElementById('t1p1_val')||{}).value?document.getElementById('t1p1_val').value.trim():'';
+    const b=(document.getElementById('t2p1_val')||{}).value?document.getElementById('t2p1_val').value.trim():'';
+    if(!a||!b){ if(err){err.textContent='Please select both players first.';err.style.display='block';} return; }
+    if(a===b){ if(err){err.textContent='The two players must be different.';err.style.display='block';} return; }
+    t1p1=a; t1p2=null; t2p1=b; t2p2=null;
+  } else {
+    const ids=['t1p1','t1p2','t2p1','t2p2'];
+    const vals=ids.map(id=>{ const el=document.getElementById(id+'_val'); return el?el.value.trim():''; });
+    if(vals.some(v=>!v)){ if(err){err.textContent='Please select all four players first.';err.style.display='block';} return; }
+    if(new Set(vals).size<4){ if(err){err.textContent='All four must be different.';err.style.display='block';} return; }
+    t1p1=vals[0]; t1p2=vals[1]; t2p1=vals[2]; t2p2=vals[3];
+  }
+  if(err) err.style.display='none';
+
+  // store on entryData so the marker's finish can return straight into Step 3
+  entryData.t1p1=t1p1; entryData.t1p2=t1p2; entryData.t2p1=t2p1; entryData.t2p2=t2p2;
+
+  // preload MK directly (no setup sheet). end any stray live session first.
+  if(typeof liveFinish==='function' && typeof LIVE!=='undefined' && LIVE.active) liveFinish('abandoned');
+  MK.players={ t1p1:t1p1, t1p2:t1p2, t2p1:t2p1, t2p2:t2p2 };
+  MK.format = singles ? 'singles' : 'doubles';
+  MK.cat    = entryData.type || "Men's";
+  MK.event  = entryData.event || 'Social';
+  MK.fmt    = parseInt(entryData.sets) || 5;   // games-played chosen on entry (label/display only)
+  MK.firstServe=1; MK.eventLocked=null; MK.preload=null;
+  MK.returnToEntry = true;                      // finish -> return to Step 3, don't self-submit
+  MK.handicap = undefined;                      // unknown here; mkStart resolves it before play
+                                                // (the setup-dropdown path sets it via mkSetupEventChanged)
+  if(typeof loadPlayers==='function'){ loadPlayers(); }
+  showScreen('markerScreen');
+  mkServePrompt();
+}
+
+// One-tap "Who serves first?" — the only thing not chosen on the entry pages. Rendered in the
+// marker's own screen/style; each button sets MK.firstServe and starts live scoring (mkStart).
+function mkServePrompt(){
+  MK.view='serve';
+  document.getElementById('mkTitle').textContent='Live Marker';
+  const sing=(MK.format==='singles');
+  const t1=mkSideName(1), t2=mkSideName(2);
+  const lbl1 = sing ? t1 : (MK.players.t1p1+' & '+MK.players.t1p2);
+  const lbl2 = sing ? t2 : (MK.players.t2p1+' & '+MK.players.t2p2);
+  document.getElementById('mkContent').innerHTML = `
+  <div class="mk-setup">
+    <div class="mk-grp" style="text-align:center;">
+      <div style="font-size:12px;color:#9a8578;margin-bottom:4px;">${MK.event||'Social'} · ${MK.cat} · ${sing?'Singles':'Doubles'} · Best of ${MK.fmt}</div>
+      <div style="font-size:15px;color:#FFA033;font-weight:700;margin-bottom:2px;">${lbl1}</div>
+      <div style="font-size:12px;color:#9a8578;">vs</div>
+      <div style="font-size:15px;color:#FFA033;font-weight:700;margin-top:2px;">${lbl2}</div>
+    </div>
+    <div class="mk-grp">
+      <h3>Who serves first?</h3>
+      <div class="mk-seg">
+        <button onclick="mkStartFromServe(1)">${sing?'Player 1':'Team 1'}</button>
+        <button onclick="mkStartFromServe(2)">${sing?'Player 2':'Team 2'}</button>
+      </div>
+    </div>
+    <button class="mk-cancel" style="margin-top:8px;" onclick="mkBack()">‹ Back to teams</button>
+  </div>`;
+}
+function mkStartFromServe(side){ MK.firstServe=side; mkStart(); }
 
 function renderStep3(){
   setStep(3);
@@ -3736,6 +4550,42 @@ function renderStep4(){
       <button class="btn btn-secondary" onclick="renderStep3()">&larr; Back</button>
       <button class="btn btn-success" id="submitBtn" onclick="submitMatch()">&#10003; Submit Match</button>
     </div>`;
+}
+
+// ODR auto-birth: given two individual NAMES, return the pair's name, creating the pair
+// (players row, 60/40 birth, category from genders, no pair-PIN) if it doesn't exist yet.
+async function odrEnsurePair(nameA, nameB){
+  nameA=(nameA||'').trim(); nameB=(nameB||'').trim();
+  if(!nameA || !nameB) throw new Error('two players are required per side');
+  if(nameA===nameB) throw new Error('a pair needs two different players');
+  // resolve the two individuals (id, gender, seed)
+  const a = INDIV_BY_NAME[nameA] || (await sbGet(`individuals?select=id,full_name,gender,seed_rating&club_id=eq.${CLUB_ID}&full_name=eq.${encodeURIComponent(nameA)}&limit=1`))[0];
+  const b = INDIV_BY_NAME[nameB] || (await sbGet(`individuals?select=id,full_name,gender,seed_rating&club_id=eq.${CLUB_ID}&full_name=eq.${encodeURIComponent(nameB)}&limit=1`))[0];
+  if(!a) throw new Error('"'+nameA+'" is not a registered individual');
+  if(!b) throw new Error('"'+nameB+'" is not a registered individual');
+  const aid=a.id, bid=b.id;
+  const lo=aid<bid?aid:bid, hi=aid<bid?bid:aid;
+  const canonName=[nameA,nameB].sort((x,y)=>x.localeCompare(y)).join(' & ');
+  // already exists? Match the pair whichever ORDER its members are stored — an older row may
+  // have member_a_id/member_b_id swapped (e.g. 110/94 vs our 94/110). Checking only lo,hi would
+  // miss it and birth a DUPLICATE pair row. This or() matches both orders.
+  const existing = await sbGet(`players?select=name&club_id=eq.${CLUB_ID}&or=(and(member_a_id.eq.${lo},member_b_id.eq.${hi}),and(member_a_id.eq.${hi},member_b_id.eq.${lo}))&limit=1`);
+  if(existing && existing.length) return existing[0].name;
+  // birth it: 60/40, category from genders
+  const rhu=x=>Math.floor(x+0.5);
+  const sa=a.seed_rating, sb=b.seed_rating;
+  const init=rhu(Math.max(sa,sb)*0.6 + Math.min(sa,sb)*0.4);
+  const ga=a.gender, gb=b.gender;
+  const cat=(ga==='M'&&gb==='M')?'M':(ga==='F'&&gb==='F')?'L':'X';
+  const ins = await fetch(SB_URL+'/rest/v1/players',{ method:'POST', headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON, 'Content-Type':'application/json', Prefer:'return=representation' }, body:JSON.stringify({ club_id:CLUB_ID, name:canonName, gender:cat, initial_rating:init, season_initial:init, pin:null, member_a_id:lo, member_b_id:hi }) });
+  if(!ins.ok) throw new Error(await ins.text());
+  const rows = await ins.json();
+  const pid = rows[0] ? rows[0].id : null;
+  // seed a player_results row so it shows immediately (recompute will refine it)
+  if(pid!=null){
+    await fetch(SB_URL+'/rest/v1/player_results?on_conflict=player_id',{ method:'POST', headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON, 'Content-Type':'application/json', Prefer:'resolution=merge-duplicates,return=representation' }, body:JSON.stringify({ player_id:pid, club_id:CLUB_ID, name:canonName, gender:cat, initial_rating:init, current_rating:init, sets_played:0, sets_won:0, updated_at:new Date().toISOString() }) });
+  }
+  return canonName;
 }
 
 async function submitMatch(){
@@ -4066,6 +4916,19 @@ async function doSubmit(btn){  const err=document.getElementById('err4');
         return; // handled (success or a shown error) — never falls through to submit_match
       }
     }
+    // ODR HYBRID: entry gives 4 individuals. Ensure each side's two people form a PAIR
+    // (auto-birth if new, 60/40, category from genders, no pair-PIN), then rewrite the
+    // match to pair-vs-pair (one pair name per side) so the engine's singles branch rates
+    // the pair. New pairings thus appear automatically — no admin trip needed.
+    let _pairName1, _pairName2;
+    try{
+      _pairName1 = await odrEnsurePair(entryData.t1p1, entryData.t1p2);
+      _pairName2 = await odrEnsurePair(entryData.t2p1, entryData.t2p2);
+    }catch(e){
+      err.innerHTML='<strong>⚠️ Not submitted.</strong><br>Could not form the pair: '+(e.message||e);
+      err.style.display='block'; btn.disabled=false; btn.textContent='\u2713 Submit Match';
+      return;
+    }
     // Build set_scores string e.g. "6-3,6-4"
     const setParts=[];
     for(let i=1;i<=entryData.sets;i++){
@@ -4074,11 +4937,11 @@ async function doSubmit(btn){  const err=document.getElementById('err4');
     }
     const match={
       match_date:entryData.date, match_type:entryData.type, event:entryData.event||'Social',
-      t1p1:entryData.t1p1, t1p2:entryData.t1p2, t2p1:entryData.t2p1, t2p2:entryData.t2p2,
+      t1p1:_pairName1, t1p2:null, t2p1:_pairName2, t2p2:null,   // pair-vs-pair (partners null)
       t1_sets:entryData.t1sets, t2_sets:entryData.t2sets,
       t1_games:entryData.t1games, t2_games:entryData.t2games,
       set_scores:setParts.join(','),
-      match_format: entryData.format || 'doubles',
+      match_format: 'singles',   // one entity per side = the pair rail
       force_fixture_round: entryData._forceFixtureRound || null
     };
     entryData._forceFixtureRound = null; // one-shot; don't carry to the next match
@@ -4248,8 +5111,9 @@ async function togglePartnerMatch(idx){
 }
 let _currentModalPlayers = [];
 
-function openPlayerModal(fieldId, label) {
+async function openPlayerModal(fieldId, label) {
   _currentModalTarget = fieldId;
+  if(typeof loadPlayers==='function'){ await loadPlayers(); }  // ODR: ensure freshest pair list
   let players = getPlayerList(entryData.type);
   const ids = ['t1p1','t1p2','t2p1','t2p2'];
   const sel = ids.map(id => {
@@ -4285,11 +5149,8 @@ function openPlayerModal(fieldId, label) {
 }
 
 function filterModalPlayers() {
-  const q = document.getElementById('playerModalSearch').value.toLowerCase();
-  const filtered = q ? _currentModalPlayers.filter(p => {
-    const firstName = p.toLowerCase().split(' ')[0];
-    return firstName.startsWith(q);
-  }) : _currentModalPlayers;
+  const q = document.getElementById('playerModalSearch').value.toLowerCase().trim();
+  const filtered = q ? _currentModalPlayers.filter(p => p.toLowerCase().startsWith(q)) : _currentModalPlayers;
   renderModalList(filtered);
 }
 
@@ -4371,9 +5232,65 @@ function selectModalPlayer(name) {
   const lblEl = document.getElementById(_currentModalTarget + '_lbl');
   const btnEl = document.getElementById(_currentModalTarget + '_btn');
   if (valEl) valEl.value = name;
-  if (lblEl) lblEl.textContent = name;
+  if (lblEl) {
+    lblEl.textContent = name;   // name only — the pair rating shows on the line below
+  }
   if (btnEl) btnEl.classList.add('selected');
   closePlayerModal();
+  odrUpdateCombined();   // refresh each side's combined-rating line
+}
+
+// name -> derived CURRENT individual rating (seed + sum of that person's pair moves).
+// Cached in ODR_INDIV_RATING, built by odrBuildIndivRatings() when entry opens.
+let ODR_INDIV_RATING = {};
+let ODR_PAIR_RATING = {};   // existing pair name -> current rating (carries; no re-derive)
+function odrIndivRating(name){ const v=ODR_INDIV_RATING[name]; return (v==null?null:Math.round(v)); }
+async function odrBuildIndivRatings(){
+  try{
+    const inds = await sbGet(`individuals?select=id,full_name,seed_rating&club_id=eq.${CLUB_ID}`) || [];
+    const pairs = await sbGet(`players?select=name,initial_rating,member_a_id,member_b_id&club_id=eq.${CLUB_ID}&or=(member_a_id.not.is.null)`) || [];
+    const pr = await sbGet(`player_results?select=name,current_rating,initial_rating&club_id=eq.${CLUB_ID}`) || [];
+    const prBy={}; pr.forEach(r=>{ prBy[r.name]={cur:r.current_rating, init:r.initial_rating}; });
+    // existing pair current ratings (what actually carries into a match)
+    ODR_PAIR_RATING={};
+    pairs.forEach(p=>{ const d=prBy[p.name]||{}; ODR_PAIR_RATING[p.name]=(d.cur!=null?d.cur:p.initial_rating); });
+    // move contributed by each pair = current - initial
+    const moveByIndiv={};   // id -> summed move
+    pairs.forEach(p=>{
+      const d=prBy[p.name]||{}; const cur=(d.cur!=null?d.cur:p.initial_rating); const init=(d.init!=null?d.init:p.initial_rating);
+      const mv=(cur-init);
+      [p.member_a_id,p.member_b_id].forEach(id=>{ if(id!=null) moveByIndiv[id]=(moveByIndiv[id]||0)+mv; });
+    });
+    ODR_INDIV_RATING={};
+    inds.forEach(i=>{ ODR_INDIV_RATING[i.full_name] = (i.seed_rating||1500) + (moveByIndiv[i.id]||0); });
+  }catch(e){}
+}
+// Update the little rating line under each side. If the two people already have a pair,
+// show that pair's REAL current rating (it carries — no re-derivation). Only if they've
+// never played together do we show a starting estimate for the new pair.
+// READING B: a pair number is ALWAYS the live 60/40 of its two members CURRENT
+// individual ratings — computed fresh, never the stored/frozen pair number (which goes
+// stale once either partner moves). Existing vs new collapse into the same live calc;
+// the label only tells the user whether this combination has played before.
+function odrUpdateCombined(){
+  [['t1p1','t1p2','odrCombined1'],['t2p1','t2p2','odrCombined2']].forEach(([a,b,cid])=>{
+    const el=document.getElementById(cid); if(!el) return;
+    const na=(document.getElementById(a+'_val')||{}).value||'';
+    const nb=(document.getElementById(b+'_val')||{}).value||'';
+    if(!(na && nb)){ el.style.display='none'; return; }
+    const canonName=[na,nb].sort((x,y)=>x.localeCompare(y)).join(' & ');
+    const hasPlayed = (ODR_PAIR_RATING[canonName]!=null);
+    const ra=odrIndivRating(na), rb=odrIndivRating(nb);
+    if(ra!=null && rb!=null){
+      const live=Math.round(Math.max(ra,rb)*0.6+Math.min(ra,rb)*0.4);
+      const label = hasPlayed ? 'Existing pairing' : 'New pairing';
+      el.innerHTML=label+' · <b style="color:#D35400;">'+live+'</b>';
+      el.style.display='block';
+    } else if (ODR_PAIR_RATING[canonName]!=null){
+      el.innerHTML='Existing pairing · <b style="color:#D35400;">'+Math.round(ODR_PAIR_RATING[canonName])+'</b>';
+      el.style.display='block';
+    } else { el.style.display='none'; }
+  });
 }
 
 // Generic picker: open the same modal with a custom name list + a callback.
@@ -4403,7 +5320,7 @@ function closePlayerModal() {
   if (bar) bar.style.display = 'none';
 }
 
-window.onload=function(){ var ht=document.getElementById('heroTitle'); if(ht) ht.textContent='OSR · '+CLUB_NAME; var vt=document.getElementById('oprVerTag'); if(vt) vt.textContent=OPR_VERSION; refreshClubName(); loadRecent(); loadPlayers(); loadClubStats(); };
+window.onload=function(){ var ht=document.getElementById('heroTitle'); if(ht) ht.textContent='ODR · '+CLUB_NAME; var vt=document.getElementById("oprVerTag"); if(vt) vt.textContent=OPR_VERSION; var av=document.getElementById("aboutVersion"); if(av) av.textContent=OPR_VERSION; refreshClubName(); loadRecent(); loadPlayers(); loadClubStats(); };
 // Pull the current club name from the database so admin renames appear on the front page.
 async function refreshClubName(){
   try{
@@ -4411,8 +5328,8 @@ async function refreshClubName(){
     if(rows && rows[0] && rows[0].name){
       window.CLUB_NAME_LIVE=rows[0].name;
       var ht=document.getElementById('heroTitle');
-      if(ht) ht.textContent='OSR · '+rows[0].name;
-      document.title='OSR · '+rows[0].name;
+      if(ht) ht.textContent='ODR · '+rows[0].name;
+      document.title='ODR · '+rows[0].name;
     }
   }catch(e){/* keep the URL-map name if fetch fails */}
 }
@@ -4420,12 +5337,13 @@ async function refreshClubName(){
 async function loadClubStats(){
   const box=document.getElementById('clubStats'); if(!box) return;
   try{
-    const players=await sbGet(`players_public?select=name&club_id=eq.${CLUB_ID}`)||[];
+    const pl=await sbGet(`players?select=member_a_id&club_id=eq.${CLUB_ID}`)||[];
+    const pairs=(pl||[]).filter(p=>p.member_a_id!=null);
     const matches=await sbGet(`matches?select=id&club_id=eq.${CLUB_ID}`)||[];
     const nm=(window.CLUB_NAME_LIVE||CLUB_NAME);
     box.innerHTML =
       '<div class="club-stat"><span class="lbl">Club</span><span class="val">'+nm+'</span></div>'
-     +'<div class="club-stat"><span class="lbl">Members</span><span class="val">'+players.length+'</span></div>'
+     +'<div class="club-stat"><span class="lbl">Pairs</span><span class="val">'+pairs.length+'</span></div>'
      +'<div class="club-stat"><span class="lbl">Matches played</span><span class="val">'+matches.length+'</span></div>';
   }catch(e){ box.innerHTML='<div style="color:#999;font-size:12px;">Stats unavailable.</div>'; }
 }
@@ -4703,7 +5621,41 @@ const TM = (function () {
       else if (frac === 0.25) label += ' — the step-up applies every 4th game';
       else if (frac === 0.75) label += ' — the step-up applies 3 of every 4 games';
     }
-    return { gap, share, steps, receive: b.receive, owe: b.owe, altReceive, altOwe, base, frac, label, favLabel, undLabel, capped: steps >= 5 };
+    // ===== SQUASH REALISATION (ODR — true OPR parity, fractional/alternating) ==========
+    // OPR realises a FRACTIONAL handicap by alternating the per-game head-start (base most
+    // games, alt on the fraction's games). Squash does the SAME, but the unit is POINTS to 11
+    // given to the UNDERDOG only (favourite always 0 — never negative). The fair fractional
+    // head-start below was derived from the SAME win-probability principle as OPR: for each
+    // rating gap we solved for the continuous points head-start that pulls the favourite's
+    // to-11 game-win% to 50%, at quarter-step resolution. base=floor, frac=remainder
+    // (0/.25/.5/.75), alt=base+1 used on the alternating games — mkNewGamePts spreads them
+    // exactly like OPR (g%2 / g%4). Capped at 9 so the underdog always earns >=2 points.
+    const hcFractional = (g) => {
+      if (g >= 775) return 8.25; if (g >= 710) return 8.0;  if (g >= 650) return 7.75;
+      if (g >= 595) return 7.5;  if (g >= 540) return 7.25; if (g >= 500) return 7.0;
+      if (g >= 460) return 6.75; if (g >= 425) return 6.5;  if (g >= 390) return 6.25;
+      if (g >= 360) return 6.0;  if (g >= 335) return 5.75; if (g >= 310) return 5.5;
+      if (g >= 285) return 5.25; if (g >= 265) return 5.0;  if (g >= 245) return 4.75;
+      if (g >= 225) return 4.5;  if (g >= 205) return 4.25; if (g >= 190) return 4.0;
+      if (g >= 175) return 3.75; if (g >= 160) return 3.5;  if (g >= 145) return 3.25;
+      if (g >= 130) return 3.0;  if (g >= 120) return 2.75; if (g >= 105) return 2.5;
+      if (g >= 90)  return 2.25; if (g >= 80)  return 2.0;  if (g >= 70)  return 1.75;
+      if (g >= 60)  return 1.5;  if (g >= 45)  return 1.25; if (g >= 35)  return 1.0;
+      if (g >= 25)  return 0.75; if (g >= 15)  return 0.5;  if (g >= 5)   return 0.25;
+      return 0.0;
+    };
+    let hcTarget = Math.min(9, hcFractional(gap));
+    const hcBase = Math.floor(hcTarget);
+    const hcFrac = Math.round((hcTarget - hcBase) * 100) / 100;  // 0, .25, .5, .75
+    const hcAlt  = hcFrac > 0 ? hcBase + 1 : hcBase;             // alternating games use alt
+    const headStart = hcBase;                                    // the "most games" value
+    const _altEvery = (f)=> f===0.5?'every 2nd game': f===0.25?'every 4th game': f===0.75?'3 of every 4 games':'';
+    let hcLabel;
+    if (hcTarget === 0) hcLabel = 'Scratch (no handicap)';
+    else if (hcFrac === 0) hcLabel = 'underdog +' + hcBase + ' (to 11)';
+    else hcLabel = 'underdog +' + hcBase + ' (+' + hcAlt + ' ' + _altEvery(hcFrac) + ', to 11)';
+    return { gap, share, steps, receive: b.receive, owe: b.owe, altReceive, altOwe, base, frac, label, favLabel, undLabel,
+             headStart, hcBase, hcAlt, hcFrac, hcTarget, hcLabel, capped: hcTarget >= 9 };
   }
 
   // Swiss round from a ranked seed order.
@@ -4798,16 +5750,26 @@ const TM = (function () {
      Reads master's published current ratings, computes pair rating, FREEZES it
      on the entry. Sorting high->low later assigns seeds. No recompute, no calls. */
   async function readCurrentRating(name) {
-    // Use a cached club-wide ratings map to avoid one network query per player.
-    if(!window._ratingMap){
-      try{
-        const all = await sbGet(`player_results?select=name,current_rating&club_id=eq.${CLUB_ID}`) || [];
-        window._ratingMap = {};
-        all.forEach(r=>{ window._ratingMap[r.name] = (r.current_rating!=null?Number(r.current_rating):null); });
-      }catch(e){ window._ratingMap = {}; }
-    }
-    const v = window._ratingMap[name];
-    return (v!=null) ? v : null;
+    // READING B: the INDIVIDUAL is the rated entity and ALWAYS has a rating (seed + movements).
+    // A brand-new player simply sits at their seed. The old lookup read player_results (pairs
+    // that have already played), so new / never-paired individuals returned null → false
+    // "no published rating yet". Read the individual instead, in priority order:
+    //   1. live individual rating (seed + accumulated pair-movement) via odrIndivRating()
+    //   2. the individual's seed_rating from INDIV_BY_NAME
+    //   3. a direct individuals lookup (in case the by-name map isn't warm yet)
+    //   4. null ONLY if the name genuinely isn't a known individual.
+    try{
+      if(typeof odrBuildIndivRatings==='function' && (!ODR_INDIV_RATING || !Object.keys(ODR_INDIV_RATING).length)){
+        await odrBuildIndivRatings();
+      }
+      if(typeof odrIndivRating==='function'){ const v=odrIndivRating(name); if(v!=null) return Number(v); }
+    }catch(e){}
+    try{ if(INDIV_BY_NAME[name] && INDIV_BY_NAME[name].seed_rating!=null) return Number(INDIV_BY_NAME[name].seed_rating); }catch(e){}
+    try{
+      const row = (await sbGet(`individuals?select=seed_rating&club_id=eq.${CLUB_ID}&full_name=eq.${encodeURIComponent(name)}&limit=1`))||[];
+      if(row[0] && row[0].seed_rating!=null) return Number(row[0].seed_rating);
+    }catch(e){}
+    return null;
   }
   // Build a seeded Teams&Bands list from a set of entries (each {p1,p2,category,seed_rating}).
   function seedEntries(entries) {
@@ -5027,19 +5989,24 @@ async function loadTournamentSheet(tournament, division) {
     const favSeed = rA > rB ? seedA : seedB;      // stronger side
     const undSeed = rA > rB ? seedB : seedA;      // weaker side
     const hc = TM.computeHandicap(Math.max(rA,rB), Math.min(rA,rB));
-    if(hc.steps === 0) return { scratch:true, bySeed:{} };
-    // Court-friendly shorthand per team. + = receive (start ahead), − = owe (behind).
-    // "alt." = the value alternates each game. Returns a label per seed so each sits under
-    // its own team name in the fixture row.
-    const recVal = (n, alt) => alt ? ((n ? (n===1?'15':'30')+'/'+(n===1?'30':'40') : '15/30') + ' alt.') : (n===1?'15':'30');
-    const oweVal = (n, alt) => alt ? ((n ? (n===1?'15':n===2?'30':'40')+'/'+(n===1?'30':'40') : '15/30') + ' alt.') : (n===1?'15':n===2?'30':'40');
-    const undLabel = (hc.receive || hc.altReceive) ? ('+' + recVal(hc.receive, hc.altReceive)) : null;
-    const favLabel = (hc.owe || hc.altOwe) ? ('−' + oweVal(hc.owe, hc.altOwe)) : null;
+    // SQUASH: POINTS head-start to 11 for the UNDERDOG only (favourite starts at 0). A
+    // fractional handicap ALTERNATES per game (base most games, alt on the fraction's games)
+    // — same mechanic as OPR. Label mirrors OPR: "+3 (+4 every 2nd game, to 11)".
+    if((hc.hcTarget||0) === 0) return { scratch:true, bySeed:{} };
+    const _altEvery = (f)=> f===0.5?'every 2nd game': f===0.25?'every 4th game': f===0.75?'3 of every 4 games':'';
+    const undLabel = hc.hcFrac>0
+      ? ('+' + hc.hcBase + ' (+' + hc.hcAlt + ' ' + _altEvery(hc.hcFrac) + ')')
+      : ('+' + hc.hcBase);
     const byS = {};
-    if(undLabel) byS[undSeed] = undLabel;
-    if(favLabel) byS[favSeed] = favLabel;
-    return { scratch:false, favSeed, undSeed, bySeed: byS, capped:hc.capped };
+    byS[undSeed] = undLabel;
+    // Per-seed start values for the UMPIRE: underdog gets base/alt/frac, favourite is flat 0.
+    const startBySeed = {};
+    startBySeed[undSeed] = { base: hc.hcBase, alt: hc.hcAlt, frac: hc.hcFrac };
+    startBySeed[favSeed] = { base: 0, alt: 0, frac: 0 };
+    return { scratch:false, favSeed, undSeed, hcBase:hc.hcBase, hcAlt:hc.hcAlt, hcFrac:hc.hcFrac,
+             bySeed: byS, startBySeed, capped:hc.capped };
   };
+  window._tmFixtureHandicap = tmFixtureHandicap;
 
   const rounds = {};
   // Round board groups the GROUP-STAGE / Swiss rounds only. Knockout playoff fixtures
@@ -5161,8 +6128,8 @@ async function loadTournamentSheet(tournament, division) {
     if (window._tmIsHandicap) {
       h += '<div style="margin:0 0 10px;padding:8px 12px;border:1.5px solid #B9770E;border-radius:9px;background:#fffdf5;font-size:12px;color:#8a6d1a;line-height:1.5;">'
         + '🎯 <b>Handicap event — just for fun (no rating effect).</b> Each match shows the head start to play on court: '
-        + '<b>(+)</b> = that pair <b>receives</b> (starts the game ahead), <b>(−)</b> = that pair <b>owes</b> (starts behind). '
-        + '<b>“alt.”</b> = the value alternates each game (e.g. −30/40 alt. = owe 30 one game, 40 the next). Enter the final score as played.'
+        + 'the weaker pair <b>starts each game on points</b> (e.g. <b>+5 to 11</b> means they begin every game at 5, first to 11 wins). The stronger pair starts at 0. '
+        + 'Some handicaps <b>alternate</b> per game (e.g. <b>+3 (+4 every 2nd game)</b> = start on 3 most games, 4 on the alternating game). Enter the final score as played.'
         + '</div>';
     }
 
@@ -5312,11 +6279,26 @@ async function loadTournamentSheet(tournament, division) {
       const aWin = w===f.seed_a, bWin = w===f.seed_b;
       const bye = f.seed_b===0;
       const score = played ? (f.sets_a+'–'+f.sets_b) : '';
+      // SQUASH handicap (handicap events only): head-start tag under each team's own name,
+      // so the Bracket tab shows head-starts for KO/plate too — parity with the rounds table.
+      let hcA='', hcB='';
+      if(window._tmIsHandicap && !bye){
+        try{
+          const hc = tmFixtureHandicap(f.seed_a, f.seed_b);
+          if(hc && !hc.scratch){
+            const tag = v => '<div class="bkt-hc" style="font-size:10px;font-weight:700;color:#8fb500;">'+v+(hc.capped?' <span style="color:#c0392b;">(max)</span>':'')+'</div>';
+            if(hc.bySeed[f.seed_a]) hcA = tag(hc.bySeed[f.seed_a]);
+            if(hc.bySeed[f.seed_b]) hcB = tag(hc.bySeed[f.seed_b]);
+          } else if(hc && hc.scratch){
+            hcA = '<div class="bkt-hc" style="font-size:10px;color:#5aa98d;">scratch</div>';
+          }
+        }catch(e){}
+      }
       h += '<div class="bkt-match'+(bye?' bkt-bye':'')+'" '+(bye?'':'onclick="tmEnterFixtureResult('+f.id+')" title="Tap to enter/edit score"')+'>'
-        + '<div class="bkt-team'+(aWin?' bkt-win':'')+'"><span class="bkt-sd">'+f.seed_a+'</span>'+tName(f.seed_a)+'<span class="bkt-sc">'+(played?f.sets_a:'')+'</span></div>'
+        + '<div class="bkt-team'+(aWin?' bkt-win':'')+'"><span class="bkt-sd">'+f.seed_a+'</span>'+tName(f.seed_a)+hcA+'<span class="bkt-sc">'+(played?f.sets_a:'')+'</span></div>'
         + (bye
             ? '<div class="bkt-team bkt-byerow"><span class="bkt-sd">–</span>BYE<span class="bkt-sc"></span></div>'
-            : '<div class="bkt-team'+(bWin?' bkt-win':'')+'"><span class="bkt-sd">'+f.seed_b+'</span>'+tName(f.seed_b)+'<span class="bkt-sc">'+(played?f.sets_b:'')+'</span></div>')
+            : '<div class="bkt-team'+(bWin?' bkt-win':'')+'"><span class="bkt-sd">'+f.seed_b+'</span>'+tName(f.seed_b)+hcB+'<span class="bkt-sc">'+(played?f.sets_b:'')+'</span></div>')
         + '</div>';
     });
     h += '</div>';
@@ -5505,14 +6487,28 @@ async function loadTournamentSheet(tournament, division) {
     const emptyA = (m.a==null), emptyB=(m.b==null && m.b!==0);
     const scoreA = played? m.fx.sets_a : '';
     const scoreB = played? m.fx.sets_b : '';
+    // SQUASH handicap head-start under each team name on the bracket (OPR parity).
+    let hcA = '', hcB = '';
+    if(window._tmIsHandicap && m.a!=null && m.b!=null && m.b!==0){
+      try{
+        const hc = tmFixtureHandicap(m.a, m.b);
+        if(hc && !hc.scratch && hc.bySeed){
+          const tag = v => '<div class="bkt-hc" style="font-size:10px;font-weight:700;color:#8fb500;">'+v+(hc.capped?' <span style="color:#c0392b;">(max)</span>':'')+'</div>';
+          if(hc.bySeed[m.a]) hcA = tag(hc.bySeed[m.a]);
+          if(hc.bySeed[m.b]) hcB = tag(hc.bySeed[m.b]);
+        } else if(hc && hc.scratch){
+          hcA = '<div class="bkt-hc" style="font-size:10px;color:#5aa98d;">scratch</div>';
+        }
+      }catch(e){}
+    }
     const click = ready ? (' onclick="tmEnterFixtureResult('+m.fx.id+')" title="Tap to enter score" style="cursor:pointer;"') : '';
     return '<div class="bkt-match'+(bye?' bkt-bye':'')+(ready?' bkt-ready':'')+'"'+click+'>'
       + '<div class="bkt-team'+(aWin?' bkt-win':'')+(emptyA?' bkt-empty':'')+'">'
         + (m.a!=null?'<span class="bkt-sd">'+m.a+'</span>':'<span class="bkt-sd bkt-sd-e"></span>')
-        + '<span class="bkt-nm">'+(aName||'&nbsp;')+'</span><span class="bkt-sc">'+scoreA+'</span></div>'
+        + '<span class="bkt-nm">'+(aName||'&nbsp;')+hcA+'</span><span class="bkt-sc">'+scoreA+'</span></div>'
       + '<div class="bkt-team'+(bWin?' bkt-win':'')+((emptyB)?' bkt-empty':'')+'">'
         + (m.b===0?'<span class="bkt-sd">–</span>':(m.b!=null?'<span class="bkt-sd">'+m.b+'</span>':'<span class="bkt-sd bkt-sd-e"></span>'))
-        + '<span class="bkt-nm">'+(bName||'&nbsp;')+'</span><span class="bkt-sc">'+scoreB+'</span></div>'
+        + '<span class="bkt-nm">'+(bName||'&nbsp;')+hcB+'</span><span class="bkt-sc">'+scoreB+'</span></div>'
       + '</div>';
   }
   function koTreeHTML(rounds, title, isPlate){
@@ -6271,7 +7267,7 @@ async function showEnterTournament(preselect) {
   window._etTournament = tournament;
 
   // players (for gender-filtered pickers)
-  const players = await sbGet(`players_public?select=name,gender&order=name.asc&club_id=eq.${CLUB_ID}`) || [];
+  const players = ((await sbGet(`individuals?select=full_name,gender&order=full_name.asc&club_id=eq.${CLUB_ID}`)) || []).map(x=>({name:x.full_name,gender:x.gender}));
   window._etPlayers = players;
   // tournament cap (max_teams) — read defensively in case the column isn't there yet
   let cap = null;
@@ -7080,7 +8076,7 @@ async function loadClubLadder(){
   body.innerHTML = '<div class="loading">Loading ladder…</div>';
   // players for join pickers
   if(!window._clPlayers){
-    window._clPlayers = await sbGet(`players_public?select=name,gender&order=name.asc&club_id=eq.${CLUB_ID}`) || [];
+    window._clPlayers = ((await sbGet(`individuals?select=full_name,gender&order=full_name.asc&club_id=eq.${CLUB_ID}`)) || []).map(x=>({name:x.full_name,gender:x.gender}));
   }
   renderClubLadder();
 }
@@ -7101,7 +8097,7 @@ async function renderClubLadder(){
   const singles = clIsSingles(cat);
   const sel = 'width:100%;padding:11px;border:1.5px solid rgba(211,84,0,.22);border-radius:9px;font-size:15px;box-sizing:border-box;margin-bottom:10px;';
 
-  // TOP-LEVEL format toggle: Singles Ladder / Doubles Ladder
+  // OSR is the full squash build — BOTH singles and doubles. Show the top-level toggle.
   let fmtBar = '<div class="tm-divbar cl-divbar" style="margin-bottom:8px;">'
     + '<button class="'+(CL_FORMAT==='singles'?'active':'')+'" onclick="clSetFormat(\'singles\')">🎾 Singles Ladder</button>'
     + '<button class="'+(CL_FORMAT==='doubles'?'active':'')+'" onclick="clSetFormat(\'doubles\')">👥 Doubles Ladder</button>'
