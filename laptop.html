@@ -2795,7 +2795,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.13-09 - Singles now submits correctly (individual vs individual, no pair formation); fixes 'two players required per side' on singles entry. Doubles unchanged (pair-vs-pair).";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.13-10 - Fix: Men/Ladies Singles ratings now list INDIVIDUALS (pairs no longer shown); anchored to the individuals table with current rating merged in. Singles submit + entry retained.";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -3016,7 +3016,20 @@ async function loadLadder(type, title) {
     // Triggered by the "Singles Ratings" menu group. Renders one row per individual.
     if(type==='mens_singles' || type==='ladies_singles'){
       const g = (type==='mens_singles') ? 'M' : 'F';
-      const data = await sbGet(`player_results?select=name,current_rating,initial_rating&gender=eq.${g}&order=current_rating.desc&club_id=eq.${CLUB_ID}`) || [];
+      // Anchor to INDIVIDUALS (real people) so pairs never appear here. A pair's player_results
+      // row has " & " in the name and the same gender code, which is why filtering player_results
+      // by gender alone showed pairs. We list individuals and merge their current rating.
+      const [inds, prAll] = await Promise.all([
+        sbGet(`individuals?select=full_name,gender,seed_rating&gender=eq.${g}&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
+        sbGet(`player_results?select=name,current_rating,initial_rating&club_id=eq.${CLUB_ID}`).then(r=>r||[])
+      ]);
+      const prBy={}; prAll.forEach(r=>{ if(!(String(r.name).includes(' & '))) prBy[r.name]={cur:r.current_rating, init:r.initial_rating}; });
+      const data = inds.map(p=>{
+        const d=prBy[p.full_name]||{};
+        const cur=(d.cur!=null? d.cur : (p.seed_rating!=null? p.seed_rating : 1500));
+        const init=(d.init!=null? d.init : (p.seed_rating!=null? p.seed_rating : 1500));
+        return { name:p.full_name, current_rating:cur, initial_rating:init };
+      }).sort((a,b)=> b.current_rating - a.current_rating);
       window._singlesRows = data; window._singlesGender = g;
       html = (typeof ladderNoteHTML==='function'? ladderNoteHTML() : '');
       html += '<table class="ladder-table"><thead><tr><th>Rank</th><th>Name</th><th>Rating</th><th>Level</th><th>Move</th></tr></thead><tbody>';
