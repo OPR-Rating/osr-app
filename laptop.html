@@ -2609,6 +2609,15 @@ async function adminAddMember(){
   if(!name){ msg.innerHTML='<span style="color:#c0392b;">Name required.</span>'; return; }
   try{
     await odrRestPost('individuals',{ club_id:Number(cid), full_name:name, gender:gender, seed_rating:rating, pin:pin });
+    // SINGLES: also mirror this person as a PERSON-row in players (member links NULL) so the
+    // rating engine (which seeds from players) rates their singles matches. A NULL-member row
+    // is never treated as a pair. Skip silently if a row with this name already exists.
+    try{
+      const _exists = await odrRestGet(`players?select=id&club_id=eq.${Number(cid)}&name=eq.${encodeURIComponent(name)}`);
+      if(!_exists || !_exists.length){
+        await odrRestPost('players',{ club_id:Number(cid), name:name, gender:gender, initial_rating:rating, season_initial:rating, pin:pin, member_a_id:null, member_b_id:null });
+      }
+    }catch(_e){ /* non-fatal: individual is created; mirror can be backfilled via SQL */ }
     _playersLoaded=false;   // roster changed — refresh cached player list on next open
     msg.innerHTML='<span style="color:#1e8449;">Added '+name+' ('+gender+' '+rating+').</span>';
     document.getElementById('amName').value=''; document.getElementById('amRating').value=''; document.getElementById('amPin').value='';
@@ -2795,7 +2804,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.13-10 - Fix: Men/Ladies Singles ratings now list INDIVIDUALS (pairs no longer shown); anchored to the individuals table with current rating merged in. Singles submit + entry retained.";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.13-20 - Table scope fixed: Pairs tables show ONLY pairs (individuals no longer leak in); Singles tables show ONLY players who have actually played a singles match (no flood of unplayed members). One unified rating throughout.";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -3019,16 +3028,22 @@ async function loadLadder(type, title) {
       // Anchor to INDIVIDUALS (real people) so pairs never appear here. A pair's player_results
       // row has " & " in the name and the same gender code, which is why filtering player_results
       // by gender alone showed pairs. We list individuals and merge their current rating.
-      const [inds, prAll] = await Promise.all([
+      const [inds, singlesM] = await Promise.all([
         sbGet(`individuals?select=full_name,gender,seed_rating&gender=eq.${g}&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
-        sbGet(`player_results?select=name,current_rating,initial_rating&club_id=eq.${CLUB_ID}`).then(r=>r||[])
+        // every singles match in the club — used to keep ONLY players who have actually played
+        // singles (otherwise a 100-member club floods this table with unplayed 1500 rows).
+        sbGet(`matches?select=t1p1,t2p1&match_format=eq.singles&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
+        (typeof odrBuildIndivRatings==="function" ? odrBuildIndivRatings() : Promise.resolve())
       ]);
-      const prBy={}; prAll.forEach(r=>{ if(!(String(r.name).includes(' & '))) prBy[r.name]={cur:r.current_rating, init:r.initial_rating}; });
-      const data = inds.map(p=>{
-        const d=prBy[p.full_name]||{};
-        const cur=(d.cur!=null? d.cur : (p.seed_rating!=null? p.seed_rating : 1500));
-        const init=(d.init!=null? d.init : (p.seed_rating!=null? p.seed_rating : 1500));
-        return { name:p.full_name, current_rating:cur, initial_rating:init };
+      const _playedSingles = new Set();
+      (singlesM||[]).forEach(m=>{ if(m.t1p1) _playedSingles.add(m.t1p1); if(m.t2p1) _playedSingles.add(m.t2p1); });
+      // ONE unified live rating per person (seed + pair-play + singles), the SAME rating the
+      // banner shows. A player who climbed via doubles brings that rating onto the singles court.
+      // Only list players who have PLAYED at least one singles match.
+      const data = inds.filter(p=> _playedSingles.has(p.full_name)).map(p=>{
+        const seed=(p.seed_rating!=null? p.seed_rating : 1500);
+        const cur=(typeof odrIndivRating==="function" && odrIndivRating(p.full_name)!=null) ? odrIndivRating(p.full_name) : seed;
+        return { name:p.full_name, current_rating:cur, initial_rating:seed };
       }).sort((a,b)=> b.current_rating - a.current_rating);
       window._singlesRows = data; window._singlesGender = g;
       html = (typeof ladderNoteHTML==='function'? ladderNoteHTML() : '');
@@ -3067,6 +3082,10 @@ async function loadLadder(type, title) {
         if(type!=='universal'){ q += `&gender=eq.${catCode[type]}`; }
         data = await sbGet(q) || [];
       }
+      // PAIRS TABLE = pairs ONLY. player_results holds both pairs and mirrored individuals
+      // (same gender code), so exclude any row that isn't a pair. A pair name always contains
+      // " & "; an individual's name never does.
+      data = (data||[]).filter(p=> p && typeof p.name==='string' && p.name.includes(' & '));
       window._singlesRows = data; window._singlesGender = (catCode[type]||'M');
       html = ladderNoteHTML();
       html += '<table class="ladder-table"><thead><tr><th>Rank</th><th>Pair</th><th>Rating</th><th>Level</th><th>Move</th></tr></thead><tbody>';
@@ -3138,6 +3157,137 @@ function renderIndivList(inds){
       <div><div class="player-name">${p.full_name}</div><div class="player-gender">${p.gender==='M'?'Male':p.gender==='F'?'Female':''}</div></div>
     </li>`).join('') || '<li style="padding:12px;color:#9a8578;">No individuals registered yet.</li>';
 }
+// ===== SINGLES / TEAM MATCH-HISTORY SCREEN (ported from OTR pics 2 & 3) =====
+// Opens a dedicated screen: banner + 5 stat pills + "Match History (N)" with W/L rows,
+// opponent rating tag, move tag, set score and a ▼ that rolls out per-game chips.
+// partner==='' => SINGLES view (individual). Otherwise a pair view.
+async function loadTeamProfileOSR(name, partner, cat){
+  window._teamFor = {name, partner, cat};
+  const isSingles = (partner===''||partner==null);
+  const title = isSingles ? name : (name+' & '+partner);
+  document.getElementById('profileTitle').textContent = title;
+  const box=document.getElementById('profileContent');
+  box.innerHTML = '<div class="loading"><span class="loading-spinner">\u23F3</span>Loading...</div>';
+  window._profileFrom='team';
+  showScreen('profileScreen');
+  try{
+    const enc=encodeURIComponent(name), encP=encodeURIComponent(partner||'');
+    let q;
+    if(isSingles){
+      q=`matches?select=match_date,match_type,event,t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,t1_games,t2_games,set_scores,rating_delta,t1_rating_at,t2_rating_at&and=(t1p2.is.null,t2p2.is.null)&or=(t1p1.eq.${enc},t2p1.eq.${enc})&order=match_date.desc,id.desc&club_id=eq.${CLUB_ID}`;
+    } else {
+      q=`matches?select=match_date,match_type,event,t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,t1_games,t2_games,set_scores,rating_delta,t1_rating_at,t2_rating_at&order=match_date.desc,id.desc&club_id=eq.${CLUB_ID}`
+        +`&or=(and(t1p1.eq.${enc},t1p2.eq.${encP}),and(t1p1.eq.${encP},t1p2.eq.${enc}),and(t2p1.eq.${enc},t2p2.eq.${encP}),and(t2p1.eq.${encP},t2p2.eq.${enc}))`;
+    }
+    // Fetch both independent datasets in PARALLEL (removes the load stammer).
+    const [tm, allPR] = await Promise.all([
+      sbGet(q).then(r=>r||[]),
+      sbGet(`player_results?select=name,current_rating,gender&club_id=eq.${CLUB_ID}`).then(r=>r||[])
+    ]);
+    window._teamMatches = tm;
+    const rmap={}, gmap={}; allPR.forEach(r=>{ if(r.name!=null){ if(r.current_rating!=null)rmap[r.name]=Number(r.current_rating); if(r.gender!=null)gmap[r.name]=r.gender; } });
+    let bannerRating='\u2014', bannerLevel='\u2014';
+    if(isSingles){
+      // unified live rating (seed + pair + singles), same as the profile banner
+      const _u=(typeof odrIndivRating==='function' && odrIndivRating(name)!=null)?odrIndivRating(name):(rmap[name]!=null?rmap[name]:null);
+      if(_u!=null){ bannerRating=Math.round(_u); bannerLevel=(_u/200).toFixed(1);} }
+    else if(rmap[name]!=null && rmap[partner]!=null){
+      const same=(gmap[name]===gmap[partner]);
+      const v= same ? (rmap[name]+rmap[partner])/2 : (Math.max(rmap[name],rmap[partner])*0.6+Math.min(rmap[name],rmap[partner])*0.4);
+      bannerRating=Math.round(v); bannerLevel=(v/200).toFixed(1);
+    }
+
+    let setsPlayed=0,setsWon=0,gamesFor=0,gamesAgainst=0,move=0;
+    const sideIsT1=(m)=> (m.t1p1===name||m.t1p2===name);
+    tm.forEach(m=>{
+      const onT1=sideIsT1(m);
+      setsPlayed+=(m.t1_sets||0)+(m.t2_sets||0);
+      setsWon+= onT1?(m.t1_sets||0):(m.t2_sets||0);
+      gamesFor+= onT1?(m.t1_games||0):(m.t2_games||0);
+      gamesAgainst+= onT1?(m.t2_games||0):(m.t1_games||0);
+      const d=(m.rating_delta!=null?Number(m.rating_delta):0); move+= onT1?d:-d;
+    });
+    move=Math.round(move*10)/10;
+    const winPct=setsPlayed>0?Math.round(setsWon/setsPlayed*100*10)/10:'-';
+    const gdps=setsPlayed>0?Math.round((gamesFor-gamesAgainst)/setsPlayed*100)/100:null;
+    const gdpsTxt=gdps==null?'-':gdps.toFixed(2);
+    const moveCol= move>=0?'#1e8449':'#c0392b';
+    const moveStr=(move>0?'+':'')+move;
+    const catLbl = cat==='M'?"Men's":cat==='F'?'Ladies':cat==='L'?'Ladies':cat==='X'?'Mixed':'';
+
+    const oppTag=(o1,o2,storedAt)=>{
+      let r=(storedAt!=null)?Number(storedAt):null;
+      if(r==null){ if(o2==null){ r=(o1 in rmap)?rmap[o1]:null; } else if((o1 in rmap)&&(o2 in rmap)){ r=(rmap[o1]+rmap[o2])/2; } }
+      if(r==null) return '';
+      return ` <span style="color:#B8480A;font-weight:700;">(${Math.round(r)} \u00B7 L ${(r/200).toFixed(1)})</span>`;
+    };
+    const moveTag=(delta,onT1)=>{ if(delta==null)return''; const d=onT1?Number(delta):-Number(delta); const col=d<0?'#c0392b':'#1e8449'; return `<span class="rating-move" style="color:${col};">(${(d>0?'+':'')+d.toFixed(1)})</span>`; };
+
+    let matchHTML='';
+    if(tm.length>0){
+      matchHTML=`<div class="section-header">Match History (${tm.length})</div>`;
+      tm.forEach((m,midx)=>{
+        const type=m.match_type||'';
+        const onT1=sideIsT1(m);
+        m._onT1=onT1;
+        const opp1=onT1?m.t2p1:m.t1p1, opp2=onT1?m.t2p2:m.t1p2;
+        const mysets=onT1?(m.t1_sets||0):(m.t2_sets||0), oppsets=onT1?(m.t2_sets||0):(m.t1_sets||0);
+        const won=mysets>oppsets;
+        const oppNames=opp2!=null?`${opp1} & ${opp2}`:`${opp1}`;
+        const olTag=oppTag(opp1,opp2,onT1?m.t2_rating_at:m.t1_rating_at);
+        const mvTag=moveTag(m.rating_delta,onT1);
+        matchHTML+=`<div class="match-row" onclick="toggleTeamMatchOSR(${midx})" style="cursor:pointer;" id="tmatcho_${midx}">
+            <span class="${won?'win-badge':'loss-badge'}">${won?'W':'L'}</span>
+            <div class="match-info" style="flex:1;">
+              <div class="opponents amr-prof"><span class="amr-pnm">vs ${oppNames}</span><span class="amr-rl">${olTag}</span> <span class="amr-mv">${mvTag}</span></div>
+            </div>
+            <div class="match-meta" style="text-align:right;">
+              <div class="score" style="font-weight:800;">${mysets}-${oppsets}</div>
+              <div class="date" style="color:#9a8578;font-size:11px;">${type} \u25BC</div>
+            </div>
+          </div>
+          <div id="tmatchodetail_${midx}" style="display:none;background:rgba(211,84,0,.10);padding:8px 12px;border-radius:8px;margin:-4px 0 6px;font-size:12px;text-align:center;"></div>`;
+      });
+    } else { matchHTML='<div class="empty-state" style="padding:20px 0;"><p>No matches yet</p></div>'; }
+
+    box.innerHTML = `
+      <div class="profile-card">
+        <div class="profile-name" style="font-size:20px;font-weight:800;">${title}</div>
+        <div class="profile-rating" style="font-size:40px;font-weight:800;line-height:1.1;margin:6px 0;">${bannerRating}</div>
+        <div class="profile-level">Level ${bannerLevel}</div>
+        <div class="profile-rank">${catLbl}${catLbl?' \u00B7 ':''}<span style="color:${move>=0?'#bff3d8':'#ffd0c8'};font-weight:800;">${moveStr}</span> since inception</div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-value">${tm.length}</div><div class="stat-label">Matches</div></div>
+        <div class="stat-card"><div class="stat-value">${setsPlayed}</div><div class="stat-label">Sets Played</div></div>
+        <div class="stat-card"><div class="stat-value">${setsWon}</div><div class="stat-label">Sets Won</div></div>
+        <div class="stat-card"><div class="stat-value">${winPct}%</div><div class="stat-label">Win %</div></div>
+        <div class="stat-card"><div class="stat-value">${gdpsTxt}</div><div class="stat-label">Game Diff/Set</div></div>
+      </div>
+      ${matchHTML}`;
+  }catch(e){ box.innerHTML='<div class="empty-state"><div class="icon">\u26A0\uFE0F</div><p>Could not load profile: '+(e.message||e)+'</p></div>'; }
+}
+function toggleTeamMatchOSR(i){
+  const m=(window._teamMatches||[])[i]; if(!m) return;
+  const d=document.getElementById('tmatchodetail_'+i); if(!d) return;
+  if(d.style.display==='none'){
+    const onT1 = (m._onT1!=null) ? m._onT1 : true;
+    const ss=(m.set_scores||'').trim();
+    let chips='';
+    if(ss){
+      chips = ss.split(',').map(x=>x.trim()).filter(x=>x).map(sc=>{
+        const parts=sc.split('-').map(n=>parseInt(n)||0); const x=parts[0], y=parts[1];
+        const mine=onT1?x:y, theirs=onT1?y:x;
+        return '<span class="amr-chip" style="background:'+(mine>theirs?'#1e8449':'#c0392b')+';">'+mine+'/'+theirs+'</span>';
+      }).join('');
+    }
+    const _meta=[(m.match_date||''),(m.match_type||''),(m.event&&m.event!=='Social'?m.event:'')].filter(x=>x).join(' \u00B7 ');
+    const evt=_meta?('<div style="margin-top:6px;color:#9a8578;">'+_meta+'</div>'):'';
+    d.innerHTML = (chips? ('<div class="amr-chiprow" style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">'+chips+'</div>') : 'No set detail')+evt;
+    d.style.display='block';
+  } else d.style.display='none';
+}
+
 async function showPartnerships(indivId){
   const ind=(window._profileIndivs||[]).find(x=>x.id===indivId);
   const who = ind ? ind.full_name : '';
@@ -3153,7 +3303,8 @@ async function showPartnerships(indivId){
       sbGet(`player_results?select=name,current_rating,initial_rating&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
       sbGet(`matches?select=t1p1,t2p1,t1_sets,t2_sets,t1_games,t2_games&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
       // OSR: this individual's SINGLES matches (match_format='singles', they are t1p1 or t2p1).
-      sbGet(`matches?select=match_date,t1p1,t2p1,t1_sets,t2_sets,t1_games,t2_games,event&match_format=eq.singles&club_id=eq.${CLUB_ID}&or=(t1p1.eq.${_encWho},t2p1.eq.${_encWho})&order=match_date.desc`).then(r=>r||[])
+      sbGet(`matches?select=match_date,t1p1,t2p1,t1_sets,t2_sets,t1_games,t2_games,set_scores,event&match_format=eq.singles&club_id=eq.${CLUB_ID}&or=(t1p1.eq.${_encWho},t2p1.eq.${_encWho})&order=match_date.desc`).then(r=>r||[]),
+      (typeof odrBuildIndivRatings==="function" ? odrBuildIndivRatings() : Promise.resolve())
     ]);
     const _noTeams = !teams.length;
     const curBy={}; pr.forEach(r=>{ curBy[r.name]={cur:r.current_rating, init:r.initial_rating}; });
@@ -3161,18 +3312,40 @@ async function showPartnerships(indivId){
     const catCls=c=>c==='M'?'odr-cat-M':c==='L'?'odr-cat-L':'odr-cat-X';
     const teamNames = teams.map(t=>t.name);
     const mcount={}; myMatches.forEach(m=>{ if(m.t1p1) mcount[m.t1p1]=(mcount[m.t1p1]||0)+1; if(m.t2p1) mcount[m.t2p1]=(mcount[m.t2p1]||0)+1; });
-    // ----- INDIVIDUAL DERIVED CARD (seed + sum of this person's pair moves) -----
+    // ----- INDIVIDUAL BANNER (OTR-style: rating & move come straight from the person's
+    // player_results row — the engine already computed it correctly. Do NOT reconstruct
+    // by summing pair moves; that was the source of wrong banner numbers.) -----
     const seed = ind && ind.seed_rating!=null ? ind.seed_rating : 1500;
-    let totalMove=0, matches=0, setsFor=0, setsAgainst=0, gamesFor=0, gamesAgainst=0, setsWon=0, setsPlayed=0;
-    teams.forEach(t=>{ const pd=curBy[t.name]||{}; const cur=(pd.cur!=null?pd.cur:t.initial_rating); const init=(pd.init!=null?pd.init:t.initial_rating); totalMove+=(cur-init); });
-    const isMine=m=>teamNames.includes(m.t1p1)||teamNames.includes(m.t2p1);
-    myMatches.filter(isMine).forEach(m=>{
-      matches++; const mineIsT1=teamNames.includes(m.t1p1);
+    // Individual banner rating = the DERIVED rating (seed + pair-play contribution + singles
+    // movement), exactly like OPR's OPR.indiv(). A pure-doubles player therefore shows their
+    // real standing (e.g. 1511 +11), not their untouched singles seed.
+    const _derived = (typeof odrIndivRating==='function' && odrIndivRating(who)!=null) ? odrIndivRating(who) : null;
+    const _curR = (_derived!=null) ? _derived : Math.round(seed);
+    const _initR = Math.round(seed);
+    const totalMove = _curR - _initR;
+    // Stats across ALL this person's matches (pairs + singles). Build the set of names that
+    // represent this person: their own name (singles) + every pair they belong to.
+    const _mineNames = new Set([who, ...teamNames]);
+    let matches=0, setsFor=0, setsAgainst=0, gamesFor=0, gamesAgainst=0, setsWon=0, setsPlayed=0;
+    // Combine pair matches (myMatches, keyed by pair name in t1p1/t2p1) and singles matches
+    // (keyed by the person's own name).
+    const _addMatch=(m, mineIsT1)=>{
       const sf=mineIsT1?(m.t1_sets||0):(m.t2_sets||0), sa=mineIsT1?(m.t2_sets||0):(m.t1_sets||0);
       const gf=mineIsT1?(m.t1_games||0):(m.t2_games||0), ga=mineIsT1?(m.t2_games||0):(m.t1_games||0);
-      setsFor+=sf; setsAgainst+=sa; gamesFor+=gf; gamesAgainst+=ga; setsPlayed+=sf+sa; setsWon+=sf;
+      setsFor+=sf; setsAgainst+=sa; gamesFor+=gf; gamesAgainst+=ga; setsPlayed+=sf+sa; setsWon+=sf; matches++;
+    };
+    (myMatches||[]).forEach(m=>{
+      const t1mine=_mineNames.has(m.t1p1), t2mine=_mineNames.has(m.t2p1);
+      if(!t1mine && !t2mine) return;
+      _addMatch(m, t1mine);
     });
-    const curRating=Math.round(seed+totalMove), level=(curRating/200).toFixed(1);
+    (singlesMatches||[]).forEach(m=>{
+      // singles matches use the individual's own name; myMatches is keyed by pair names, so
+      // these won't have been counted above.
+      _addMatch(m, m.t1p1===who);
+    });
+    // Prefer the person's real current rating (player_results) when present; else seed+move.
+    const curRating=Math.round(_curR), level=(curRating/200).toFixed(1);
     const cat=ind?(ind.gender==='M'?"Men's":ind.gender==='F'?'Ladies':''):'';
     const winPct=setsPlayed>0?(setsWon/setsPlayed*100).toFixed(1):'0.0';
     const gdps=setsPlayed>0?((gamesFor-gamesAgainst)/setsPlayed).toFixed(2):'0.00';
@@ -3210,11 +3383,30 @@ async function showPartnerships(indivId){
         sP+=(my||0)+(opp||0); sW+=(my||0);
         const win=(my||0)>(opp||0);
         const dt=(mm.match_date||'').slice(0,10);
-        return `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:13px;"><span>vs ${oppName||'?'}${dt?' <span style=\'color:#9a8578;font-size:11px;\'>'+dt+'</span>':''}</span><span style="font-weight:700;color:${win?'#1e8449':'#c0392b'};">${my||0}\u2013${opp||0}</span></div>`;
+        // Per-GAME chips from set_scores (e.g. "11-4,11-2"), from this player's perspective,
+        // green if they won that game, red if not — matching OTR's expanded match view.
+        const ss=(mm.set_scores||'').trim();
+        let chips='';
+        if(ss){
+          chips = ss.split(',').map(x=>x.trim()).filter(x=>x).map(sc=>{
+            const parts=sc.split('-').map(n=>parseInt(n)||0); const x=parts[0], y=parts[1];
+            const mine=meT1?x:y, theirs=meT1?y:x;
+            return `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;color:#fff;background:${mine>theirs?'#1e8449':'#c0392b'};margin:2px 4px 2px 0;">${mine}\u2013${theirs}</span>`;
+          }).join('');
+        }
+        return `<div style="padding:8px 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:13px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span>vs ${oppName||'?'}${dt?' <span style=\'color:#9a8578;font-size:11px;\'>'+dt+'</span>':''}</span>
+            <span style="font-weight:700;color:${win?'#1e8449':'#c0392b'};">${my||0}\u2013${opp||0}</span>
+          </div>
+          ${chips?('<div style="margin-top:4px;">'+chips+'</div>'):''}
+        </div>`;
       }).join('');
-      // Move for singles = seed→current for THIS individual (their singles rating movement is the
-      // individual rating movement, already in totalMove). Show it like a partnership card.
-      const sMv = Math.round(totalMove);
+      // Move for the SINGLES card = this person's SINGLES-only movement (their own player_results
+      // row moves only on singles matches), NOT their total move. Relevant-to-singles, like a
+      // partnership card shows that pair's move.
+      const _ownS = curBy[who] || {};
+      const sMv = (_ownS.cur!=null && _ownS.init!=null) ? Math.round(_ownS.cur - _ownS.init) : 0;
       const sMvCol = sMv>=0 ? '#1e8449' : '#c0392b';
       // Individuals use gender M/F (not the pair M/L/X scheme), so map directly for the singles pill.
       const _ig = (ind && ind.gender) ? ind.gender : 'M';
@@ -3222,16 +3414,16 @@ async function showPartnerships(indivId){
       const sCls = _ig==='F' ? 'odr-cat-L' : _ig==='L' ? 'odr-cat-L' : _ig==='X' ? 'odr-cat-X' : 'odr-cat-M';
       const gPill = `<span class="odr-cat-pill ${sCls}">${sLabel}</span>`;
       singlesCard = `<div style="font-weight:700;color:#5a4636;margin:4px 0 8px;font-size:14px;">SINGLES</div>`
-        + `<div onclick="var d=document.getElementById('osrSinglesDetail'); if(d) d.style.display=(d.style.display==='none'?'block':'none');" style="cursor:pointer;background:#fff;border:1px solid rgba(211,84,0,.16);border-radius:12px;padding:12px 14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+        + `<div onclick="window._teamBackId=${indivId};loadTeamProfileOSR('${who.replace(/'/g,"\\'")}','','${(ind&&ind.gender)||'M'}')" style="cursor:pointer;background:#fff;border:1px solid rgba(211,84,0,.16);border-radius:12px;padding:12px 14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-            <span style="font-weight:700;flex:1;">Singles <span style="color:#B8480A;font-size:10px;">▼</span></span>${gPill}
+            <span style="font-weight:700;flex:1;">Singles <span style="color:#B8480A;font-size:11px;">›</span></span>${gPill}
           </div>
           <div style="display:flex;gap:16px;font-size:13px;color:#6b5647;">
             <span>Rating <b style="color:#B8480A;">${curRating}</b></span>
             <span>Matches <b>${singlesMatches.length}</b></span>
             <span>Move <b style="color:${sMvCol};">${sMv>0?'+':''}${sMv}</b></span>
           </div>
-          <div id="osrSinglesDetail" style="display:none;margin-top:10px;padding-top:8px;border-top:1px solid rgba(0,0,0,.08);">${rowsS}</div>
+          
         </div>`;
     }
     const partHdr = '<div style="font-weight:700;color:#5a4636;margin:4px 0 8px;font-size:14px;">Partnerships</div>';
@@ -3526,6 +3718,12 @@ function profileBack(){
   if(window._profileFrom==='ladder' && window._lastLadder){
     window._profileFrom=null;
     loadLadder(window._lastLadder.type, window._lastLadder.title);
+  } else if(window._profileFrom==='team'){
+    // From the singles/pair match-history screen -> back to that person's profile
+    // (the showPartnerships view that has the SINGLES + Partnerships cards).
+    window._profileFrom=null;
+    if(window._teamBackId!=null && typeof showPartnerships==='function'){ showPartnerships(window._teamBackId); }
+    else showScreen('profileSearchScreen');
   } else if(window._profileFrom==='partnerships'){
     window._profileFrom=null;
     showScreen('partnershipsScreen');   // back to the person's team list
@@ -3569,21 +3767,29 @@ async function loadProfileIndividual(name, gender) {
   document.getElementById('profileContent').innerHTML = profileTabsHTML('individual') + '<div class="loading"><span class="loading-spinner">⏳</span>Loading...</div>';
   try {
     // Pair rating/category/initial from player_results (ODR: the entity is a pair).
-    const prArr = await sbGet(`player_results?select=current_rating,initial_rating,gender,form_npi,form_sets&name=eq.${encodeURIComponent(name)}&club_id=eq.${CLUB_ID}`);
+    // Fetch the player row AND their matches in PARALLEL (removes the load stammer).
+    const _encN=encodeURIComponent(name);
+    const _q=`matches?select=match_date,match_type,event,t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,t1_games,t2_games,set_scores,rating_delta,t1_rating_at,t2_rating_at&or=(t1p1.eq.${_encN},t1p2.eq.${_encN},t2p1.eq.${_encN},t2p2.eq.${_encN})&order=match_date.desc,id.desc&club_id=eq.${CLUB_ID}`;
+    const [prArr, _pmParallel, _allPRParallel] = await Promise.all([
+      sbGet(`player_results?select=current_rating,initial_rating,gender,form_npi,form_sets&name=eq.${_encN}&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
+      sbGet(_q).then(r=>r||[]),
+      sbGet(`player_results?select=name,current_rating&club_id=eq.${CLUB_ID}`).then(r=>r||[])
+    ]);
     const pr = prArr[0]||{};
-    const rating = pr.current_rating!=null ? Math.round(pr.current_rating) : '-';
-    const level = pr.current_rating!=null ? (pr.current_rating/200).toFixed(1) : '-';
+    // ONE unified live rating (seed + pair-play + singles) — same everywhere. Build if needed.
+    if(typeof odrBuildIndivRatings==='function' && (typeof ODR_INDIV_RATING==='undefined' || ODR_INDIV_RATING[name]==null)){ try{ await odrBuildIndivRatings(); }catch(_e){} }
+    const _uni = (typeof odrIndivRating==='function' && odrIndivRating(name)!=null) ? odrIndivRating(name) : (pr.current_rating!=null?Math.round(pr.current_rating):null);
+    const _seedR = pr.initial_rating!=null ? Math.round(pr.initial_rating) : (_uni!=null?_uni:null);
+    const rating = _uni!=null ? Math.round(_uni) : '-';
+    const level = _uni!=null ? (_uni/200).toFixed(1) : '-';
     const catCode = pr.gender || gender || 'M';
     const catLabel = catCode==='M' ? "Men's" : catCode==='L' ? 'Ladies' : catCode==='X' ? 'Mixed' : "Men's";
-    const initR = pr.initial_rating!=null ? Math.round(pr.initial_rating) : null;
-    const moveVal = (pr.current_rating!=null && initR!=null) ? (Math.round(pr.current_rating) - initR) : null;
+    const initR = _seedR;
+    const moveVal = (_uni!=null && initR!=null) ? (Math.round(_uni) - initR) : null;
     const moveStr = moveVal==null ? '' : ((moveVal>0?'+':'')+moveVal);
     const moveCol = (moveVal==null||moveVal>=0) ? '#bff3d8' : '#ffd0c8';
 
-    // Match history from matches (player on any of the 4 slots)
-    const enc=encodeURIComponent(name);
-    const q=`matches?select=match_date,match_type,event,t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,t1_games,t2_games,set_scores,rating_delta,t1_rating_at,t2_rating_at&or=(t1p1.eq.${enc},t1p2.eq.${enc},t2p1.eq.${enc},t2p2.eq.${enc})&order=match_date.desc,id.desc&club_id=eq.${CLUB_ID}`;
-    const playerMatches = await sbGet(q);
+    const playerMatches = _pmParallel;
     window._profileMatches = playerMatches;
 
     // Compute matches, sets played / won / win% / game diff per set from the player's matches
@@ -3604,7 +3810,7 @@ async function loadProfileIndividual(name, gender) {
     // Opponent tag. Prefers the STORED rating-at-the-time-of-match (what they were worth on
     // the day, written by the engine); falls back to the club's current ratings for any match
     // the engine hasn't written yet, so the row still reads sensibly either way.
-    const allPR = await sbGet(`player_results?select=name,current_rating&club_id=eq.${CLUB_ID}`);
+    const allPR = _allPRParallel;
     const rmap={}; (allPR||[]).forEach(r=>{ if(r.name!=null && r.current_rating!=null) rmap[r.name]=r.current_rating; });
     const oppTag=(o1,o2,storedAt)=>{
       let r = (storedAt!=null) ? Number(storedAt) : null;      // engine's rating for that side, that day
@@ -5289,7 +5495,14 @@ async function odrBuildIndivRatings(){
       [p.member_a_id,p.member_b_id].forEach(id=>{ if(id!=null) moveByIndiv[id]=(moveByIndiv[id]||0)+mv; });
     });
     ODR_INDIV_RATING={};
-    inds.forEach(i=>{ ODR_INDIV_RATING[i.full_name] = (i.seed_rating||1500) + (moveByIndiv[i.id]||0); });
+    inds.forEach(i=>{
+      // seed + pair-play contribution + this person's OWN singles movement (their individual
+      // player_results row moves only on singles matches). This makes the individual banner
+      // rating correct for pure-doubles players (seed+pair) AND singles players.
+      const _own = prBy[i.full_name];
+      const _singlesMove = (_own && _own.cur!=null && _own.init!=null) ? (_own.cur - _own.init) : 0;
+      ODR_INDIV_RATING[i.full_name] = (i.seed_rating||1500) + (moveByIndiv[i.id]||0) + _singlesMove;
+    });
     // Live per-individual current rating (includes singles match movement), keyed by name.
     // Used by the singles picker preview so it shows the player's real current singles rating.
     ODR_INDIV_CURRENT={};
@@ -5312,8 +5525,8 @@ function odrUpdateCombined(){
     // SINGLES: show the single player's own rating (like OTR), as soon as they're picked.
     if(_singles){
       if(!na){ el.style.display='none'; return; }
-      // Prefer the player's LIVE current rating (includes singles movement); fall back to derived.
-      let r = (typeof ODR_INDIV_CURRENT!=='undefined' && ODR_INDIV_CURRENT[na]!=null) ? ODR_INDIV_CURRENT[na] : odrIndivRating(na);
+      // ONE unified live rating (seed + pair-play + singles) — the same rating shown everywhere.
+      let r = (typeof odrIndivRating==='function') ? odrIndivRating(na) : null;
       if(r==null){ el.style.display='none'; return; }
       el.innerHTML='Rating · <b style="color:#D35400;">'+Math.round(r)+'</b>';
       el.style.display='block';
