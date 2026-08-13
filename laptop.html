@@ -2795,7 +2795,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.13-05 · Marker readability: larger call/status banner, GAME number and player names; Games-per-side now shown in a pill. Same layout, bigger type.";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.13-08 - Singles entry now shows the player rating under their name (Rating - NNNN), like OTR, using live current rating. Singles All Sorts + Format selector retained.";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -3831,7 +3831,7 @@ async function renderStep1(){
         <option value="">Select event...</option>
       </select>
     </div>
-    <div class="field" style="display:none;"><label>Format</label>
+    <div class="field"><label>Format</label>
       <select id="matchFormat" onchange="onFormatChange()">
         <option value="doubles">Doubles (2 v 2)</option>
         <option value="singles">Singles (1 v 1)</option>
@@ -4124,8 +4124,11 @@ function onFormatChange(){
   const mt=document.getElementById('matchType');
   if(!mt) return;
   const cur=mt.value;
-  // ODR entry is doubles (4 individuals). Categories: Men's/Ladies/Mixed/All Sorts.
-  const opts = [["","Select type..."],["Men's","Men's"],["Ladies","Ladies"],["Mixed","Mixed"],["All Sorts","All Sorts"]];
+  // OSR has BOTH singles and doubles. Singles only exists as Men's / Ladies (no Mixed /
+  // All Sorts singles); doubles offers all four. Mirrors OTR.
+  const opts = (fmt==='singles')
+    ? [["","Select type..."],["Men's","Men's"],["Ladies","Ladies"],["All Sorts","All Sorts"]]
+    : [["","Select type..."],["Men's","Men's"],["Ladies","Ladies"],["Mixed","Mixed"],["All Sorts","All Sorts"]];
   mt.innerHTML = opts.map(o=>`<option value="${o[0]}">${o[1]}</option>`).join('');
   if(opts.some(o=>o[0]===cur)) mt.value=cur; else mt.value='';
   const evSel=document.getElementById('matchEvent');
@@ -5245,6 +5248,7 @@ function selectModalPlayer(name) {
 // Cached in ODR_INDIV_RATING, built by odrBuildIndivRatings() when entry opens.
 let ODR_INDIV_RATING = {};
 let ODR_PAIR_RATING = {};   // existing pair name -> current rating (carries; no re-derive)
+let ODR_INDIV_CURRENT={};
 function odrIndivRating(name){ const v=ODR_INDIV_RATING[name]; return (v==null?null:Math.round(v)); }
 async function odrBuildIndivRatings(){
   try{
@@ -5264,6 +5268,10 @@ async function odrBuildIndivRatings(){
     });
     ODR_INDIV_RATING={};
     inds.forEach(i=>{ ODR_INDIV_RATING[i.full_name] = (i.seed_rating||1500) + (moveByIndiv[i.id]||0); });
+    // Live per-individual current rating (includes singles match movement), keyed by name.
+    // Used by the singles picker preview so it shows the player's real current singles rating.
+    ODR_INDIV_CURRENT={};
+    inds.forEach(i=>{ const d=prBy[i.full_name]; if(d && d.cur!=null) ODR_INDIV_CURRENT[i.full_name]=d.cur; });
   }catch(e){}
 }
 // Update the little rating line under each side. If the two people already have a pair,
@@ -5274,10 +5282,21 @@ async function odrBuildIndivRatings(){
 // stale once either partner moves). Existing vs new collapse into the same live calc;
 // the label only tells the user whether this combination has played before.
 function odrUpdateCombined(){
+  const _singles=(entryData.format==='singles');
   [['t1p1','t1p2','odrCombined1'],['t2p1','t2p2','odrCombined2']].forEach(([a,b,cid])=>{
     const el=document.getElementById(cid); if(!el) return;
     const na=(document.getElementById(a+'_val')||{}).value||'';
-    const nb=(document.getElementById(b+'_val')||{}).value||'';
+    const nb=_singles ? '' : ((document.getElementById(b+'_val')||{}).value||'');
+    // SINGLES: show the single player's own rating (like OTR), as soon as they're picked.
+    if(_singles){
+      if(!na){ el.style.display='none'; return; }
+      // Prefer the player's LIVE current rating (includes singles movement); fall back to derived.
+      let r = (typeof ODR_INDIV_CURRENT!=='undefined' && ODR_INDIV_CURRENT[na]!=null) ? ODR_INDIV_CURRENT[na] : odrIndivRating(na);
+      if(r==null){ el.style.display='none'; return; }
+      el.innerHTML='Rating · <b style="color:#D35400;">'+Math.round(r)+'</b>';
+      el.style.display='block';
+      return;
+    }
     if(!(na && nb)){ el.style.display='none'; return; }
     const canonName=[na,nb].sort((x,y)=>x.localeCompare(y)).join(' & ');
     const hasPlayed = (ODR_PAIR_RATING[canonName]!=null);
