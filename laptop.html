@@ -2795,7 +2795,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.13-08 - Singles entry now shows the player rating under their name (Rating - NNNN), like OTR, using live current rating. Singles All Sorts + Format selector retained.";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.13-09 - Singles now submits correctly (individual vs individual, no pair formation); fixes 'two players required per side' on singles entry. Doubles unchanged (pair-vs-pair).";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -4920,18 +4920,27 @@ async function doSubmit(btn){  const err=document.getElementById('err4');
         return; // handled (success or a shown error) — never falls through to submit_match
       }
     }
-    // ODR HYBRID: entry gives 4 individuals. Ensure each side's two people form a PAIR
-    // (auto-birth if new, 60/40, category from genders, no pair-PIN), then rewrite the
-    // match to pair-vs-pair (one pair name per side) so the engine's singles branch rates
-    // the pair. New pairings thus appear automatically — no admin trip needed.
-    let _pairName1, _pairName2;
-    try{
-      _pairName1 = await odrEnsurePair(entryData.t1p1, entryData.t1p2);
-      _pairName2 = await odrEnsurePair(entryData.t2p1, entryData.t2p2);
-    }catch(e){
-      err.innerHTML='<strong>⚠️ Not submitted.</strong><br>Could not form the pair: '+(e.message||e);
-      err.style.display='block'; btn.disabled=false; btn.textContent='\u2713 Submit Match';
-      return;
+    // SINGLES: no pair to form — the two individuals ARE the entities. Skip pair birth and
+    // submit individual-vs-individual (t1p1 vs t2p1, partners null). DOUBLES: form each
+    // side's pair (auto-birth if new, 60/40, category from genders), then submit pair-vs-pair.
+    const _isSingles = (entryData.format==='singles');
+    let _side1, _side2;
+    if(_isSingles){
+      if(!entryData.t1p1 || !entryData.t2p1){
+        err.innerHTML='<strong>⚠️ Not submitted.</strong><br>Please select both players.';
+        err.style.display='block'; btn.disabled=false; btn.textContent='\u2713 Submit Match';
+        return;
+      }
+      _side1 = entryData.t1p1; _side2 = entryData.t2p1;
+    } else {
+      try{
+        _side1 = await odrEnsurePair(entryData.t1p1, entryData.t1p2);
+        _side2 = await odrEnsurePair(entryData.t2p1, entryData.t2p2);
+      }catch(e){
+        err.innerHTML='<strong>⚠️ Not submitted.</strong><br>Could not form the pair: '+(e.message||e);
+        err.style.display='block'; btn.disabled=false; btn.textContent='\u2713 Submit Match';
+        return;
+      }
     }
     // Build set_scores string e.g. "6-3,6-4"
     const setParts=[];
@@ -4941,11 +4950,11 @@ async function doSubmit(btn){  const err=document.getElementById('err4');
     }
     const match={
       match_date:entryData.date, match_type:entryData.type, event:entryData.event||'Social',
-      t1p1:_pairName1, t1p2:null, t2p1:_pairName2, t2p2:null,   // pair-vs-pair (partners null)
+      t1p1:_side1, t1p2:null, t2p1:_side2, t2p2:null,   // one entity per side (individual for singles, pair for doubles)
       t1_sets:entryData.t1sets, t2_sets:entryData.t2sets,
       t1_games:entryData.t1games, t2_games:entryData.t2games,
       set_scores:setParts.join(','),
-      match_format: 'singles',   // one entity per side = the pair rail
+      match_format: _isSingles ? 'singles' : 'doubles',
       force_fixture_round: entryData._forceFixtureRound || null
     };
     entryData._forceFixtureRound = null; // one-shot; don't carry to the next match
