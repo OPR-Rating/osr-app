@@ -661,7 +661,7 @@
           <p style="margin:0;">Win % treats a narrow 7–6 win the same as a crushing 6–0, and ignores who you played. Form rewards convincing performances and accounts for opponent strength — a fairer picture of how someone is actually playing. For doubles, Form shows how a <strong>partnership performs as a team</strong>.</p>
         </div>
         <div class="ladders-grid one-col">
-          <button class="menu-btn" onclick="loadFormWall('individual','Pairs Form')">Pairs Form (all)</button>
+          <button class="menu-btn" onclick="loadFormWall('individual','Singles Form')">Singles Form</button>
           <button class="menu-btn" onclick="loadFormWall('mensdoubles',&quot;Men's Doubles Form&quot;)">Men's Doubles Form</button>
           <button class="menu-btn" onclick="loadFormWall('ladiesdoubles','Ladies Doubles Form')">Ladies Doubles Form</button>
           <button class="menu-btn" onclick="loadFormWall('mixed','Mixed Doubles Form')">Mixed Doubles Form</button>
@@ -1609,8 +1609,9 @@ function mkEnd(){
       <div style="${fld}margin-bottom:12px;display:flex;align-items:center;color:#FFA033;font-weight:700;">${MK.event||'—'}</div>
       <label style="font-size:12px;color:#c9b8a8;display:block;margin-bottom:5px;">Your name</label>
       <select id="submitterName" style="${fld}margin-bottom:12px;"></select>
-      <label style="font-size:12px;color:#c9b8a8;display:block;margin-bottom:5px;">Your 4-digit PIN</label>
-      <input type="password" id="submitterPin" maxlength="4" inputmode="numeric" placeholder="\u2022\u2022\u2022\u2022" style="${fld}">
+      <!-- Player PIN hidden: players no longer need a PIN to submit. Kept in DOM (empty) so
+           existing submit code that reads #submitterPin still works. -->
+      <input type="hidden" id="submitterPin" value="">
       <div id="err4" style="color:#ff9b8a;font-size:13px;margin-top:10px;display:none;background:#3a1410;border:1px solid #7a2a20;border-radius:8px;padding:8px 10px;"></div>
     </div>
     <div class="mk-fbtns">
@@ -2722,14 +2723,20 @@ async function loadFormWall(type, title) {
   try {
     const note = '<div style="padding:10px 14px;background:rgba(211,84,0,.08);border:1px solid rgba(211,84,0,.30);border-radius:10px;margin:14px 12px 12px;font-size:12px;color:#0d4a38;line-height:1.5;">'
       + (type==='individual'
-          ? 'Pairs Form — overall pair performance across all categories. Minimum 12 games.'
+          ? 'Singles Form — individual singles performance. Minimum 12 games.'
           : 'Doubles Form — how this pairing performs <em>as a team</em>. Minimum 12 team games.')
       + '</div>';
     let html = note;
 
     if(type==='individual'){
-      // Individual Form — full Form Guide columns
-      const data = await sbGet(`player_results?select=name,sets_played,sets_won,set_win_pct,game_diff_per_set,form_npi&club_id=eq.${CLUB_ID}`);
+      // SINGLES / Individual Form — individuals ONLY (player_results also holds pair rows,
+      // whose name contains " & "; exclude those). Only players who have played singles appear.
+      const [prAll, singlesM] = await Promise.all([
+        sbGet(`player_results?select=name,sets_played,sets_won,set_win_pct,game_diff_per_set,form_npi&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
+        sbGet(`matches?select=t1p1,t2p1&match_format=eq.singles&club_id=eq.${CLUB_ID}`).then(r=>r||[])
+      ]);
+      const played=new Set(); (singlesM||[]).forEach(m=>{ if(m.t1p1)played.add(m.t1p1); if(m.t2p1)played.add(m.t2p1); });
+      const data = (prAll||[]).filter(p=> p && typeof p.name==='string' && !p.name.includes(' & ') && played.has(p.name));
       const FORM_MIN = 12;
       const qf = (data||[]).filter(p=>p.form_npi!=null && (p.sets_played||0)>=FORM_MIN);
       const uf = (data||[]).filter(p=>!(p.form_npi!=null && (p.sets_played||0)>=FORM_MIN));
@@ -2804,7 +2811,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.13-20 - Table scope fixed: Pairs tables show ONLY pairs (individuals no longer leak in); Singles tables show ONLY players who have actually played a singles match (no flood of unplayed members). One unified rating throughout.";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.13-23 - CRITICAL FIX: doubles matches now submit as FOUR individuals (OTR model) so the doubles engine builds real pairs. Previously each side was a pair-name with a null partner, which the doubles engine skipped and singles engine mis-filed (why doubles Form/stats were empty and only Singles categories existed).";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -4762,9 +4769,8 @@ function renderStep4(){
         </select>
       </div>
       <div class="field" style="margin-bottom:0;">
-        <label>Your PIN</label>
-        <input type="password" id="submitterPin" maxlength="4" placeholder="4-digit PIN"
-          style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:10px;font-size:18px;font-weight:700;letter-spacing:6px;text-align:center;">
+        <!-- Player PIN hidden (not required to submit) -->
+        <input type="hidden" id="submitterPin" value="">
         <div style="font-size:11px;color:#5aa98d;margin-top:6px;">Players use their own PIN. A club admin can use the club admin code to enter on anyone's behalf.</div>
       </div>
     </div>
@@ -4817,7 +4823,7 @@ async function submitMatch(){
   const err=document.getElementById('err4');
 
   if(!submitter){err.textContent='Please select your name.';err.style.display='block';return;}
-  if(!pin||pin.length<4){err.textContent='Please enter your 4-digit PIN.';err.style.display='block';return;}
+  // Player PIN no longer required — only the submitter name is needed.
 
   err.style.display='none';
   // TOURNAMENT ENTRY GUARD (division-aware). A tournament runs a set of live divisions
@@ -5142,21 +5148,21 @@ async function doSubmit(btn){  const err=document.getElementById('err4');
     // SINGLES: no pair to form — the two individuals ARE the entities. Skip pair birth and
     // submit individual-vs-individual (t1p1 vs t2p1, partners null). DOUBLES: form each
     // side's pair (auto-birth if new, 60/40, category from genders), then submit pair-vs-pair.
+    // OTR MODEL: doubles is submitted as FOUR INDIVIDUALS (t1p1+t1p2 vs t2p1+t2p2); singles as
+    // one-vs-one. The recompute's doublesEngine keys pairs by the two individual names, so pairs
+    // form automatically — no pre-formed pair entity is stored. (Previously OSR collapsed each
+    // side into a single pair-name with a null partner, which the doubles engine skipped and the
+    // singles engine wrongly picked up — that is why doubles stats were filed as "… Singles".)
     const _isSingles = (entryData.format==='singles');
-    let _side1, _side2;
     if(_isSingles){
       if(!entryData.t1p1 || !entryData.t2p1){
         err.innerHTML='<strong>⚠️ Not submitted.</strong><br>Please select both players.';
         err.style.display='block'; btn.disabled=false; btn.textContent='\u2713 Submit Match';
         return;
       }
-      _side1 = entryData.t1p1; _side2 = entryData.t2p1;
     } else {
-      try{
-        _side1 = await odrEnsurePair(entryData.t1p1, entryData.t1p2);
-        _side2 = await odrEnsurePair(entryData.t2p1, entryData.t2p2);
-      }catch(e){
-        err.innerHTML='<strong>⚠️ Not submitted.</strong><br>Could not form the pair: '+(e.message||e);
+      if(!entryData.t1p1 || !entryData.t1p2 || !entryData.t2p1 || !entryData.t2p2){
+        err.innerHTML='<strong>⚠️ Not submitted.</strong><br>Doubles needs two players on each side.';
         err.style.display='block'; btn.disabled=false; btn.textContent='\u2713 Submit Match';
         return;
       }
@@ -5169,7 +5175,8 @@ async function doSubmit(btn){  const err=document.getElementById('err4');
     }
     const match={
       match_date:entryData.date, match_type:entryData.type, event:entryData.event||'Social',
-      t1p1:_side1, t1p2:null, t2p1:_side2, t2p2:null,   // one entity per side (individual for singles, pair for doubles)
+      t1p1:entryData.t1p1, t1p2:(_isSingles?null:entryData.t1p2),
+      t2p1:entryData.t2p1, t2p2:(_isSingles?null:entryData.t2p2),   // 4 individuals for doubles (OTR model); 1-v-1 for singles
       t1_sets:entryData.t1sets, t2_sets:entryData.t2sets,
       t1_games:entryData.t1games, t2_games:entryData.t2games,
       set_scores:setParts.join(','),
