@@ -690,7 +690,10 @@
       <h1>Team Profile</h1>
     </div>
     <div class="screen-content">
-      <input type="text" class="search-box" id="playerSearch" placeholder="Search your name..." oninput="filterPlayers()" style="position:sticky;top:0;z-index:30;background:#fff;">
+      <div style="position:sticky;top:0;z-index:30;background:#fff;">
+        <div style="text-align:center;font-size:12px;color:#5a7a70;padding:8px 12px 4px;">Tap a name to open the profile.</div>
+        <input type="text" class="search-box" id="playerSearch" placeholder="Search your name..." oninput="filterPlayers()" style="background:#fff;">
+      </div>
       <ul class="player-list" id="playerList"></ul>
     </div>
   </div>
@@ -2811,7 +2814,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.13-23 - CRITICAL FIX: doubles matches now submit as FOUR individuals (OTR model) so the doubles engine builds real pairs. Previously each side was a pair-name with a null partner, which the doubles engine skipped and singles engine mis-filed (why doubles Form/stats were empty and only Singles categories existed).";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.13-24";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -3158,11 +3161,37 @@ async function showProfileSearch() {
   }
 }
 function renderIndivList(inds){
-  document.getElementById('playerList').innerHTML = inds.map(p=>`
+  // Pills: Rating / Level / Move / Rank. Live rating via OPR.indiv (engine), fallback seed.
+  // Rank = position within own gender by live rating; list stays ALPHABETICAL. No extra fetch.
+  const _pill=(txt,bg,fg,w)=>`<span style="display:inline-block;width:${w}px;text-align:center;padding:2px 0;border-radius:99px;font-size:10px;font-weight:800;background:${bg};color:${fg};margin-left:4px;">${txt}</span>`;
+  const _lr=(nm,sd)=>{ let v=null; try{ if(typeof OPR!=='undefined'&&OPR.indiv) v=OPR.indiv(nm); }catch(e){} return (v!=null)?v:(sd!=null?sd:null); };
+  const _rk={}; window._oprRankById=_rk;
+  ['M','F'].forEach(g=>{
+    inds.filter(x=>x.gender===g).map(x=>({id:x.id,r:_lr(x.full_name,x.seed_rating)}))
+      .filter(x=>x.r!=null).sort((a,b)=>b.r-a.r).forEach((x,i)=>{ _rk[x.id]=i+1; });
+  });
+  document.getElementById('playerList').innerHTML = inds.map(p=>{
+    const r=_lr(p.full_name,p.seed_rating);
+    const cur=(r!=null)?Math.round(r):null;
+    const lvl=(cur!=null)?(cur/200).toFixed(1):null;
+    const init=(p.seed_rating!=null)?Math.round(p.seed_rating):null;
+    const mv=(cur!=null&&init!=null)?(cur-init):null;
+    const mvStr=(mv==null)?'—':((mv>0?'+':'')+mv);
+    const mvFg=(mv==null||mv>=0)?'#1e8449':'#c0392b';
+    const rateBg=(p.gender==='F')?'#ffe6f0':'#e3edff';
+    const rateFg=(p.gender==='F')?'#a02166':'#2148a0';
+    const rk=_rk[p.id];
+    const pills = _pill(cur!=null?cur:'',rateBg,rateFg,46)
+      + _pill(lvl!=null?lvl:'','#efe9e3','#6b4a2f',34)
+      + _pill(mvStr,'#f0f0f0',mvFg,40)
+      + _pill((rk!=null?('('+rk+')'):'—'),rateBg,rateFg,34);
+    return `
     <li class="player-item" onclick="showPartnerships(${p.id})">
       <div class="player-avatar">${(p.full_name||'?')[0]}</div>
-      <div><div class="player-name">${p.full_name}</div><div class="player-gender">${p.gender==='M'?'Male':p.gender==='F'?'Female':''}</div></div>
-    </li>`).join('') || '<li style="padding:12px;color:#9a8578;">No individuals registered yet.</li>';
+      <div style="flex:1;min-width:0;"><div class="player-name">${p.full_name}</div><div class="player-gender">${p.gender==='M'?'Male':p.gender==='F'?'Female':''}</div></div>
+      <div style="white-space:nowrap;flex-shrink:0;">${pills}</div>
+    </li>`;
+  }).join('') || '<li style="padding:12px;color:#9a8578;">No individuals registered yet.</li>';
 }
 // ===== SINGLES / TEAM MATCH-HISTORY SCREEN (ported from OTR pics 2 & 3) =====
 // Opens a dedicated screen: banner + 5 stat pills + "Match History (N)" with W/L rows,
