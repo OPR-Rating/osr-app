@@ -2814,7 +2814,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.13-24";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.13-27";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -3155,16 +3155,28 @@ async function showProfileSearch() {
   try{
     const inds = await sbGet(`individuals?select=id,full_name,gender,seed_rating&club_id=eq.${CLUB_ID}&order=full_name.asc`) || [];
     window._profileIndivs = inds;
+    // Build the OSR individual-rating map BEFORE rendering so the list pills read live ratings
+    // (same source as the profile card: odrIndivRating). Fixes Move/rating showing the seed.
+    try{ if(typeof odrBuildIndivRatings==='function') await odrBuildIndivRatings(); }catch(e){}
     renderIndivList(inds);
   }catch(e){
     document.getElementById('playerList').innerHTML='<li style="padding:12px;color:#c0392b;">Could not load individuals.</li>';
   }
 }
 function renderIndivList(inds){
+  // SELF-HEAL: if the OSR rating map isn't built yet, build it then re-render once, so the
+  // pills never show the seed fallback on first paint (map is keyed by full_name via odrIndivRating).
+  if(typeof odrBuildIndivRatings==='function' &&
+     (typeof ODR_INDIV_RATING==='undefined' || !ODR_INDIV_RATING || Object.keys(ODR_INDIV_RATING).length===0) &&
+     !window._ldrRebuilding){
+    window._ldrRebuilding=true;
+    odrBuildIndivRatings().then(()=>{ window._ldrRebuilding=false; renderIndivList(inds); }).catch(()=>{ window._ldrRebuilding=false; });
+    // fall through and render now (seed) so the screen isn't blank; the re-render will correct it.
+  }
   // Pills: Rating / Level / Move / Rank. Live rating via OPR.indiv (engine), fallback seed.
   // Rank = position within own gender by live rating; list stays ALPHABETICAL. No extra fetch.
   const _pill=(txt,bg,fg,w)=>`<span style="display:inline-block;width:${w}px;text-align:center;padding:2px 0;border-radius:99px;font-size:10px;font-weight:800;background:${bg};color:${fg};margin-left:4px;">${txt}</span>`;
-  const _lr=(nm,sd)=>{ let v=null; try{ if(typeof OPR!=='undefined'&&OPR.indiv) v=OPR.indiv(nm); }catch(e){} return (v!=null)?v:(sd!=null?sd:null); };
+  const _lr=(nm,sd)=>{ let v=null; try{ if(typeof odrIndivRating==='function') v=odrIndivRating(nm); }catch(e){} return (v!=null)?v:(sd!=null?sd:null); };
   const _rk={}; window._oprRankById=_rk;
   ['M','F'].forEach(g=>{
     inds.filter(x=>x.gender===g).map(x=>({id:x.id,r:_lr(x.full_name,x.seed_rating)}))
