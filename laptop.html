@@ -2814,7 +2814,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.13-27";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.13-29";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -3377,10 +3377,18 @@ async function showPartnerships(indivId){
     let matches=0, setsFor=0, setsAgainst=0, gamesFor=0, gamesAgainst=0, setsWon=0, setsPlayed=0;
     // Combine pair matches (myMatches, keyed by pair name in t1p1/t2p1) and singles matches
     // (keyed by the person's own name).
+    // Chart accumulators (radar + donut) — filled for BOTH singles and doubles via _addMatch.
+    let _cW=0,_ccW=0,_ccL=0,_cL=0,_oppSum=0,_oppN=0;
+    const _oppR=(n)=>{ let r=null; try{ if(typeof odrIndivRating==='function') r=odrIndivRating(n); }catch(e){} return r; };
     const _addMatch=(m, mineIsT1)=>{
       const sf=mineIsT1?(m.t1_sets||0):(m.t2_sets||0), sa=mineIsT1?(m.t2_sets||0):(m.t1_sets||0);
       const gf=mineIsT1?(m.t1_games||0):(m.t2_games||0), ga=mineIsT1?(m.t2_games||0):(m.t1_games||0);
       setsFor+=sf; setsAgainst+=sa; gamesFor+=gf; gamesAgainst+=ga; setsPlayed+=sf+sa; setsWon+=sf; matches++;
+      const won=sf>sa, setMargin=Math.abs(sf-sa), gMargin=Math.abs(gf-ga);
+      const close=(setMargin<=1)||(gMargin>0&&gMargin<=3);
+      if(won){ if(close)_ccW++; else _cW++; } else { if(close)_ccL++; else _cL++; }
+      const oA=mineIsT1?m.t2p1:m.t1p1, oB=mineIsT1?m.t2p2:m.t1p2;
+      [oA,oB].forEach(n=>{ if(n){ const r=_oppR(n); if(r!=null){_oppSum+=r;_oppN++;} } });
     };
     (myMatches||[]).forEach(m=>{
       const t1mine=_mineNames.has(m.t1p1), t2mine=_mineNames.has(m.t2p1);
@@ -3398,6 +3406,55 @@ async function showPartnerships(indivId){
     const winPct=setsPlayed>0?(setsWon/setsPlayed*100).toFixed(1):'0.0';
     const gdps=setsPlayed>0?((gamesFor-gamesAgainst)/setsPlayed).toFixed(2):'0.00';
     const mvColI=totalMove>=0?'#bff3d8':'#ffd0c8', mvStrI=(totalMove>0?'+':'')+Math.round(totalMove);
+    const _totM=_cW+_ccW+_ccL+_cL, _avgOpp=_oppN>0?Math.round(_oppSum/_oppN):null;
+    const _mcVals=Object.values(mcount).filter(v=>v>0);
+    const _clubAvgM=_mcVals.length?(_mcVals.reduce((a,b)=>a+b,0)/_mcVals.length):0;
+    const _clamp=v=>Math.max(0,Math.min(100,v));
+    const rWin=setsPlayed>0?_clamp(setsWon/setsPlayed*100):0;
+    const rScrap=_totM>0?_clamp(_ccW/_totM*100+(_cW/_totM*100)*0.4):0;
+    const rCompose=_totM>0?_clamp(100-(_ccL/_totM*100)):50;
+    const rOpp=_avgOpp!=null?_clamp((_avgOpp-1200)/8):50;
+    const rAct=_clubAvgM>0?_clamp(matches/_clubAvgM*50):_clamp(matches*8);
+    const rEff=_clamp(50+(parseFloat(gdps)||0)*12);
+    const _axes=[['Win %',rWin],['Scrap',rScrap],['Compose',rCompose],['Opp Str',rOpp],['Active',rAct],['Pt Eff',rEff]];
+    function _radarSVG(axes){
+      const cx=100,cy=95,R=70,N=axes.length;
+      const pt=(i,r)=>{ const a=-Math.PI/2+i*2*Math.PI/N; return [cx+Math.cos(a)*r,cy+Math.sin(a)*r]; };
+      let grid=''; [0.25,0.5,0.75,1].forEach(f=>{ let p=axes.map((_,i)=>pt(i,R*f).join(',')).join(' '); grid+=`<polygon points="${p}" fill="none" stroke="#d6e6df" stroke-width="1"/>`; });
+      let spokes='',labels='';
+      axes.forEach((ax,i)=>{ const [x,y]=pt(i,R); spokes+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#d6e6df" stroke-width="1"/>`;
+        const [lx,ly]=pt(i,R+14); labels+=`<text x="${lx}" y="${ly}" font-size="8" fill="#4a6358" text-anchor="middle" dominant-baseline="middle">${ax[0]}</text>`; });
+      const poly=axes.map((ax,i)=>pt(i,R*ax[1]/100).join(',')).join(' ');
+      return `<svg viewBox="0 0 200 200" width="100%" style="max-width:230px;height:auto;display:block;margin:0 auto;">${grid}${spokes}<polygon points="${poly}" fill="rgba(30,132,73,.24)" stroke="#0d4a38" stroke-width="2"/>${labels}</svg>`;
+    }
+    function _donutSVG(cW,ccW,ccL,cL){
+      const tot=cW+ccW+ccL+cL,cx=70,cy=70,r=52,sw=22,C=2*Math.PI*r;
+      if(tot===0) return `<svg viewBox="0 0 140 140" width="100%" style="max-width:150px;height:auto;display:block;margin:0 auto;"><circle cx="70" cy="70" r="52" fill="none" stroke="#eee" stroke-width="22"/></svg>`;
+      const segs=[['#1e8449',cW],['#7ed957',ccW],['#ffb84d',ccL],['#c0392b',cL]]; let off=0,arcs='';
+      segs.forEach(([col,v])=>{ if(v<=0)return; const len=v/tot*C; arcs+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})"/>`; off+=len; });
+      return `<svg viewBox="0 0 140 140" width="100%" style="max-width:150px;height:auto;display:block;margin:0 auto;">${arcs}<text x="70" y="66" font-size="20" font-weight="800" fill="#0d4a38" text-anchor="middle">${tot}</text><text x="70" y="82" font-size="9" fill="#4a6358" text-anchor="middle">matches</text></svg>`;
+    }
+    const _chartsHTML = matches>0 ? `
+      <button type="button" onclick="(function(b){var p=document.getElementById('chartSnap');var open=p.style.display!=='none';p.style.display=open?'none':'block';b.innerHTML=(open?'\u25B8':'\u25BE')+' Chart Snapshot';})(this)" style="width:100%;text-align:left;background:#eef6f2;border:1.5px solid #d6e6df;border-radius:10px;padding:11px 14px;margin-bottom:10px;font-size:14px;font-weight:800;color:#0d4a38;cursor:pointer;font-family:inherit;">\u25B8 Chart Snapshot</button>
+      <div id="chartSnap" style="display:none;background:#eef6f2;border-radius:12px;padding:14px;margin-bottom:14px;">
+        <div style="font-weight:800;color:#0d4a38;font-size:15px;text-align:center;margin-bottom:2px;">Overall Performance</div>
+        <div style="font-size:10px;color:#4a6358;text-align:center;margin-bottom:10px;line-height:1.5;">
+          <b>Win %</b> games won · <b>Scrap</b> winning, esp. close · <b>Compose</b> few close losses · <b>Opp Str</b> strength of opponents · <b>Active</b> matches vs club average · <b>Pt Eff</b> point margin per game
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;">
+          <div style="flex:1 1 200px;min-width:180px;text-align:center;">${_radarSVG(_axes)}</div>
+          <div style="flex:1;min-width:150px;text-align:center;">
+            ${_donutSVG(_cW,_ccW,_ccL,_cL)}
+            <div style="display:flex;flex-wrap:wrap;gap:4px 10px;justify-content:center;margin-top:6px;font-size:10px;color:#5a4636;">
+              <span><span style="display:inline-block;width:8px;height:8px;background:#1e8449;border-radius:2px;"></span> Clear win ${_cW}</span>
+              <span><span style="display:inline-block;width:8px;height:8px;background:#7ed957;border-radius:2px;"></span> Close win ${_ccW}</span>
+              <span><span style="display:inline-block;width:8px;height:8px;background:#ffb84d;border-radius:2px;"></span> Close loss ${_ccL}</span>
+              <span><span style="display:inline-block;width:8px;height:8px;background:#c0392b;border-radius:2px;"></span> Clear loss ${_cL}</span>
+            </div>
+            ${_avgOpp!=null?`<div style="font-size:10px;color:#4a6358;margin-top:4px;">Avg opponent rating: <b>${_avgOpp}</b></div>`:''}
+          </div>
+        </div>
+      </div>` : '';
     const indivCard=`
       <div style="background:linear-gradient(135deg,#D35400,#B8480A);border-radius:16px;padding:20px;margin-bottom:8px;color:#fff;text-align:center;">
         <div style="font-size:20px;font-weight:800;">${who}</div>
@@ -3412,6 +3469,7 @@ async function showPartnerships(indivId){
         <div style="flex:1;background:#fdf3ec;border-radius:10px;padding:10px;text-align:center;"><div style="font-weight:800;color:#D35400;">${winPct}%</div><div style="font-size:11px;color:#7a6045;">Win %</div></div>
         <div style="flex:1;background:#fdf3ec;border-radius:10px;padding:10px;text-align:center;"><div style="font-weight:800;color:#D35400;">${gdps}</div><div style="font-size:11px;color:#7a6045;">Pt Diff/Game</div></div>
       </div>
+      ${_chartsHTML}
       `;
     const rows = teams.map(t=>{
       const pd=curBy[t.name]||{}; const cur=(pd.cur!=null?Math.round(pd.cur):Math.round(t.initial_rating));
