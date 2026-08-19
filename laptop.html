@@ -2814,7 +2814,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.13-29";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.13-30";  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -3349,9 +3349,9 @@ async function showPartnerships(indivId){
     const [teams, pr, myMatches, singlesMatches] = await Promise.all([
       sbGet(`players?select=id,name,gender,initial_rating,member_a_id,member_b_id&club_id=eq.${CLUB_ID}&or=(member_a_id.eq.${indivId},member_b_id.eq.${indivId})`).then(r=>r||[]),
       sbGet(`player_results?select=name,current_rating,initial_rating&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
-      sbGet(`matches?select=t1p1,t2p1,t1_sets,t2_sets,t1_games,t2_games&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
+      sbGet(`matches?select=id,t1p1,t2p1,t1_sets,t2_sets,t1_games,t2_games&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
       // OSR: this individual's SINGLES matches (match_format='singles', they are t1p1 or t2p1).
-      sbGet(`matches?select=match_date,t1p1,t2p1,t1_sets,t2_sets,t1_games,t2_games,set_scores,event&match_format=eq.singles&club_id=eq.${CLUB_ID}&or=(t1p1.eq.${_encWho},t2p1.eq.${_encWho})&order=match_date.desc`).then(r=>r||[]),
+      sbGet(`matches?select=id,match_date,t1p1,t2p1,t1_sets,t2_sets,t1_games,t2_games,set_scores,event&match_format=eq.singles&club_id=eq.${CLUB_ID}&or=(t1p1.eq.${_encWho},t2p1.eq.${_encWho})&order=match_date.desc`).then(r=>r||[]),
       (typeof odrBuildIndivRatings==="function" ? odrBuildIndivRatings() : Promise.resolve())
     ]);
     const _noTeams = !teams.length;
@@ -3390,14 +3390,17 @@ async function showPartnerships(indivId){
       const oA=mineIsT1?m.t2p1:m.t1p1, oB=mineIsT1?m.t2p2:m.t1p2;
       [oA,oB].forEach(n=>{ if(n){ const r=_oppR(n); if(r!=null){_oppSum+=r;_oppN++;} } });
     };
+    // Guard against double-counting: a singles match (individual names) can appear in BOTH
+    // myMatches and singlesMatches. Count each match id at most once.
+    const _seen=new Set();
     (myMatches||[]).forEach(m=>{
       const t1mine=_mineNames.has(m.t1p1), t2mine=_mineNames.has(m.t2p1);
       if(!t1mine && !t2mine) return;
+      if(m.id!=null){ if(_seen.has(m.id)) return; _seen.add(m.id); }
       _addMatch(m, t1mine);
     });
     (singlesMatches||[]).forEach(m=>{
-      // singles matches use the individual's own name; myMatches is keyed by pair names, so
-      // these won't have been counted above.
+      if(m.id!=null){ if(_seen.has(m.id)) return; _seen.add(m.id); }
       _addMatch(m, m.t1p1===who);
     });
     // Prefer the person's real current rating (player_results) when present; else seed+move.
