@@ -2028,9 +2028,21 @@ async function odrLoadPairsRoom(){
   try{
     const pl = await odrRestGet('players?club_id=eq.'+cid+'&select=id,name,gender,initial_rating,pin,member_a_id,member_b_id&order=name.asc');
     ODR_PAIRS = (pl||[]).filter(function(p){ return p.member_a_id!=null && p.member_b_id!=null; });
-    const pr = await odrRestGet('player_results?club_id=eq.'+cid+'&select=player_id,current_rating');
-    const cur={}; (pr||[]).forEach(function(r){ cur[r.player_id]=r.current_rating; });
-    ODR_PAIRS.forEach(function(p){ p._cur=(cur[p.id]!=null?cur[p.id]:p.initial_rating); });
+    // v38 SINGLE SOURCE (same rule as banner + partnership cards): a pair's CURRENT
+    // rating is the LIVE 60/40 of its two members' current ratings. The stored pair
+    // row never moves in this fork (pair names don't appear in 4-slot matches), so
+    // reading it froze Move at 0 forever. Members' current ratings by NAME from
+    // player_results; stored pair row (by id) kept only as last-resort fallback.
+    const pr = await odrRestGet('player_results?club_id=eq.'+cid+'&select=player_id,name,current_rating');
+    const cur={}, curByName={};
+    (pr||[]).forEach(function(r){ cur[r.player_id]=r.current_rating; if(r.name!=null&&r.current_rating!=null) curByName[r.name]=Number(r.current_rating); });
+    const _nameById={}; ODR_INDIV.forEach(function(i){ _nameById[i.id]=i.full_name; });
+    ODR_PAIRS.forEach(function(p){
+      const na=_nameById[p.member_a_id], nb=_nameById[p.member_b_id];
+      const ra=(na!=null?curByName[na]:null), rb=(nb!=null?curByName[nb]:null);
+      p._cur = (ra!=null&&rb!=null) ? Math.round(Math.max(ra,rb)*0.6+Math.min(ra,rb)*0.4)
+             : (cur[p.id]!=null?Math.round(cur[p.id]):Math.round(p.initial_rating));
+    });
   }catch(e){ ODR_PAIRS=[]; }
   if(!odrSearchWired){ odrWireSearch(); odrSearchWired=true; }
   odrRenderPairList();
@@ -2838,7 +2850,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.23-37";  // ALIGNED WITH OPR: (1) PAIR AUTO-BIRTH — both sides’ pairings register automatically when a doubles match saves (fire-and-forget, as-entered names, idempotent); the Admin Pairs Room fills itself like OPR’s. (2) RECOMPUTE NOW button in admin control — manual full-club recompute, no more open-and-resave workaround. Includes v36 and all prior.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.23-38";  // PAIRS ROOM = LIVE 60/40 (same single source as banner and partnership cards): the admin pair list’s Current and Move now derive from the two members’ current ratings, so Move tracks real play instead of freezing at 0. Includes v37 (auto-birth + recompute button) and all prior.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
