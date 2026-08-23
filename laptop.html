@@ -2815,7 +2815,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.23-31";  // ALIGNED with ODR: (1) BOX-CENTRIC KNOCKOUT — byes no longer written as round-1 fixtures, column 1 staggered; pairs with OSR-TOURNAMENT v2026.08.23-BC1. (2) AS-ENTERED PAIR NAMES — a newly-born pair (ladder/profile entity) is named in the order entered (was A→Z); existing pairs keep stored names; the Existing/New pairing probe is now order-independent. Doubles matches themselves already store all four names as typed (unchanged).  // RR FINISH CHOICE at generation (single-group): added etRRFinishHTML/etRRFinishSet + wired into etGroupConfigHTML (both no-splits and single-group-within-splits) + playoffSize on cfg — brings OSR to parity with OTR. Post-completion build still confirms top 2 or 4 (unchanged). Multi-group snake/block config, allocation engine, and 2/4 prompt untouched. // Handicap entry is now SEAMLESS (Option B): entering a handicap event's score on the main +enter screen silently routes to the safe tournament path (matches teams→fixture→record_fixture_result, server-gated). Same familiar screen; the rating engine (submit_match/recompute) is NEVER called for handicap events. No Rounds-tab detour needed.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.23-33";  // 60/40 THROUGHOUT: every pair rating shown (profile cards, team banner) is stronger*0.6 + weaker*0.4 — the same-gender 50/50 removed everywhere, matching the R1 recompute ranking. Includes everything from v31+v32.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -3242,7 +3242,7 @@ async function loadTeamProfileOSR(name, partner, cat){
       if(_u!=null){ bannerRating=Math.round(_u); bannerLevel=(_u/200).toFixed(1);} }
     else if(rmap[name]!=null && rmap[partner]!=null){
       const same=(gmap[name]===gmap[partner]);
-      const v= same ? (rmap[name]+rmap[partner])/2 : (Math.max(rmap[name],rmap[partner])*0.6+Math.min(rmap[name],rmap[partner])*0.4);
+      const v= (Math.max(rmap[name],rmap[partner])*0.6+Math.min(rmap[name],rmap[partner])*0.4);  // 60/40 THROUGHOUT (v33)
       bannerRating=Math.round(v); bannerLevel=(v/200).toFixed(1);
     }
 
@@ -3338,6 +3338,14 @@ function toggleTeamMatchOSR(i){
 }
 
 async function showPartnerships(indivId){
+  // v32 REBUILT ON THE OTR MODEL: OSR stores doubles as FOUR INDIVIDUALS per match
+  // (OTR model), but this screen was built on the ODR pair-entity model — so it found
+  // no partnerships, missed doubles in the stats, and hid the chart. Now: the person's
+  // matches are read from all four slots, doubles are grouped by partner into
+  // partnership cards (rating by the ranking convention: same-gender 50/50 combined,
+  // mixed 60/40 weighted), singles get their own card above, and every card opens the
+  // full team profile (loadTeamProfileOSR) with expandable score rows. Banner keeps the
+  // derived individual rating (odrIndivRating). Squash vocabulary kept (Games/Points).
   const ind=(window._profileIndivs||[]).find(x=>x.id===indivId);
   const who = ind ? ind.full_name : '';
   window._partnerFor = who;
@@ -3345,105 +3353,76 @@ async function showPartnerships(indivId){
   document.getElementById('partnershipsTitle').textContent = who;
   const box=document.getElementById('partnershipsList'); box.innerHTML='Loading…';
   try{
-    // Fetch the independent datasets in PARALLEL (was sequential). Pure speed; data identical.
-    const _encWho = encodeURIComponent(who);
-    const [teams, pr, myMatches, singlesMatches] = await Promise.all([
-      sbGet(`players?select=id,name,gender,initial_rating,member_a_id,member_b_id&club_id=eq.${CLUB_ID}&or=(member_a_id.eq.${indivId},member_b_id.eq.${indivId})`).then(r=>r||[]),
-      sbGet(`player_results?select=name,current_rating,initial_rating&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
-      sbGet(`matches?select=id,t1p1,t2p1,t1_sets,t2_sets,t1_games,t2_games&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
-      // OSR: this individual's SINGLES matches (match_format='singles', they are t1p1 or t2p1).
-      sbGet(`matches?select=id,match_date,t1p1,t2p1,t1_sets,t2_sets,t1_games,t2_games,set_scores,event&match_format=eq.singles&club_id=eq.${CLUB_ID}&or=(t1p1.eq.${_encWho},t2p1.eq.${_encWho})&order=match_date.desc`).then(r=>r||[]),
+    const enc=encodeURIComponent(who);
+    const q=`matches?select=id,match_date,match_type,event,t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,t1_games,t2_games,set_scores,rating_delta&or=(t1p1.eq.${enc},t1p2.eq.${enc},t2p1.eq.${enc},t2p2.eq.${enc})&order=match_date.desc,id.desc&club_id=eq.${CLUB_ID}`;
+    const [playerMatches, allPR] = await Promise.all([
+      sbGet(q).then(r=>r||[]),
+      sbGet(`player_results?select=name,current_rating,gender&club_id=eq.${CLUB_ID}`).then(r=>r||[]),
       (typeof odrBuildIndivRatings==="function" ? odrBuildIndivRatings() : Promise.resolve())
     ]);
-    const _noTeams = !teams.length;
-    const curBy={}; pr.forEach(r=>{ curBy[r.name]={cur:r.current_rating, init:r.initial_rating}; });
-    const catLabel=c=>c==='M'?"Men's":c==='L'?'Ladies':c==='X'?'Mixed':'';
-    const catCls=c=>c==='M'?'odr-cat-M':c==='L'?'odr-cat-L':'odr-cat-X';
-    const teamNames = teams.map(t=>t.name);
-    const mcount={}; myMatches.forEach(m=>{ if(m.t1p1) mcount[m.t1p1]=(mcount[m.t1p1]||0)+1; if(m.t2p1) mcount[m.t2p1]=(mcount[m.t2p1]||0)+1; });
-    // ----- INDIVIDUAL BANNER (OTR-style: rating & move come straight from the person's
-    // player_results row — the engine already computed it correctly. Do NOT reconstruct
-    // by summing pair moves; that was the source of wrong banner numbers.) -----
+    const rmap={}, gmap={};
+    allPR.forEach(r=>{ if(r.name!=null){ if(r.current_rating!=null) rmap[r.name]=Number(r.current_rating); if(r.gender!=null) gmap[r.name]=r.gender; } });
+    const myG = (ind && ind.gender) || gmap[who] || 'M';
+    const catLabel = myG==='M' ? "Men's" : myG==='F' ? 'Ladies' : '';
+
+    // ----- INDIVIDUAL BANNER (derived rating: seed + pair-play + singles movement) -----
     const seed = ind && ind.seed_rating!=null ? ind.seed_rating : 1500;
-    // Individual banner rating = the DERIVED rating (seed + pair-play contribution + singles
-    // movement), exactly like OPR's OPR.indiv(). A pure-doubles player therefore shows their
-    // real standing (e.g. 1511 +11), not their untouched singles seed.
     const _derived = (typeof odrIndivRating==='function' && odrIndivRating(who)!=null) ? odrIndivRating(who) : null;
     const _curR = (_derived!=null) ? _derived : Math.round(seed);
     const _initR = Math.round(seed);
     const totalMove = _curR - _initR;
-    // Stats across ALL this person's matches (pairs + singles). Build the set of names that
-    // represent this person: their own name (singles) + every pair they belong to.
-    const _mineNames = new Set([who, ...teamNames]);
-    let matches=0, setsFor=0, setsAgainst=0, gamesFor=0, gamesAgainst=0, setsWon=0, setsPlayed=0;
-    // Combine pair matches (myMatches, keyed by pair name in t1p1/t2p1) and singles matches
-    // (keyed by the person's own name).
-    // Chart accumulators (radar + donut) — filled for BOTH singles and doubles via _addMatch.
+    const curRating=Math.round(_curR), level=(curRating/200).toFixed(1);
+    const mvColI=totalMove>=0?'#bff3d8':'#ffd0c8', mvStrI=(totalMove>0?'+':'')+Math.round(totalMove);
+
+    // ----- STATS + CHART ACCUMULATORS from the person's matches (singles + doubles) -----
+    let matches=0, setsPlayed=0, setsWon=0, gamesFor=0, gamesAgainst=0;
     let _cW=0,_ccW=0,_ccL=0,_cL=0,_oppSum=0,_oppN=0;
-    const _oppR=(n)=>{ let r=null; try{ if(typeof odrIndivRating==='function') r=odrIndivRating(n); }catch(e){} return r; };
-    const _addMatch=(m, mineIsT1)=>{
-      const sf=mineIsT1?(m.t1_sets||0):(m.t2_sets||0), sa=mineIsT1?(m.t2_sets||0):(m.t1_sets||0);
-      const gf=mineIsT1?(m.t1_games||0):(m.t2_games||0), ga=mineIsT1?(m.t2_games||0):(m.t1_games||0);
-      setsFor+=sf; setsAgainst+=sa; gamesFor+=gf; gamesAgainst+=ga; setsPlayed+=sf+sa; setsWon+=sf; matches++;
+    const _oppR=(n)=>{ let r=null; try{ if(typeof odrIndivRating==='function') r=odrIndivRating(n); }catch(e){} if(r==null && n in rmap) r=rmap[n]; return r; };
+    playerMatches.forEach(m=>{
+      const onT1=(m.t1p1===who||m.t1p2===who);
+      const sf=onT1?(m.t1_sets||0):(m.t2_sets||0), sa=onT1?(m.t2_sets||0):(m.t1_sets||0);
+      const gf=onT1?(m.t1_games||0):(m.t2_games||0), ga=onT1?(m.t2_games||0):(m.t1_games||0);
+      setsPlayed+=sf+sa; setsWon+=sf; gamesFor+=gf; gamesAgainst+=ga; matches++;
       const won=sf>sa, setMargin=Math.abs(sf-sa), gMargin=Math.abs(gf-ga);
       const close=(setMargin<=1)||(gMargin>0&&gMargin<=3);
       if(won){ if(close)_ccW++; else _cW++; } else { if(close)_ccL++; else _cL++; }
-      const oA=mineIsT1?m.t2p1:m.t1p1, oB=mineIsT1?m.t2p2:m.t1p2;
+      const oA=onT1?m.t2p1:m.t1p1, oB=onT1?m.t2p2:m.t1p2;
       [oA,oB].forEach(n=>{ if(n){ const r=_oppR(n); if(r!=null){_oppSum+=r;_oppN++;} } });
-    };
-    // Guard against double-counting: a singles match (individual names) can appear in BOTH
-    // myMatches and singlesMatches. Count each match id at most once.
-    const _seen=new Set();
-    (myMatches||[]).forEach(m=>{
-      const t1mine=_mineNames.has(m.t1p1), t2mine=_mineNames.has(m.t2p1);
-      if(!t1mine && !t2mine) return;
-      if(m.id!=null){ if(_seen.has(m.id)) return; _seen.add(m.id); }
-      _addMatch(m, t1mine);
     });
-    (singlesMatches||[]).forEach(m=>{
-      if(m.id!=null){ if(_seen.has(m.id)) return; _seen.add(m.id); }
-      _addMatch(m, m.t1p1===who);
-    });
-    // Prefer the person's real current rating (player_results) when present; else seed+move.
-    const curRating=Math.round(_curR), level=(curRating/200).toFixed(1);
-    const cat=ind?(ind.gender==='M'?"Men's":ind.gender==='F'?'Ladies':''):'';
     const winPct=setsPlayed>0?(setsWon/setsPlayed*100).toFixed(1):'0.0';
     const gdps=setsPlayed>0?((gamesFor-gamesAgainst)/setsPlayed).toFixed(2):'0.00';
-    const mvColI=totalMove>=0?'#bff3d8':'#ffd0c8', mvStrI=(totalMove>0?'+':'')+Math.round(totalMove);
     const _totM=_cW+_ccW+_ccL+_cL, _avgOpp=_oppN>0?Math.round(_oppSum/_oppN):null;
-    const _mcVals=Object.values(mcount).filter(v=>v>0);
-    const _clubAvgM=_mcVals.length?(_mcVals.reduce((a,b)=>a+b,0)/_mcVals.length):0;
     const _clamp=v=>Math.max(0,Math.min(100,v));
     const rWin=setsPlayed>0?_clamp(setsWon/setsPlayed*100):0;
     const rScrap=_totM>0?_clamp(_ccW/_totM*100+(_cW/_totM*100)*0.4):0;
     const rCompose=_totM>0?_clamp(100-(_ccL/_totM*100)):50;
     const rOpp=_avgOpp!=null?_clamp((_avgOpp-1200)/8):50;
-    const rAct=_clubAvgM>0?_clamp(matches/_clubAvgM*50):_clamp(matches*8);
+    const rAct=_clamp(matches*8);
     const rEff=_clamp(50+(parseFloat(gdps)||0)*12);
     const _axes=[['Win %',rWin],['Scrap',rScrap],['Compose',rCompose],['Opp Str',rOpp],['Active',rAct],['Pt Eff',rEff]];
     function _radarSVG(axes){
       const cx=100,cy=95,R=70,N=axes.length;
       const pt=(i,r)=>{ const a=-Math.PI/2+i*2*Math.PI/N; return [cx+Math.cos(a)*r,cy+Math.sin(a)*r]; };
-      let grid=''; [0.25,0.5,0.75,1].forEach(f=>{ let p=axes.map((_,i)=>pt(i,R*f).join(',')).join(' '); grid+=`<polygon points="${p}" fill="none" stroke="#d6e6df" stroke-width="1"/>`; });
+      let grid=''; [0.25,0.5,0.75,1].forEach(f=>{ let p=axes.map((_,i)=>pt(i,R*f).join(',')).join(' '); grid+=`<polygon points="${p}" fill="none" stroke="#f0ddd0" stroke-width="1"/>`; });
       let spokes='',labels='';
-      axes.forEach((ax,i)=>{ const [x,y]=pt(i,R); spokes+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#d6e6df" stroke-width="1"/>`;
-        const [lx,ly]=pt(i,R+14); labels+=`<text x="${lx}" y="${ly}" font-size="8" fill="#4a6358" text-anchor="middle" dominant-baseline="middle">${ax[0]}</text>`; });
+      axes.forEach((ax,i)=>{ const [x,y]=pt(i,R); spokes+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#f0ddd0" stroke-width="1"/>`;
+        const [lx,ly]=pt(i,R+14); labels+=`<text x="${lx}" y="${ly}" font-size="8" fill="#8a5a3a" text-anchor="middle" dominant-baseline="middle">${ax[0]}</text>`; });
       const poly=axes.map((ax,i)=>pt(i,R*ax[1]/100).join(',')).join(' ');
-      return `<svg viewBox="0 0 200 200" width="100%" style="max-width:230px;height:auto;display:block;margin:0 auto;">${grid}${spokes}<polygon points="${poly}" fill="rgba(30,132,73,.24)" stroke="#0d4a38" stroke-width="2"/>${labels}</svg>`;
+      return `<svg viewBox="0 0 200 200" width="100%" style="max-width:230px;height:auto;display:block;margin:0 auto;">${grid}${spokes}<polygon points="${poly}" fill="rgba(211,84,0,.22)" stroke="#B8480A" stroke-width="2"/>${labels}</svg>`;
     }
     function _donutSVG(cW,ccW,ccL,cL){
       const tot=cW+ccW+ccL+cL,cx=70,cy=70,r=52,sw=22,C=2*Math.PI*r;
       if(tot===0) return `<svg viewBox="0 0 140 140" width="100%" style="max-width:150px;height:auto;display:block;margin:0 auto;"><circle cx="70" cy="70" r="52" fill="none" stroke="#eee" stroke-width="22"/></svg>`;
       const segs=[['#1e8449',cW],['#7ed957',ccW],['#ffb84d',ccL],['#c0392b',cL]]; let off=0,arcs='';
       segs.forEach(([col,v])=>{ if(v<=0)return; const len=v/tot*C; arcs+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})"/>`; off+=len; });
-      return `<svg viewBox="0 0 140 140" width="100%" style="max-width:150px;height:auto;display:block;margin:0 auto;">${arcs}<text x="70" y="66" font-size="20" font-weight="800" fill="#0d4a38" text-anchor="middle">${tot}</text><text x="70" y="82" font-size="9" fill="#4a6358" text-anchor="middle">matches</text></svg>`;
+      return `<svg viewBox="0 0 140 140" width="100%" style="max-width:150px;height:auto;display:block;margin:0 auto;">${arcs}<text x="70" y="66" font-size="20" font-weight="800" fill="#B8480A" text-anchor="middle">${tot}</text><text x="70" y="82" font-size="9" fill="#8a5a3a" text-anchor="middle">matches</text></svg>`;
     }
     const _chartsHTML = matches>0 ? `
-      <button type="button" onclick="(function(b){var p=document.getElementById('chartSnap');var open=p.style.display!=='none';p.style.display=open?'none':'block';b.innerHTML=(open?'\u25B8':'\u25BE')+' Chart Snapshot';})(this)" style="width:100%;text-align:left;background:#eef6f2;border:1.5px solid #d6e6df;border-radius:10px;padding:11px 14px;margin-bottom:10px;font-size:14px;font-weight:800;color:#0d4a38;cursor:pointer;font-family:inherit;">\u25B8 Chart Snapshot</button>
-      <div id="chartSnap" style="display:none;background:#eef6f2;border-radius:12px;padding:14px;margin-bottom:14px;">
-        <div style="font-weight:800;color:#0d4a38;font-size:15px;text-align:center;margin-bottom:2px;">Overall Performance</div>
-        <div style="font-size:10px;color:#4a6358;text-align:center;margin-bottom:10px;line-height:1.5;">
-          <b>Win %</b> games won · <b>Scrap</b> winning, esp. close · <b>Compose</b> few close losses · <b>Opp Str</b> strength of opponents · <b>Active</b> matches vs club average · <b>Pt Eff</b> point margin per game
+      <button type="button" onclick="(function(b){var p=document.getElementById('chartSnap');var open=p.style.display!=='none';p.style.display=open?'none':'block';b.innerHTML=(open?'\u25B8':'\u25BE')+' Chart Snapshot';})(this)" style="width:100%;text-align:left;background:#fdf3ec;border:1.5px solid #f0ddd0;border-radius:10px;padding:11px 14px;margin-bottom:10px;font-size:14px;font-weight:800;color:#B8480A;cursor:pointer;font-family:inherit;">\u25B8 Chart Snapshot</button>
+      <div id="chartSnap" style="display:none;background:#fdf3ec;border-radius:12px;padding:14px;margin-bottom:14px;">
+        <div style="font-weight:800;color:#B8480A;font-size:15px;text-align:center;margin-bottom:2px;">Overall Performance</div>
+        <div style="font-size:10px;color:#8a5a3a;text-align:center;margin-bottom:10px;line-height:1.5;">
+          <b>Win %</b> games won · <b>Scrap</b> winning, esp. close · <b>Compose</b> few close losses · <b>Opp Str</b> strength of opponents · <b>Active</b> matches played · <b>Pt Eff</b> point margin per game
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;">
           <div style="flex:1 1 200px;min-width:180px;text-align:center;">${_radarSVG(_axes)}</div>
@@ -3455,104 +3434,83 @@ async function showPartnerships(indivId){
               <span><span style="display:inline-block;width:8px;height:8px;background:#ffb84d;border-radius:2px;"></span> Close loss ${_ccL}</span>
               <span><span style="display:inline-block;width:8px;height:8px;background:#c0392b;border-radius:2px;"></span> Clear loss ${_cL}</span>
             </div>
-            ${_avgOpp!=null?`<div style="font-size:10px;color:#4a6358;margin-top:4px;">Avg opponent rating: <b>${_avgOpp}</b></div>`:''}
+            ${_avgOpp!=null?`<div style="font-size:10px;color:#8a5a3a;margin-top:4px;">Avg opponent rating: <b>${_avgOpp}</b></div>`:''}
           </div>
         </div>
       </div>` : '';
-    const indivCard=`
-      <div style="background:linear-gradient(135deg,#D35400,#B8480A);border-radius:16px;padding:20px;margin-bottom:8px;color:#fff;text-align:center;">
-        <div style="font-size:20px;font-weight:800;">${who}</div>
-        <div style="font-size:40px;font-weight:800;line-height:1.1;margin:6px 0;">${curRating}</div>
-        <div style="font-size:14px;opacity:.95;">Level ${level}</div>
-        <div style="font-size:13px;margin-top:4px;opacity:.95;">${cat}${cat?' · ':''}<span style="color:${mvColI};font-weight:800;">${mvStrI}</span> since inception</div>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:14px;">
-        <div style="flex:1;background:#fdf3ec;border-radius:10px;padding:10px;text-align:center;"><div style="font-weight:800;color:#D35400;">${matches}</div><div style="font-size:11px;color:#7a6045;">Matches</div></div>
-        <div style="flex:1;background:#fdf3ec;border-radius:10px;padding:10px;text-align:center;"><div style="font-weight:800;color:#D35400;">${setsPlayed}</div><div style="font-size:11px;color:#7a6045;">Games</div></div>
-        <div style="flex:1;background:#fdf3ec;border-radius:10px;padding:10px;text-align:center;"><div style="font-weight:800;color:#D35400;">${setsWon}</div><div style="font-size:11px;color:#7a6045;">Games Won</div></div>
-        <div style="flex:1;background:#fdf3ec;border-radius:10px;padding:10px;text-align:center;"><div style="font-weight:800;color:#D35400;">${winPct}%</div><div style="font-size:11px;color:#7a6045;">Win %</div></div>
-        <div style="flex:1;background:#fdf3ec;border-radius:10px;padding:10px;text-align:center;"><div style="font-weight:800;color:#D35400;">${gdps}</div><div style="font-size:11px;color:#7a6045;">Pt Diff/Game</div></div>
-      </div>
-      ${_chartsHTML}
-      `;
-    const rows = teams.map(t=>{
-      const pd=curBy[t.name]||{}; const cur=(pd.cur!=null?Math.round(pd.cur):Math.round(t.initial_rating));
-      const init=(pd.init!=null?Math.round(pd.init):Math.round(t.initial_rating));
-      return {t, cur, mv:cur-init, mc:(mcount[t.name]||0)};
-    }).filter(r=> r.mc>0)                          // drop ghost pairs: 0 matches left (all deleted)
-      .sort((a,b)=> b.mc-a.mc || b.cur-a.cur);   // most matches first; rating breaks ties
-    // OSR SINGLES CARD — OTR-style: a clickable card (Rating / Matches / Move + gender pill)
-    // that expands inline to show the singles match history. Only shown if singles matches exist.
-    let singlesCard = '';
-    if(singlesMatches && singlesMatches.length){
-      let sP=0,sW=0;
-      const rowsS = singlesMatches.map(mm=>{
-        const meT1=(mm.t1p1===who);
-        const my=meT1?mm.t1_sets:mm.t2_sets, opp=meT1?mm.t2_sets:mm.t1_sets;
-        const oppName=meT1?mm.t2p1:mm.t1p1;
-        sP+=(my||0)+(opp||0); sW+=(my||0);
-        const win=(my||0)>(opp||0);
-        const dt=(mm.match_date||'').slice(0,10);
-        // Per-GAME chips from set_scores (e.g. "11-4,11-2"), from this player's perspective,
-        // green if they won that game, red if not — matching OTR's expanded match view.
-        const ss=(mm.set_scores||'').trim();
-        let chips='';
-        if(ss){
-          chips = ss.split(',').map(x=>x.trim()).filter(x=>x).map(sc=>{
-            const parts=sc.split('-').map(n=>parseInt(n)||0); const x=parts[0], y=parts[1];
-            const mine=meT1?x:y, theirs=meT1?y:x;
-            return `<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;color:#fff;background:${mine>theirs?'#1e8449':'#c0392b'};margin:2px 4px 2px 0;">${mine}\u2013${theirs}</span>`;
-          }).join('');
-        }
-        return `<div style="padding:8px 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:13px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span>vs ${oppName||'?'}${dt?' <span style=\'color:#9a8578;font-size:11px;\'>'+dt+'</span>':''}</span>
-            <span style="font-weight:700;color:${win?'#1e8449':'#c0392b'};">${my||0}\u2013${opp||0}</span>
-          </div>
-          ${chips?('<div style="margin-top:4px;">'+chips+'</div>'):''}
-        </div>`;
-      }).join('');
-      // Move for the SINGLES card = this person's SINGLES-only movement (their own player_results
-      // row moves only on singles matches), NOT their total move. Relevant-to-singles, like a
-      // partnership card shows that pair's move.
-      const _ownS = curBy[who] || {};
-      const sMv = (_ownS.cur!=null && _ownS.init!=null) ? Math.round(_ownS.cur - _ownS.init) : 0;
-      const sMvCol = sMv>=0 ? '#1e8449' : '#c0392b';
-      // Individuals use gender M/F (not the pair M/L/X scheme), so map directly for the singles pill.
-      const _ig = (ind && ind.gender) ? ind.gender : 'M';
-      const sLabel = _ig==='F' ? 'Ladies' : _ig==='L' ? 'Ladies' : _ig==='X' ? 'Mixed' : "Men's";
-      const sCls = _ig==='F' ? 'odr-cat-L' : _ig==='L' ? 'odr-cat-L' : _ig==='X' ? 'odr-cat-X' : 'odr-cat-M';
-      const gPill = `<span class="odr-cat-pill ${sCls}">${sLabel}</span>`;
-      singlesCard = `<div style="font-weight:700;color:#5a4636;margin:4px 0 8px;font-size:14px;">SINGLES</div>`
-        + `<div onclick="window._teamBackId=${indivId};loadTeamProfileOSR('${who.replace(/'/g,"\\'")}','','${(ind&&ind.gender)||'M'}')" style="cursor:pointer;background:#fff;border:1px solid rgba(211,84,0,.16);border-radius:12px;padding:12px 14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+
+    // ----- ROLL UP PARTNERSHIPS (group DOUBLES matches by partner; singles grouped under '') -----
+    const groups={};
+    playerMatches.forEach(m=>{
+      const onT1=(m.t1p1===who||m.t1p2===who);
+      const partner = onT1 ? (m.t1p1===who?m.t1p2:m.t1p1) : (m.t2p1===who?m.t2p2:m.t2p1);
+      const key = (partner==null||String(partner).trim()==='') ? '' : partner;
+      if(!groups[key]) groups[key]={partner:key, matches:[], mv:0};
+      groups[key].matches.push(m);
+      const d=(m.rating_delta!=null?Number(m.rating_delta):0);
+      groups[key].mv += onT1 ? d : -d;
+    });
+    const pairRating=(a,b)=>{
+      const ra=(typeof odrIndivRating==='function'?odrIndivRating(a):null) ?? rmap[a];
+      const rb=(typeof odrIndivRating==='function'?odrIndivRating(b):null) ?? rmap[b];
+      if(ra==null||rb==null) return null;
+      // 60/40 THROUGHOUT (v33): stronger*0.6 + weaker*0.4 for EVERY pair — no 50/50.
+      return Math.round(Math.max(ra,rb)*0.6+Math.min(ra,rb)*0.4);
+    };
+    const pairCat=(a,b)=> (gmap[a]&&gmap[b]&&gmap[a]!==gmap[b]) ? 'X' : (gmap[a]||myG);
+    const catPill=(c)=>{
+      const lab=c==='M'?"Men's":c==='F'?'Ladies':c==='X'?'Mixed':'';
+      const bg=c==='X'?'#e8f8ef':'#eaf1fb', col=c==='X'?'#1e8449':'#2a5db0';
+      return lab?`<span style="font-size:11px;font-weight:700;background:${bg};color:${col};border-radius:10px;padding:2px 9px;">${lab}</span>`:'';
+    };
+    const partnerRows = Object.values(groups)
+      .map(g=>{
+        const mv=Math.round(g.mv*10)/10;
+        if(g.partner===''){ return {partner:'', label:'Singles', cat:myG, rating:curRating, mc:g.matches.length, mv}; }
+        return {partner:g.partner, label:who+' & '+g.partner, cat:pairCat(who,g.partner), rating:pairRating(who,g.partner), mc:g.matches.length, mv};
+      })
+      .filter(r=>r.mc>0)
+      .sort((a,b)=> b.mc-a.mc || (b.rating||0)-(a.rating||0));
+    const singlesRow = partnerRows.find(r=>r.partner==='');
+    const doublesRows = partnerRows.filter(r=>r.partner!=='');
+    const _esc=(x)=>String(x).replace(/'/g,"\\'");
+    const profCard=(r)=>{
+      const mvCol = r.mv>=0 ? '#1e8449' : '#c0392b';
+      const rt = r.rating!=null ? r.rating : '\u2014';
+      const openArg = `loadTeamProfileOSR('${_esc(who)}','${_esc(r.partner)}','${r.cat}')`;
+      return `<div onclick="${openArg}" style="cursor:pointer;background:#fff;border:1px solid rgba(211,84,0,.18);border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-            <span style="font-weight:700;flex:1;">Singles <span style="color:#B8480A;font-size:11px;">›</span></span>${gPill}
+            <span style="font-weight:700;flex:1;color:#3a2417;">${r.label} \u203A</span>${catPill(r.cat)}
           </div>
-          <div style="display:flex;gap:16px;font-size:13px;color:#6b5647;">
-            <span>Rating <b style="color:#B8480A;">${curRating}</b></span>
-            <span>Matches <b>${singlesMatches.length}</b></span>
-            <span>Move <b style="color:${sMvCol};">${sMv>0?'+':''}${sMv}</b></span>
+          <div style="display:flex;gap:16px;font-size:13px;color:#8a5a3a;">
+            <span>Rating <b style="color:#B8480A;">${rt}</b></span>
+            <span>Matches <b>${r.mc}</b></span>
+            <span>Move <b style="color:${mvCol};">${r.mv>0?'+':''}${r.mv}</b></span>
           </div>
-          
         </div>`;
+    };
+
+    let html = `
+      <div style="background:linear-gradient(135deg,#D35400,#A04000);border-radius:16px;padding:22px 16px;text-align:center;color:#fff;margin-bottom:14px;">
+        <div style="font-weight:800;font-size:19px;">${who}</div>
+        <div style="font-size:38px;font-weight:800;line-height:1.15;">${curRating}</div>
+        <div style="font-size:14px;opacity:.92;">Level ${level}</div>
+        <div style="font-size:13px;opacity:.92;">${catLabel} \u00B7 <span style="color:${mvColI};font-weight:800;">${mvStrI}</span> since inception</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        ${[[matches,'Matches'],[setsPlayed,'Games'],[setsWon,'Games Won'],[winPct+'%','Win %'],[gdps,'Pt Diff/Game']].map(([v,l])=>`<div style="flex:1;min-width:90px;background:#fdf3ec;border-radius:10px;padding:10px 6px;text-align:center;"><div style="font-weight:800;color:#B8480A;">${v}</div><div style="font-size:11px;color:#5a4636;">${l}</div></div>`).join('')}
+      </div>
+      ${_chartsHTML}`;
+    if(singlesRow){
+      html += `<div style="font-weight:800;color:#5a4636;font-size:13px;letter-spacing:.04em;margin:4px 0 8px;">SINGLES</div>` + profCard(singlesRow);
     }
-    const partHdr = '<div style="font-weight:700;color:#5a4636;margin:4px 0 8px;font-size:14px;">Partnerships</div>';
-    if(_noTeams || !rows.length){ box.innerHTML = indivCard + singlesCard + partHdr + '<div style="padding:16px;color:#9a8578;text-align:center;">No partnerships yet for '+who+'.</div>'; return; }
-    box.innerHTML = indivCard + singlesCard + partHdr + rows.map(r=>{
-      const t=r.t; const mc=r.mc; const mvCol = r.mv>=0 ? '#1e8449' : '#c0392b';
-      return `<div onclick="window._profileFrom='partnerships';loadProfile('${t.name.replace(/'/g,"\\'")}','${t.gender}')" style="cursor:pointer;background:#fff;border:1px solid rgba(211,84,0,.16);border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-          <span style="font-weight:700;flex:1;">${t.name}</span>
-          <span class="odr-cat-pill ${catCls(t.gender)}">${catLabel(t.gender)}</span>
-        </div>
-        <div style="display:flex;gap:16px;font-size:13px;color:#5a4636;">
-          <span>Rating <b style="color:#D35400;">${r.cur}</b></span>
-          <span>Matches <b>${mc}</b></span>
-          <span>Move <b style="color:${mvCol};">${r.mv>0?'+':''}${r.mv}</b></span>
-        </div>
-      </div>`;
-    }).join('');
-  }catch(e){ box.innerHTML='<div style="padding:16px;color:#c0392b;">'+(e.message||e)+'</div>'; }
+    html += `<div style="font-weight:800;color:#5a4636;font-size:13px;letter-spacing:.04em;margin:10px 0 8px;">PARTNERSHIPS</div>`;
+    html += doublesRows.length ? doublesRows.map(profCard).join('')
+          : `<div style="text-align:center;color:#999;padding:16px 0;">No partnerships yet for ${who}.</div>`;
+    box.innerHTML = html;
+  }catch(e){
+    box.innerHTML = '<div style="color:#c0392b;padding:14px;">Could not load profile: '+(e.message||e)+'</div>';
+  }
 }
 
 let TOURNAMENT_EVENT = '';   // no auto-default; user picks from the dropdown (placeholder shown first)
