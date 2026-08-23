@@ -604,13 +604,13 @@
       <div style="background:rgba(211,84,0,.08);border:1px solid rgba(211,84,0,.30);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#0d4a38;line-height:1.5;text-align:center;">Overall standings for ALL matches recorded in both Social and Tournament records</div>
       <div class="ladders-group-title">Singles Ratings</div>
       <div class="ladders-grid">
-        <button class="menu-btn" onclick="loadLadder('mens_singles','Men\u2019s Singles')">Men's Singles</button>
-        <button class="menu-btn" onclick="loadLadder('ladies_singles','Ladies\u2019 Singles')">Ladies' Singles</button>
+        <button class="menu-btn" onclick="loadLadder('mens_singles','Men’s Singles')">Men's Singles</button>
+        <button class="menu-btn" onclick="loadLadder('ladies_singles','Ladies’ Singles')">Ladies' Singles</button>
       </div>
       <div class="ladders-group-title">Pair Ratings</div>
       <div class="ladders-grid">
-        <button class="menu-btn" onclick="loadLadder('mens','Men\u2019s Pairs')">Men's Pairs</button>
-        <button class="menu-btn" onclick="loadLadder('ladies','Ladies\u2019 Pairs')">Ladies' Pairs</button>
+        <button class="menu-btn" onclick="loadLadder('mens','Men’s Pairs')">Men's Pairs</button>
+        <button class="menu-btn" onclick="loadLadder('ladies','Ladies’ Pairs')">Ladies' Pairs</button>
         <button class="menu-btn" onclick="loadLadder('mixed','Mixed Pairs')">Mixed Pairs</button>
         <button class="menu-btn" onclick="loadLadder('allsorts','All Sorts')">All Sorts</button>
       </div>
@@ -916,6 +916,10 @@
               <button class="ac-btn ac-btn-ghost" style="white-space:nowrap;" onclick="adminBulkReset('F')">Reset Ladies</button>
             </div>
             <div id="resetMsg" class="ac-msg"></div>
+            <div style="margin-top:10px;">
+              <button class="ac-btn ac-btn-ghost" style="width:100%;" onclick="adminRecomputeNow()">↻ Recompute club now</button>
+              <div id="recomputeMsg" class="ac-msg"></div>
+            </div>
           </div>
 
           <!-- EDIT CLUB NAME (onboarding: OPR Gen 1 -> real club name) -->
@@ -1332,10 +1336,10 @@ function mkPick(slot){
   const pool=mkPlayerPool(slot);
   const taken=Object.entries(MK.players).filter(([k,v])=>k!==slot&&v).map(([k,v])=>v);
   let note;
-  if(MK.cat==="Men's") note='Showing Men\u2019s pairs.';
-  else if(MK.cat==='Ladies') note='Showing Ladies\u2019 pairs.';
+  if(MK.cat==="Men's") note='Showing Men’s pairs.';
+  else if(MK.cat==='Ladies') note='Showing Ladies’ pairs.';
   else if(MK.cat==='Mixed') note='Showing Mixed pairs.';
-  else note='All Sorts \u2014 every pair.';
+  else note='All Sorts — every pair.';
   let opts;
   if(!pool.length){ opts='<div style="padding:14px;color:#9a8578;font-size:13px;">No eligible players found.</div>'; }
   else opts=pool.map(n=>{ const dis=taken.includes(n); return `<button class="mk-popt" style="${dis?'opacity:.35;':''}" ${dis?'':`onclick="mkPicked('${n.replace(/'/g,"\\'")}')"`}>${n}${dis?' · in match':''}</button>`; }).join('');
@@ -1694,7 +1698,7 @@ function mkFillSubmitterNames(){
   const involved = sing ? [MK.players.t1p1, MK.players.t2p1]
                         : [MK.players.t1p1, MK.players.t1p2, MK.players.t2p1, MK.players.t2p2];
   const names=[...new Set(involved.filter(Boolean))];
-  sel.innerHTML='<option value="">Select your name\u2026</option>'+names.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
+  sel.innerHTML='<option value="">Select your name…</option>'+names.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
 }
 
 async function mkSubmit(){
@@ -2161,11 +2165,11 @@ async function odrRederiveAll(){
       const newInit=odrWeighted(sa,sb);
       if(Number(p.initial_rating)!==newInit){ changes.push({p, from:Math.round(p.initial_rating), to:newInit}); }
     }
-    if(!changes.length){ msg.innerHTML='<span style="color:#1e8449;">All pairs already match their components\u2019 current seeds. Nothing to change.</span>'; return; }
+    if(!changes.length){ msg.innerHTML='<span style="color:#1e8449;">All pairs already match their components’ current seeds. Nothing to change.</span>'; return; }
     // confirm with a before/after summary
-    const preview = changes.slice(0,12).map(c=>c.p.name+': '+c.from+' → '+c.to).join('\n')+(changes.length>12?('\n\u2026and '+(changes.length-12)+' more'):'');
+    const preview = changes.slice(0,12).map(c=>c.p.name+': '+c.from+' → '+c.to).join('\n')+(changes.length>12?('\n…and '+(changes.length-12)+' more'):'');
     if(!confirm('This will overwrite the initial rating of '+changes.length+' pair'+(changes.length===1?'':'s')+' and replay all their matches:\n\n'+preview+'\n\nContinue?')) { msg.innerHTML='Cancelled.'; return; }
-    msg.innerHTML='Re-deriving '+changes.length+' pair'+(changes.length===1?'':'s')+'\u2026';
+    msg.innerHTML='Re-deriving '+changes.length+' pair'+(changes.length===1?'':'s')+'…';
     // write the new initial + season_initial for each changed pair
     for(const c of changes){
       await fetch(SB_URL+'/rest/v1/players?id=eq.'+c.p.id,{ method:'PATCH', headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON, 'Content-Type':'application/json' }, body:JSON.stringify({ initial_rating:c.to, season_initial:c.to }) });
@@ -2174,13 +2178,13 @@ async function odrRederiveAll(){
     // was throwing "failed to fetch" even though the writes land. Fire-and-forget, then
     // refresh the table after a short delay so the new ratings are visible in place.
     fetch(SB_URL+'/functions/v1/recompute',{ method:'POST', headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON, 'Content-Type':'application/json' }, body:JSON.stringify({ club_id:odrCid() }) }).catch(()=>{});
-    let out='<span style="color:#1e8449;">Re-derived '+changes.length+' pair'+(changes.length===1?'':'s')+'. Recomputing ratings in the background\u2026 (this table refreshes in a few seconds).</span><br>';
+    let out='<span style="color:#1e8449;">Re-derived '+changes.length+' pair'+(changes.length===1?'':'s')+'. Recomputing ratings in the background… (this table refreshes in a few seconds).</span><br>';
     out+=changes.slice(0,20).map(c=>c.p.name+': <b>'+c.from+' → '+c.to+'</b>').join('<br>');
-    if(changes.length>20) out+='<br>\u2026and '+(changes.length-20)+' more';
+    if(changes.length>20) out+='<br>…and '+(changes.length-20)+' more';
     msg.innerHTML=out;
     await odrLoadPairsRoom();                 // immediate: shows the new INITIALS at once
     setTimeout(async()=>{                       // delayed: shows the recomputed CURRENT ratings
-      try{ await odrLoadPairsRoom(); const m=document.getElementById('odrRederiveMsg'); if(m) m.innerHTML='<span style="color:#1e8449;">Done \u2014 ratings recomputed and updated below.</span>'; }catch(_e){}
+      try{ await odrLoadPairsRoom(); const m=document.getElementById('odrRederiveMsg'); if(m) m.innerHTML='<span style="color:#1e8449;">Done — ratings recomputed and updated below.</span>'; }catch(_e){}
     }, 4000);
     return;
   }catch(e){ msg.innerHTML='<span style="color:#c0392b;">'+(e.message||e)+'</span>'; }
@@ -2271,7 +2275,7 @@ async function odrEditIndividual(id,name,seed,pin,gender){
   // each such team's initial re-derives from the 60/40 of its two components' CURRENT seeds,
   // and the whole club replays from there. Warn, because it moves history across the board.
   if(seedChanged){
-    if(!confirm('Changing '+name+'\u2019s seed rating to '+seedNum+' will RE-DERIVE the initial rating of every team '+name+' is part of (60/40 of the two components) and REPLAY all their matches from the new starting point.\n\nThis moves ratings across the board. Use it mainly early on, when a person\u2019s true strength wasn\u2019t known.\n\nContinue?')) return;
+    if(!confirm('Changing '+name+'’s seed rating to '+seedNum+' will RE-DERIVE the initial rating of every team '+name+' is part of (60/40 of the two components) and REPLAY all their matches from the new starting point.\n\nThis moves ratings across the board. Use it mainly early on, when a person’s true strength wasn’t known.\n\nContinue?')) return;
   }
   const patch={ full_name:newName.trim(), seed_rating:seedNum, pin:(newPin.trim()||null) };
   try{
@@ -2344,7 +2348,7 @@ function adminEditCaps(id){
   let caps={}; try{ caps = t.caps ? JSON.parse(t.caps) : {}; }catch(e){ caps={}; }
   const fld='width:80px;padding:7px 9px;border:1.5px solid rgba(211,84,0,.22);border-radius:8px;font-size:14px;';
   let h='<div class="ac-card" style="border:1.5px solid #B8480A;margin-top:10px;"><h4>Edit caps — '+t.name+'</h4>'
-    + '<p style="font-size:11px;color:#5aa98d;margin:0 0 8px;">Set or extend the team cap per division. Leave blank for no cap. A cap can\u2019t be set below teams already entered.</p>';
+    + '<p style="font-size:11px;color:#5aa98d;margin:0 0 8px;">Set or extend the team cap per division. Leave blank for no cap. A cap can’t be set below teams already entered.</p>';
   divs.forEach(d=>{
     const v = (caps[d]!=null) ? caps[d] : '';
     h+='<div class="at-divrow"><label>'+d+'</label><input id="capEdit_'+d.replace(/[^A-Za-z]/g,'')+'" type="number" min="2" step="2" value="'+v+'" placeholder="no cap" style="'+fld+'"></div>';
@@ -2631,6 +2635,25 @@ async function adminAddMember(){
 }
 
 // Bulk reset all Men's or Ladies' initial ratings, then recompute. Double-guarded.
+async function adminRecomputeNow(){
+  // v37: manual full-club recompute — no more opening and re-saving a match just to
+  // trigger the engine. Same server call every submit fires; needs no PIN (the
+  // recompute function is service-role and rebuilds from stored matches only).
+  const cid=document.getElementById('adminClubSelect') ? Number(document.getElementById('adminClubSelect').value) : CLUB_ID;
+  const msg=document.getElementById('recomputeMsg');
+  if(msg) msg.innerHTML='Recomputing…';
+  try{
+    const r=await fetch(SB_URL+'/functions/v1/recompute',{ method:'POST',
+      headers:{ apikey:SB_ANON, Authorization:'Bearer '+SB_ANON, 'Content-Type':'application/json' },
+      body:JSON.stringify({ club_id: cid }) });
+    const d=await r.json().catch(()=>({}));
+    if(msg) msg.innerHTML = (r.ok && d && d.ok!==false)
+      ? '<span style="color:#1e8449;">Recompute done — '+(d.players!=null?d.players+' players':'club')+' rebuilt. Refresh screens to see fresh numbers.</span>'
+      : '<span style="color:#c0392b;">Recompute failed'+(d&&d.error?': '+d.error:'')+'.</span>';
+    window._ratingMap = null;
+  }catch(e){ if(msg) msg.innerHTML='<span style="color:#c0392b;">Connection problem — recompute not confirmed.</span>'; }
+}
+
 async function adminBulkReset(gender){
   const cid=document.getElementById('adminClubSelect').value;
   const who = gender==='M' ? 'Men' : 'Ladies';
@@ -2638,7 +2661,7 @@ async function adminBulkReset(gender){
   const msg=document.getElementById('resetMsg');
   if(!val || isNaN(val)){ msg.innerHTML='<span style="color:#c0392b;">Enter a rating for '+who+' first.</span>'; return; }
   // Guard 0: remind about backup before any destructive step
-  if(!confirm('Before resetting, have you taken a Full club backup?\n\n(Admin → Matches → Full club backup)\n\nThis reset overwrites every '+who.toLowerCase()+'\u2019s starting rating and recomputes the club — it cannot be undone from the app.\n\nOK to continue, or Cancel to back up first.')) return;
+  if(!confirm('Before resetting, have you taken a Full club backup?\n\n(Admin → Matches → Full club backup)\n\nThis reset overwrites every '+who.toLowerCase()+'’s starting rating and recomputes the club — it cannot be undone from the app.\n\nOK to continue, or Cancel to back up first.')) return;
   // Guard 1: typed confirmation
   const typed=prompt('This will set the starting rating of EVERY '+who.toLowerCase()+' to '+val+' and recompute the whole club.\n\nType RESET to confirm:');
   if(typed===null) return;
@@ -2815,7 +2838,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.23-36";  // PARTNERSHIP CARDS = SAME SOURCE AS BANNER: pair 60/40 on the individual-profile cards now reads the engine\u2019s current ratings (player_results) first \u2014 identical to the Team Profile banner and doubles ladder \u2014 fixing card-vs-banner mismatches. Includes v35 and all prior.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.23-37";  // ALIGNED WITH OPR: (1) PAIR AUTO-BIRTH — both sides’ pairings register automatically when a doubles match saves (fire-and-forget, as-entered names, idempotent); the Admin Pairs Room fills itself like OPR’s. (2) RECOMPUTE NOW button in admin control — manual full-club recompute, no more open-and-resave workaround. Includes v36 and all prior.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -3235,7 +3258,7 @@ async function loadTeamProfileOSR(name, partner, cat){
     ]);
     window._teamMatches = tm;
     const rmap={}, gmap={}; allPR.forEach(r=>{ if(r.name!=null){ if(r.current_rating!=null)rmap[r.name]=Number(r.current_rating); if(r.gender!=null)gmap[r.name]=r.gender; } });
-    let bannerRating='\u2014', bannerLevel='\u2014';
+    let bannerRating='—', bannerLevel='—';
     if(isSingles){
       // unified live rating (seed + pair + singles), same as the profile banner
       const _u=(typeof odrIndivRating==='function' && odrIndivRating(name)!=null)?odrIndivRating(name):(rmap[name]!=null?rmap[name]:null);
@@ -3452,7 +3475,7 @@ async function showPartnerships(indivId){
     });
     const pairRating=(a,b)=>{
       // v36 (single source, aligned): use the ENGINE's current individual ratings
-      // (player_results) FIRST \u2014 the same source the team banner and doubles ladder use \u2014
+      // (player_results) FIRST — the same source the team banner and doubles ladder use —
       // so the partnership card, the Team Profile banner, and the ladder all show the
       // identical 60/40 number. Derived ratings only as fallback.
       const ra= rmap[a] ?? (typeof odrIndivRating==='function'?odrIndivRating(a):null);
@@ -3480,7 +3503,7 @@ async function showPartnerships(indivId){
     const _esc=(x)=>String(x).replace(/'/g,"\\'");
     const profCard=(r)=>{
       const mvCol = r.mv>=0 ? '#1e8449' : '#c0392b';
-      const rt = r.rating!=null ? r.rating : '\u2014';
+      const rt = r.rating!=null ? r.rating : '—';
       const openArg = `loadTeamProfileOSR('${_esc(who)}','${_esc(r.partner)}','${r.cat}')`;
       return `<div onclick="${openArg}" style="cursor:pointer;background:#fff;border:1px solid rgba(211,84,0,.18);border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.05);">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
@@ -3963,7 +3986,7 @@ async function loadProfilePartner(){
   // partner picker (modal name picker, exclude self)
   let html = profileTabsHTML('partner')
     + '<div class="card"><div style="font-size:16px;font-weight:700;color:#D35400;margin:0 0 6px;">How ' + name.split(' ')[0] + ' does with a partner</div>'
-    + '<p class="sub">Pick a partner to see your combined rating and the matches you\u2019ve played together.</p>'
+    + '<p class="sub">Pick a partner to see your combined rating and the matches you’ve played together.</p>'
     + '<input type="hidden" id="ppPartner">'
     + '<button type="button" class="name-pick-btn" id="ppPartnerBtn" onclick="profilePickPartner()">— select a partner —</button></div>'
     + '<div id="ppResult"></div>';
@@ -4070,7 +4093,7 @@ async function profileShowPartner(partner){
           <div id="ppmatchdetail_${midx}" style="display:none;background:rgba(211,84,0,.12);padding:8px 12px;border-radius:8px;margin:-4px 0 4px;font-size:12px;text-align:center;"></div>`;
       });
     } else {
-      matchHTML='<div class="empty-state" style="padding:20px 0;"><p>'+name.split(' ')[0]+' and '+partner.split(' ')[0]+' haven\u2019t played any matches together yet.</p></div>';
+      matchHTML='<div class="empty-state" style="padding:20px 0;"><p>'+name.split(' ')[0]+' and '+partner.split(' ')[0]+' haven’t played any matches together yet.</p></div>';
     }
 
     box.innerHTML = `
@@ -4446,7 +4469,7 @@ async function step1Next(){
       activated = !!(st && st.length && st[0].activated);
     }catch(e){}
     if(!activated){
-      alert('The '+ladderCat+' ladder is not activated yet. A ladder match can only be entered once that ladder has been activated on the Good \u2019ol Club Ladder page.');
+      alert('The '+ladderCat+' ladder is not activated yet. A ladder match can only be entered once that ladder has been activated on the Good ’ol Club Ladder page.');
       return; // stay on step 1, do not proceed
     }
     try{
@@ -4971,7 +4994,7 @@ async function submitMatch(){
         const p1ok = set.has(entryData.t1p1), p2ok = set.has(entryData.t2p1);
         if(!p1ok || !p2ok){
           const bad=[]; if(!p1ok) bad.push(entryData.t1p1); if(!p2ok) bad.push(entryData.t2p1);
-          err.innerHTML = 'Not on the '+cat+' ladder: <b>'+bad.join('</b> and <b>')+'</b>.<br>Both players must be registered on the singles ladder first (Good \u2019ol Club Ladder → Singles).';
+          err.innerHTML = 'Not on the '+cat+' ladder: <b>'+bad.join('</b> and <b>')+'</b>.<br>Both players must be registered on the singles ladder first (Good ’ol Club Ladder → Singles).';
           err.style.display='block';
           return;
         }
@@ -5275,6 +5298,17 @@ async function doSubmit(btn){  const err=document.getElementById('err4');
     }
 
     const who=result.submitted_by||entryData._submitter;
+    // PAIR AUTO-BIRTH (v37, aligned with OPR): register both sides' pairings in the pair
+    // registry the moment a doubles match saves — fire-and-forget, so entry speed is
+    // untouched. odrEnsurePair is idempotent (member-ID lookup, either order) and names
+    // the pair AS ENTERED (v31 rule). Singles matches skip this. This is what fills the
+    // Admin Pairs Room automatically, exactly like OPR — no manual creation needed.
+    if(!_isSingles && entryData.t1p1 && entryData.t1p2 && entryData.t2p1 && entryData.t2p2){
+      Promise.all([
+        odrEnsurePair(entryData.t1p1, entryData.t1p2),
+        odrEnsurePair(entryData.t2p1, entryData.t2p2)
+      ]).catch(()=>{});
+    }
     // Ratings just changed — clear the cached ratings map so next read is fresh.
     window._ratingMap = null;
 
@@ -5309,7 +5343,7 @@ async function doSubmit(btn){  const err=document.getElementById('err4');
     const fxNote = (result.fixture==='ambiguous')
       ? `<div style="font-size:12px;color:#b9770e;margin-top:10px;background:#fff8e8;border:1px solid #f1c40f;border-radius:8px;padding:8px 10px;line-height:1.4;">⚠️ This result counts toward ratings &amp; stats, but it matched <strong>two open fixtures equally</strong> (because of stand-ins) so it could not be auto-placed on the draw board. Open the tournament → Rounds and <strong>tap the correct fixture</strong> to record its score there.</div>`
       : (result.fixture==='nomatch')
-      ? `<div style="font-size:12px;color:#b9770e;margin-top:10px;background:#fff8e8;border:1px solid #f1c40f;border-radius:8px;padding:8px 10px;line-height:1.4;">⚠️ This result counts toward ratings &amp; stats, but the players didn\u2019t match a fixture closely enough to auto-place on the draw board. Open the tournament → Rounds and <strong>tap the correct fixture</strong> to record it.</div>`
+      ? `<div style="font-size:12px;color:#b9770e;margin-top:10px;background:#fff8e8;border:1px solid #f1c40f;border-radius:8px;padding:8px 10px;line-height:1.4;">⚠️ This result counts toward ratings &amp; stats, but the players didn’t match a fixture closely enough to auto-place on the draw board. Open the tournament → Rounds and <strong>tap the correct fixture</strong> to record it.</div>`
       : '';
     // If this submit was launched from the LIVE MARKER, show the marker's own
     // success screen (writing to #entryContent would update the hidden entry screen
@@ -8462,7 +8496,7 @@ async function renderClubLadder(){
     const explainer = '<div class="card" style="background:rgba(211,84,0,.05);border:1px solid #e6ddf0;">'
       + '<h2 style="font-size:14px;">How the Club Ladder works</h2>'
       + '<p class="sub" style="margin:0;line-height:1.6;">The ladder works on a <b>challenge basis only</b>. Ratings are used <b>once</b> — to set the opening order when the ladder is activated. After that, ratings no longer apply and teams move only by results. '
-      + 'A challenger may challenge <b>any team above them</b>. If the challenger <b>wins</b>, they move into the challenged team\u2019s spot and everyone in between moves down one. If the challenger <b>loses</b>, all teams stay where they are. '
+      + 'A challenger may challenge <b>any team above them</b>. If the challenger <b>wins</b>, they move into the challenged team’s spot and everyone in between moves down one. If the challenger <b>loses</b>, all teams stay where they are. '
       + 'All ladder matches are <b>best of 3 games</b>.</p></div>';
 
     bodyHTML = explainer + '<div class="card"><h2>'+cat+' Ladder <span class="tm-divtag">'+cat+'</span>'
@@ -8501,7 +8535,7 @@ async function renderClubLadder(){
     // see who has joined before activating (spill list).
     bodyHTML += '<div class="card"><h2>Teams entered <span class="tm-divtag">'+cat+'</span> <span style="font-size:12px;color:#888;font-weight:400;">('+rows.length+')</span></h2>';
     if(!rows.length){
-      bodyHTML += '<p class="sub">No teams entered yet. Add pairs above — they\u2019ll appear here as you go.</p>';
+      bodyHTML += '<p class="sub">No teams entered yet. Add pairs above — they’ll appear here as you go.</p>';
     } else {
       bodyHTML += '<table><thead><tr><th class="num">'+(activated?'#':'')+'</th><th>Team</th><th class="num"></th></tr></thead><tbody>';
       rows.forEach((r,i)=>{
