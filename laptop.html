@@ -2815,7 +2815,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.23-33";  // 60/40 THROUGHOUT: every pair rating shown (profile cards, team banner) is stronger*0.6 + weaker*0.4 — the same-gender 50/50 removed everywhere, matching the R1 recompute ranking. Includes everything from v31+v32.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.23-34";  // 60/40 EVERYWHERE, FINAL PASS: doubles listings and tournament results now SHOW the weighted rating for every category (Rating (Wtd)) matching the R1 rank order, and tournament banding/seeding strength is weighted for every category. (Individuals listings unchanged — new members stay visible at their seed.) Includes v31-v33.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -3118,7 +3118,7 @@ async function loadLadder(type, title) {
       // DOUBLES — unified headings: Rank, Pair, Rating, Level, Sets, Won, % Won (+ expandable match history)
       const catMap={'mensdoubles':"Men's",'ladiesdoubles':'Ladies','mixeddoubles':'Mixed','allsortsd':'All Sorts','universal':'Universal'};
       const cat = catMap[type] || "Men's";
-      const usesCombined = (cat==="Men's" || cat==='Ladies');
+      const usesCombined = false;  // 60/40 THROUGHOUT: rating shown = weighted, matching the R1 recompute rank order.
       const data = await sbGet(`doubles_results?select=rank,p1,p2,combined,weighted,level,sets,sets_won,set_win_pct,matches&category=eq.${encodeURIComponent(cat)}&order=rank.asc&club_id=eq.${CLUB_ID}`);
       window._doublesRows = data;
       window._doublesCat = cat;
@@ -3694,7 +3694,7 @@ async function loadTournament(category, title) {
   try {
     const isSingles = /singles/i.test(category);
     // Singles use the player's own rating; doubles Men's/Ladies use Combined, others Weighted.
-    const usesCombined = (category==="Men's" || category==='Ladies');
+    const usesCombined = false;  // 60/40 THROUGHOUT: rating shown = weighted.
     // Tournament STATISTICS table: performance during the event, NOT the final placing.
     // Sort by WIN % (self-explaining for casual players) → sets won → game diff/set.
     // Qualifier: 6 sets played together; sub-6 shown greyed for reference, not ranked.
@@ -6073,7 +6073,7 @@ const TM = (function () {
   }
   function pairRating(r1, r2, category) {
     const a = Number(r1) || 0, b = Number(r2) || 0;
-    if (usesCombined(category)) return (a + b) / 2;                 // Combined
+    if (false) return (a + b) / 2;  // 60/40 THROUGHOUT: banding/seeding strength = weighted for EVERY category.
     const hi = Math.max(a, b), lo = Math.min(a, b);
     return hi * 0.6 + lo * 0.4;                                     // Weighted
   }
