@@ -2815,7 +2815,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.23-35";  // RECENT MATCHES WRAP-WHEN-NEEDED (same as OPR v35). Includes v34 and all prior.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.23-36";  // PARTNERSHIP CARDS = SAME SOURCE AS BANNER: pair 60/40 on the individual-profile cards now reads the engine\u2019s current ratings (player_results) first \u2014 identical to the Team Profile banner and doubles ladder \u2014 fixing card-vs-banner mismatches. Includes v35 and all prior.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -3451,8 +3451,12 @@ async function showPartnerships(indivId){
       groups[key].mv += onT1 ? d : -d;
     });
     const pairRating=(a,b)=>{
-      const ra=(typeof odrIndivRating==='function'?odrIndivRating(a):null) ?? rmap[a];
-      const rb=(typeof odrIndivRating==='function'?odrIndivRating(b):null) ?? rmap[b];
+      // v36 (single source, aligned): use the ENGINE's current individual ratings
+      // (player_results) FIRST \u2014 the same source the team banner and doubles ladder use \u2014
+      // so the partnership card, the Team Profile banner, and the ladder all show the
+      // identical 60/40 number. Derived ratings only as fallback.
+      const ra= rmap[a] ?? (typeof odrIndivRating==='function'?odrIndivRating(a):null);
+      const rb= rmap[b] ?? (typeof odrIndivRating==='function'?odrIndivRating(b):null);
       if(ra==null||rb==null) return null;
       // 60/40 THROUGHOUT (v33): stronger*0.6 + weaker*0.4 for EVERY pair — no 50/50.
       return Math.round(Math.max(ra,rb)*0.6+Math.min(ra,rb)*0.4);
