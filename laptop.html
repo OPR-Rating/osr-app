@@ -342,6 +342,11 @@
   .name-pick-btn.selected { color:#2C2C34; font-weight:600; border-color:#B8480A; }
 
   #tournamentSheetContent td.ta, #tournamentSheetContent td.tb { font-size:13px; line-height:1.4; color:#3a2f44; padding:11px 8px; }
+  @media(max-width:560px){
+    /* on phones the Band pill is decoration — reclaim its width for names */
+    #tournamentSheetContent table.fxtbl th:nth-child(3), #tournamentSheetContent table.fxtbl td:nth-child(3){ display:none; }
+    #tournamentSheetContent table.fxtbl td.ta, #tournamentSheetContent table.fxtbl td.tb { font-size:12.5px; padding:10px 6px; }
+  }
   #tournamentSheetContent td.ta.winr, #tournamentSheetContent td.tb.winr { color:#1e7a34; font-weight:700; }
   #tournamentSheetContent td { padding:11px 6px; }
   #tournamentSheetContent th.ta, #tournamentSheetContent th.tb { width:30%; }
@@ -1167,7 +1172,7 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
   if(id==='entryScreen') renderStep1();
-  if(id==='tournamentScreen'){ window._tourInternalView = 'stats'; loadTournamentPicker(); }
+  if(id==='tournamentScreen'){ window._tourInternalView = 'draw'; loadTournamentPicker(); }  // always land on Draw & Rounds
   if(id==='clubLadderScreen') loadClubLadder();
 }
 
@@ -2850,7 +2855,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.23-38";  // PAIRS ROOM = LIVE 60/40 (same single source as banner and partnership cards): the admin pair list’s Current and Move now derive from the two members’ current ratings, so Move tracks real play instead of freezing at 0. Includes v37 (auto-birth + recompute button) and all prior.
+const OPR_VERSION = "OSR-LAPTOP v2026.08.26-39";  // PORT PASS from OPR v44: uneven 2-group RR splits (15→8+7, 17→9+8, 19→10+9, 20→10+10) with size-aware tiers; tournaments land on Draw & Rounds with a prominent switch under the title; fixture names stacked two lines (Band hidden on phones); pre-generation Standings says entry is open; round chips numbered by position (no "Rbye", no gaps/duplicates). (Recompute button already present since v37.) Includes v38 and all prior.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -3613,12 +3618,12 @@ async function loadTournamentPicker(){
   if(!internalDiv){
     internalDiv = document.createElement('div');
     internalDiv.id = 'tournamentInternal';
-    body.parentNode.insertBefore(internalDiv, body.nextSibling);
+    body.parentNode.insertBefore(internalDiv, body);   // switch sits under the tournament name
   }
   if(isInternal){
     // Internal: TWO views — Tournament Stats (tagged-match standings) OR Draw & Rounds (the draw).
     // Plus Enter a team. Default to Stats; remember the choice.
-    if(!window._tourInternalView) window._tourInternalView = 'stats';
+    if(!window._tourInternalView) window._tourInternalView = 'draw';   // new members want "who am I playing" first
     const v = window._tourInternalView;
     internalDiv.style.display='';
     // Is any division still open for entry? (a division is "closed" once its draw exists)
@@ -3638,9 +3643,9 @@ async function loadTournamentPicker(){
       } else { entryOpen = true; }
     }catch(e){ entryOpen = true; }
     internalDiv.innerHTML =
-        '<div class="tm-nav" style="margin:4px 0 12px;">'
-      + '<button class="'+(v==='stats'?'active':'')+'" onclick="setTourView(\'stats\')">📊 Tournament Stats</button>'
-      + '<button class="'+(v==='draw'?'active':'')+'" onclick="setTourView(\'draw\')">Draw &amp; Rounds</button>'
+        '<div class="tm-nav" style="margin:8px 0 14px;padding:7px;border-radius:13px;">'
+      + '<button class="'+(v==='draw'?'active':'')+'" style="padding:11px 8px;font-size:14.5px;font-weight:800;" onclick="setTourView(\'draw\')">🎾 Draw &amp; Rounds</button>'
+      + '<button class="'+(v==='stats'?'active':'')+'" style="padding:11px 8px;font-size:14.5px;font-weight:800;" onclick="setTourView(\'stats\')">📊 Tournament Stats</button>'
       + '</div>'
       + '<div class="ladders-grid one-col" style="margin-top:4px;">'
       + (v==='draw'
@@ -3650,7 +3655,7 @@ async function loadTournamentPicker(){
       // previously it only appeared on the Stats view, so an un-drawn division
       // (e.g. Ladies) had no way in from the Draw & Rounds view.
       + (entryOpen
-          ? '<button class="menu-btn" style="margin-top:'+(v==='draw'?'8px':'0')+';" onclick="showEnterTournament(TOURNAMENT_EVENT)">➕ Enter a team / generate a draw</button>'
+          ? '<button class="menu-btn" style="margin:'+(v==='draw'?'8px 0 0':'0 0 16px')+';" onclick="showEnterTournament(TOURNAMENT_EVENT)">➕ Enter a team / generate a draw</button>'
           : (v==='draw' ? '' : '<p class="sub" style="text-align:center;margin:6px 0;">All divisions are drawn — entry is closed.</p>'))
       + '</div>';
     // Stats view → show the standings body; Draw view → hide it (draw opens its own screen)
@@ -5889,7 +5894,17 @@ const TM = (function () {
       if (N % g !== 0) continue;
       const per = N / g;
       if (per < 4 || per > 8) continue;   // groups of 4..8 only (3 is too thin)
-      out.push({ groups: g, perGroup: per });
+      out.push({ groups: g, perGroup: per, sizes: [per, per] });
+    }
+    // UNEVEN 2-GROUP: odd fields split 2 ways — 15->8+7, 17->9+8, 19->10+9, 20->10+10.
+    // The smaller group carries a bye round (the circle-method scheduler already rotates
+    // a phantom BYE through any odd group). Cross-group playoff (2 advance each:
+    // A1 v B2, B1 v A2) works unchanged — it seeds from standings, not group sizes.
+    const big = Math.ceil(N / 2), small = Math.floor(N / 2);
+    const already = out.some(o => o.groups === 2);
+    if (!already && big >= 5 && big <= 10 && small >= 4) {
+      out.push({ groups: 2, perGroup: null, sizes: [big, small] });
+      out.sort((a, b) => a.groups - b.groups);
     }
     return out;
   }
@@ -5907,10 +5922,13 @@ const TM = (function () {
     for (let i = 0; i < groups; i++) labels.push(String.fromCharCode(65 + i)); // A,B,C,...
     const g = {}; labels.forEach(L => g[L] = []);
     if (mode === 'block') {
-      const per = N / groups;
-      for (let s = 1; s <= N; s++) {
-        const gi = Math.floor((s - 1) / per);
-        g[labels[gi]].push(s);
+      // size-based tiers — works for uneven groups too. Each group's size is floor(N/G),
+      // the first (N mod G) groups taking one extra: 15 in 2 groups -> A:[1..8] B:[9..15].
+      const baseSize = Math.floor(N / groups), extra = N % groups;
+      let seed = 1;
+      for (let gi = 0; gi < groups; gi++) {
+        const size = baseSize + (gi < extra ? 1 : 0);
+        for (let k = 0; k < size; k++) g[labels[gi]].push(seed++);
       }
     } else { // snake
       let gi = 0, dir = 1;
@@ -6526,14 +6544,16 @@ async function loadTournamentSheet(tournament, division) {
         const f0 = rounds[r][0];
         const band = f0 ? String(f0.band||'') : '';
         const sec = band.split('·')[0] || '?';
-        const rn = (band.split('·')[1]||'').replace(/^R/,'') || String(r);
-        roundInfo[r] = { sec, rn };
+        // chip numbers come from POSITION, never the band: band round numbers are
+        // section-offset and a bye-only round has no number (used to render "Rbye" /
+        // start at R2 with a duplicate at the end).
+        roundInfo[r] = { sec, rn: '' };
       });
       const sections = [...new Set(roundNos.map(r=> roundInfo[r].sec))].sort();
       const tiers = (typeof etTierNames==='function') ? etTierNames(sections.length) : [];
       sections.forEach((sec, si)=>{
-        const secRounds = roundNos.filter(r=> roundInfo[r].sec===sec)
-          .sort((a,b)=> parseInt(roundInfo[a].rn)-parseInt(roundInfo[b].rn));
+        const secRounds = roundNos.filter(r=> roundInfo[r].sec===sec).sort((a,b)=> a-b);
+        secRounds.forEach((r,i)=>{ roundInfo[r].rn = String(i+1); });   // R1..Rn, no gaps/duplicates
         h += '<div style="margin:6px 0 2px;font-size:12px;font-weight:800;color:#D35400;text-align:left;">Group ' + sec
           + (tiers[si] ? (' <span style="font-weight:600;color:#5aa98d;">· ' + tiers[si] + '</span>') : '') + '</div>';
         h += '<div class="rsel">';
@@ -6550,7 +6570,8 @@ async function loadTournamentSheet(tournament, division) {
       });
       h += '</div>';
     }
-    h += '<table><thead><tr><th class="num">Sd</th><th class="ta">Team A</th><th class="num">Band</th>'
+    const stk = s => String(s==null?'':s).replace(' / ', '<br>');   // pair over two lines
+    h += '<table class="fxtbl"><thead><tr><th class="num">Sd</th><th class="ta">Team A</th><th class="num">Band</th>'
       + '<th class="tb">Team B</th><th class="num">Sd</th><th class="num">Score</th></tr></thead><tbody>';
     // Knockout rounds must display in bracket-slot order (1v16, 8v9, 4v13...).
     // Swiss rounds keep their generated order.
@@ -6564,7 +6585,7 @@ async function loadTournamentSheet(tournament, division) {
       if (f.seed_b === 0) {
         h += '<tr class="bkt-byerow">'
           + '<td class="num"><span class="seed' + (f.seed_a === 1 ? ' s1' : '') + '">' + f.seed_a + '</span></td>'
-          + '<td class="ta">' + tName(f.seed_a) + '</td>'
+          + '<td class="ta">' + stk(tName(f.seed_a)) + '</td>'
           + '<td class="num"></td>'
           + '<td class="tb" style="font-style:italic;color:#999;">bye this round</td>'
           + '<td class="num"></td>'
@@ -6588,9 +6609,9 @@ async function loadTournamentSheet(tournament, division) {
       }
       h += '<tr style="cursor:pointer;" onclick="tmEnterFixtureResult(' + f.id + ')" title="Tap to enter/edit the score">'
         + '<td class="num"><span class="seed' + (f.seed_a === 1 ? ' s1' : '') + '">' + f.seed_a + '</span></td>'
-        + '<td class="ta' + (aWin ? ' winr' : '') + '">' + tNameAt(f.seed_a, f.round) + hcA + '</td>'
+        + '<td class="ta' + (aWin ? ' winr' : '') + '">' + stk(tNameAt(f.seed_a, f.round)) + hcA + '</td>'
         + '<td class="num"><span class="pill ' + f.band + '">' + (f.band||'') + '</span></td>'
-        + '<td class="tb' + (bWin ? ' winr' : '') + '">' + tNameAt(f.seed_b, f.round) + hcB + '</td>'
+        + '<td class="tb' + (bWin ? ' winr' : '') + '">' + stk(tNameAt(f.seed_b, f.round)) + hcB + '</td>'
         + '<td class="num"><span class="seed' + (f.seed_b === 1 ? ' s1' : '') + '">' + f.seed_b + '</span></td>'
         + '<td class="num">' + (played ? '<span class="res-done">' + score + '</span>' : '<span style="color:#B8480A;font-weight:700;">enter ▸</span>') + '</td></tr>';
     });
@@ -7009,6 +7030,14 @@ async function loadTournamentSheet(tournament, division) {
 
   function standingsHTML() {
     if(!N) return '<div class="card"><p class="sub">No teams yet.</p></div>';
+    // Before the draw exists there are no fixtures — entries all have seed NULL, so a
+    // standings table would collapse to one misleading row. Say it straight instead.
+    if(!fixtures.length){
+      return '<div class="card"><h2>Standings <span class="tm-divtag">' + TM_DIVISION + '</span></h2>'
+        + '<p class="sub">The draw hasn\'t been generated yet — entry is open. '
+        + N + (N===1?' team':' teams') + ' entered so far (see the Teams tab). '
+        + 'Standings appear as soon as the draw is generated.</p></div>';
+    }
     // Single group: one table (unchanged behaviour).
     if(!_hasGroups){
       return '<div class="card"><h2>Standings <span class="tm-divtag">' + TM_DIVISION + '</span></h2>'
@@ -7902,7 +7931,11 @@ function etGroupConfigHTML(d, cnt){
   splits.forEach(s=>{
     const sel = (cfg.groups===s.groups);
     h += '<button onclick="etGroupSet(\'' + de + '\',' + s.groups + ',null)" class="ac-btn ' + (sel?'ac-btn-primary':'ac-btn-ghost') + '" style="text-align:left;">'
-      + (sel?'● ':'○ ') + s.groups + ' groups of ' + s.perGroup + ' — split the field into groups</button>';
+      + (sel?'● ':'○ ') + (s.perGroup!=null
+          ? (s.groups + ' groups of ' + s.perGroup + ' — split the field into groups')
+          : (s.groups + ' groups of ' + s.sizes[0] + ' + ' + s.sizes[1] + ' — split the field'
+             + (s.sizes[0]!==s.sizes[1] ? ' (smaller group has a bye round)'
+                : (s.sizes[0]%2===1 ? ' (each group has a bye round)' : '')))) + '</button>';
   });
   h += '</div>';
 
