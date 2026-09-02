@@ -2855,7 +2855,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.08.26-39";  // PORT PASS from OPR v44: uneven 2-group RR splits (15→8+7, 17→9+8, 19→10+9, 20→10+10) with size-aware tiers; tournaments land on Draw & Rounds with a prominent switch under the title; fixture names stacked two lines (Band hidden on phones); pre-generation Standings says entry is open; round chips numbered by position (no "Rbye", no gaps/duplicates). (Recompute button already present since v37.) Includes v38 and all prior.
+const OPR_VERSION = "OSR-LAPTOP v2026.09.02-40";  // v40 SINGLE-SOURCE PAIRS LADDER: Men's/Ladies'/Mixed Pairs rating = live 60/40 of the two members' current individual ratings (the engine rates individuals; the stored pair row never moves), rows re-ranked by the derived rating; ladder row-click opens the real Team Profile (back returns to the table). Ported from cc-squash v40. Includes v39 and all prior.  // PORT PASS from OPR v44: uneven 2-group RR splits (15→8+7, 17→9+8, 19→10+9, 20→10+10) with size-aware tiers; tournaments land on Draw & Rounds with a prominent switch under the title; fixture names stacked two lines (Band hidden on phones); pre-generation Standings says entry is open; round chips numbered by position (no "Rbye", no gaps/duplicates). (Recompute button already present since v37.) Includes v38 and all prior.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -2889,7 +2889,15 @@ function toggleLadderNote(){
   window._ladderNoteOpen = nowOpen;   // remembered for this session
 }
 // Row-tap -> profile, by index (names never enter an HTML attribute, so apostrophes are safe).
-function ladProfile(i){ const p=(window._singlesRows||[])[i]; if(p){ window._profileFrom='ladder'; loadProfile(p.name, window._singlesGender||'M'); } }
+function ladProfile(i){ const p=(window._singlesRows||[])[i]; if(!p) return;
+  // v40: a PAIR row opens the real Team Profile (the screen every other pair card uses —
+  // its banner already derives the live 60/40), not the ODR pair-entity profile that read
+  // the frozen player_results row. Members from the ladder's own derivation (register ids),
+  // ' & ' split as fallback. _profileFrom is set AFTER the call because loadTeamProfileOSR's
+  // synchronous prefix stamps 'team'; 'ladder' must win so Back returns to this table.
+  const mm = p._members || (function(){ const s=String(p.name).split(' & '); return s.length===2?[s[0].trim(),s[1].trim()]:null; })();
+  if(mm && typeof loadTeamProfileOSR==='function'){ loadTeamProfileOSR(mm[0], mm[1], p.gender||window._singlesGender||'M'); window._profileFrom='ladder'; return; }
+  window._profileFrom='ladder'; loadProfile(p.name, window._singlesGender||'M'); }
 
 // ---- Excel/CSV export (laptop) ----------------------------------------
 // Generic: reads any rendered <table> and downloads it as a clean CSV that
@@ -3137,6 +3145,32 @@ async function loadLadder(type, title) {
       // (same gender code), so exclude any row that isn't a pair. A pair name always contains
       // " & "; an individual's name never does.
       data = (data||[]).filter(p=> p && typeof p.name==='string' && p.name.includes(' & '));
+      // v40 SINGLE-SOURCE LADDER (extends the v38 Pairs-Room / v36 team-banner rule to the
+      // LAST screen that missed it): the engine rates INDIVIDUALS (4-slot matches), so the
+      // stored pair row in player_results NEVER moves — reading it froze every pair at its
+      // seed. A pair's CURRENT rating is ALWAYS the live 60/40 of its two members' current
+      // individual ratings (odrIndivRating: seed + own match movement). Members resolved
+      // from the pair register (member ids — no name parsing); ' & ' split only as a
+      // fallback for register-less rows. Move = derived current − stored pair initial,
+      // matching the Pairs Room exactly. Rows re-ranked by the derived rating.
+      try{
+        if(typeof odrBuildIndivRatings==='function') await odrBuildIndivRatings();
+        const _pl = await sbGet(`players?select=name,member_a_id,member_b_id&club_id=eq.${CLUB_ID}`) || [];
+        const _ids = await sbGet(`individuals?select=id,full_name&club_id=eq.${CLUB_ID}`) || [];
+        const _nm={}; _ids.forEach(x=>{ if(x&&x.id!=null) _nm[x.id]=x.full_name; });
+        const _mem={}; _pl.forEach(p=>{ if(p&&p.member_a_id!=null&&p.member_b_id!=null&&_nm[p.member_a_id]&&_nm[p.member_b_id]) _mem[p.name]=[_nm[p.member_a_id],_nm[p.member_b_id]]; });
+        const _live=(n)=>{ let v=null; try{ if(typeof odrIndivRating==='function') v=odrIndivRating(n); }catch(_e){} return v; };
+        data.forEach(p=>{
+          let mm=_mem[p.name];
+          if(!mm){ const s=String(p.name).split(' & '); if(s.length===2) mm=[s[0].trim(),s[1].trim()]; }
+          if(!mm) return;
+          const ra=_live(mm[0]), rb=_live(mm[1]);
+          if(ra==null||rb==null) return;
+          p.current_rating = Math.round(Math.max(ra,rb)*0.6+Math.min(ra,rb)*0.4);
+          p._members = mm;
+        });
+        data.sort((a,b)=>(b.current_rating||0)-(a.current_rating||0));
+      }catch(_e){ /* derivation is display-only; on any failure the stored rows render as before */ }
       window._singlesRows = data; window._singlesGender = (catCode[type]||'M');
       html = ladderNoteHTML();
       html += '<table class="ladder-table"><thead><tr><th>Rank</th><th>Pair</th><th>Rating</th><th>Level</th><th>Move</th></tr></thead><tbody>';
