@@ -2855,7 +2855,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.09.02-40";  // v40 SINGLE-SOURCE PAIRS LADDER: Men's/Ladies'/Mixed Pairs rating = live 60/40 of the two members' current individual ratings (the engine rates individuals; the stored pair row never moves), rows re-ranked by the derived rating; ladder row-click opens the real Team Profile (back returns to the table). Ported from cc-squash v40. Includes v39 and all prior.  // PORT PASS from OPR v44: uneven 2-group RR splits (15→8+7, 17→9+8, 19→10+9, 20→10+10) with size-aware tiers; tournaments land on Draw & Rounds with a prominent switch under the title; fixture names stacked two lines (Band hidden on phones); pre-generation Standings says entry is open; round chips numbered by position (no "Rbye", no gaps/duplicates). (Recompute button already present since v37.) Includes v38 and all prior.
+const OPR_VERSION = "OSR-LAPTOP v2026.09.03-41";  // DOUBLE-TAP GUARD ON SUBMIT MATCH: the button is disabled on the FIRST tap, before any network call, so a weak signal can no longer let repeated taps save duplicate matches. Built ON TOP of the live file — nothing from any parallel session removed. Keeps the 2026-09-02 single-source ladder work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -4958,7 +4958,8 @@ async function odrEnsurePair(nameA, nameB){
   return canonName;
 }
 
-async function submitMatch(){
+// Inner: original logic. Returns true ONLY when it has handed off to doSubmit().
+async function _submitMatchInner(){
   const submitter=document.getElementById('submitterName').value;
   const pin=document.getElementById('submitterPin').value;
   const err=document.getElementById('err4');
@@ -5182,6 +5183,7 @@ async function submitMatch(){
   entryData._submitter=submitter;
   entryData._pin=pin;
   doSubmit(btn);
+  return true;   // handed off: doSubmit owns the button from here
 }
 
 // Route a handicap-event score (entered on the main screen) to the SAFE tournament path.
@@ -5259,6 +5261,30 @@ async function routeHandicapEntry(ed, err, btn){
   if(typeof showScreen==='function') showScreen('homeScreen');
   if(typeof loadRecent==='function'){ _hcGlimpseLoaded=false; loadRecent(); }
   return true;
+}
+
+
+// DOUBLE-TAP GUARD (ported from OPR v46). On a weak club signal the checks before
+// submission take seconds, and the button used to stay live that whole time — so an
+// impatient tap-tap-tap fired several full submissions and saved duplicate matches.
+// The button is now disabled SYNCHRONOUSLY on the first tap, before any network call;
+// every existing failure path re-enables it exactly as before. The disabled state IS
+// the guard, so no second tap can start a second submission.
+async function submitMatch(){
+  const btn=document.getElementById('submitBtn');
+  if(btn){
+    if(btn.disabled) return;              // a submission is already running — ignore the tap
+    btn.disabled=true;
+    btn.textContent='Checking\u2026';
+  }
+  let handed=false;
+  try{
+    handed = await _submitMatchInner();
+  }finally{
+    // Only re-enable if we never reached doSubmit (validation failed, or a confirm was
+    // cancelled). Once handed off, doSubmit owns the button.
+    if(!handed && btn){ btn.disabled=false; btn.textContent='\u2713 Submit Match'; }
+  }
 }
 
 async function doSubmit(btn){  const err=document.getElementById('err4');
