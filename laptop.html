@@ -2855,7 +2855,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.09.03-42";  // KNOCKOUT BRACKET SCORE ORIENTATION: a bracket box holds its two teams in canonical bracket order, which is not always the fixture’s seed_a/seed_b order — so in reversed boxes each score printed against the wrong team (winner highlight was always correct). Scores are now oriented by seed. Display only; no fixture, result or engine change. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v2026.09.03-43";  // SINGLES HANDICAP ROUTING: routeHandicapEntry now resolves a singles division as "<Type> Singles" (matching the rated path and the server reconcile), so a singles handicap result finds its draw instead of reporting "No draw found". Doubles unchanged. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -5193,8 +5193,12 @@ async function _submitMatchInner(){
 async function routeHandicapEntry(ed, err, btn){
   const done = (msg, ok)=>{ err.innerHTML = msg; err.style.display='block'; btn.disabled=false; btn.textContent='\u2713 Submit Match'; return true; };
   const tour = (ed.event||'').trim();
-  const div = ed.type;
+  // SINGLES DIVISION FIX: a singles draw is stored under "<Type> Singles" (the rated
+  // path and the server reconcile both derive it that way). This router used the bare
+  // type, so a singles HANDICAP result searched a division that doesn't exist and
+  // reported "No draw found". Same expression as the rated path's _mDiv.
   const isSingles = ed.format==='singles';
+  const div = isSingles ? (ed.type + ' Singles') : ed.type;
   // normalise a player-name for comparison
   const norm = s => (s||'').trim().toLowerCase();
   // team identity = the set of its player names (order-independent within a pair)
