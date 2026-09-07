@@ -943,32 +943,15 @@
 
         <!-- ROOM: PAIRS (ODR — individuals combine into rated pairs) -->
         <div class="ac-room" id="acRoomPairs">
+          <!-- The manual pair-creation tools (Create a pair / Bulk create pairs / Re-derive
+               all pairs) were removed. Pairs are born automatically at match entry
+               (odrEnsurePair) at the live 60/40, so hand-creating them only produced pairs
+               with no matches ("ghost pairs"), and Re-derive rewrote every stored initial
+               rating club-wide. The JS functions are left in place, unreferenced, so nothing
+               else can break. The Current pairs list below is unchanged. -->
           <div class="ac-card">
-            <h4>Create a pair</h4>
-            <p style="font-size:12px;color:#7a6688;margin:0 0 9px;">Pick two individuals. The pair is born as one rated member: name A→Z, category from genders (Men's / Ladies / Mixed), initial rating = stronger×0.6 + weaker×0.4.</p>
-            <label style="font-size:11px;color:#7a6688;">Member A</label>
-            <div style="position:relative;"><input id="pAsearch" class="ac-field" placeholder="Search individual…" autocomplete="off"><div id="pAlist" class="odr-searchlist"></div></div>
-            <label style="font-size:11px;color:#7a6688;">Member B</label>
-            <div style="position:relative;"><input id="pBsearch" class="ac-field" placeholder="Search individual…" autocomplete="off"><div id="pBlist" class="odr-searchlist"></div></div>
-            <input id="pPin" class="ac-field" inputmode="numeric" placeholder="Pair PIN (4-digit)">
-            <div id="pairBirthPreview" style="font-size:12px;color:#7a6688;margin-bottom:9px;">Pick two individuals to preview the birth.</div>
-            <button class="ac-btn ac-btn-primary" style="width:100%;" onclick="odrCreatePair()">Create pair</button>
-            <div id="pairMsg" class="ac-msg"></div>
-          </div>
-
-          <div class="ac-card">
-            <h4>Bulk create pairs (paste)</h4>
-            <p style="font-size:12px;color:#7a6688;margin:0 0 8px;">Paste rows of <b>Person A, Person B, PIN</b> — one pair per line. Names must exactly match registered individuals. Category &amp; 60/40 rating are computed automatically.</p>
-            <textarea id="bulkPairText" class="ac-field" style="min-height:120px;font-family:monospace;font-size:12px;" placeholder="Andre Farrell, Bridget Dlamini, 4321&#10;Andre Farrell, Thomas Farrell, 4322"></textarea>
-            <button class="ac-btn ac-btn-primary" style="width:100%;" onclick="odrBulkCreatePairs()">Create all pasted pairs</button>
-            <div id="bulkPairMsg" class="ac-msg"></div>
-          </div>
-
-          <div class="ac-card">
-            <h4>Re-derive all pairs from current seeds</h4>
-            <p style="font-size:12px;color:#7a6688;margin:0 0 9px;">Recomputes every pair's <b>initial rating</b> = 60/40 of its two components' <b>current</b> individual seeds, overwrites the stored initial, then recomputes the whole club. Use this to fix any drift after editing individual seeds. Rarely needed — it moves ratings across the board.</p>
-            <button class="ac-btn ac-btn-primary" style="width:100%;" onclick="odrRederiveAll()">Re-derive all pairs &amp; recompute</button>
-            <div id="odrRederiveMsg" class="ac-msg"></div>
+            <h4>Pairs are created automatically</h4>
+            <p style="font-size:12px;color:#7a6688;margin:0;">A pair comes into being the first time its two players enter a match together — named as entered, rated at the live 60/40 of the two members. There is nothing to register here.</p>
           </div>
 
           <div class="ac-card">
@@ -2859,7 +2842,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.09.03-44";  // TABLE BOTTOM SPACING: every scrolling screen now has proper padding at the foot (plus the phone’s safe-area inset), so the last row of ratings/ladder/form tables no longer sits flush against the bottom edge. CSS only. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v2026.09.03-45";  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
