@@ -1955,7 +1955,7 @@ function watchLeave(){
 let ADMIN_PIN = "";
 function openAdmin(){ document.getElementById('adminGate').style.display='block'; document.getElementById('adminPanel').style.display='none'; document.getElementById('adminPin').value=''; document.getElementById('adminGateErr').style.display='none'; showScreen('adminScreen'); }
 async function adminCall(action, args, pinOverride){
-  const body=Object.assign({ master_pin:(pinOverride||ADMIN_PIN), action }, args||{});
+  const body=Object.assign({ master_pin:(pinOverride||ADMIN_PIN), action, club_id:CLUB_ID }, args||{});   // 46: tell the admin function which club this is — its code is checked against THIS club only
   const resp=await fetch(SB_URL+"/functions/v1/admin",{ method:"POST", headers:{ apikey:SB_ANON, Authorization:"Bearer "+SB_ANON, "Content-Type":"application/json" }, body:JSON.stringify(body) });
   return await resp.json();
 }
@@ -2842,7 +2842,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v2026.09.03-45";  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v2026.09.13-46";  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
