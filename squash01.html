@@ -87,6 +87,15 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .five{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:0 12px}
 .fig{background:var(--card);border:1px solid var(--line);border-radius:12px;text-align:center;padding:9px 2px}
 .fig b{display:block;font-size:16px;color:var(--c,var(--ink))}.fig span{font-size:10.5px;color:var(--soft)}
+/* the division's action row (nat3's five squares) */
+.acts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:12px}
+.act{background:#fff;border:1.5px solid color-mix(in srgb,var(--c) 30%,#fff);border-radius:14px;padding:11px 2px;text-align:center;font-size:10.5px;overflow-wrap:anywhere;font-weight:800;color:color-mix(in srgb,var(--c) 85%,#000);line-height:1.2}
+.act i{display:block;font-style:normal;font-size:19px;margin-bottom:5px}
+.act.primary{background:linear-gradient(180deg,color-mix(in srgb,var(--c) 85%,#fff),var(--c));color:#fff;border-color:var(--c)}
+.mini{padding:2px 14px 12px}
+.mini svg{width:100%;height:70px;display:block}
+.mini .lab{display:flex;justify-content:space-between;font-size:11px;color:var(--soft);margin-top:2px}
+.mv b.up{color:var(--up)}.mv b.dn{color:var(--dn)}
 /* the bar */
 #bar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 #bar .in{max-width:720px;margin:0 auto;display:flex}
@@ -109,7 +118,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 <script>
 "use strict";
 (function(){
-var BUILD="sq01 b2";
+var BUILD="sq01 b3";
 /* -------------------------------------------------------------------------------------------- the data layer
    Reads the platform's SQUASH rows on the OSR / platform Supabase project. Nothing here writes. Everything for a
    register is read once, together, at the start — so every page after the first is drawn from memory, instantly. */
@@ -156,6 +165,33 @@ function colourOf(c){ if(!c) return "#5b17ac"; if(c.colour) return c.colour; if(
 function descendants(c){ var out=[c.id]; (c.kids||[]).forEach(function(k){ out=out.concat(descendants(k)); }); return out; }
 function matchesUnder(c){ var set={}; descendants(c).forEach(function(i){ set[i]=1; }); return D.matches.filter(function(m){ return set[m.club_id]; }); }
 function kindOf(c){ var depth=0, p=c; while(p && p.parentId){ depth++; p=D.byId[p.parentId]; } if(!(c.kids||[]).length) return "Division"; return depth===0?"Province":"Region"; }
+/* nat3's window rule (n62): this week, or far enough back to hold the four most recent matches */
+function ago(d){ return (Date.now()-new Date(String(d).slice(0,10)+"T12:00:00").getTime())/86400000; }
+function windowOf(ms){
+  if(ms.filter(function(m){ return ago(m.match_date)<=7; }).length>=2) return 7;
+  var d=ms.map(function(m){ return ago(m.match_date); }).sort(function(a,b){ return a-b; });
+  if(!d.length) return 7; return Math.max(7,Math.ceil(d[Math.min(3,d.length-1)])+1);
+}
+function whenTxt(w){ return w<=7?"this week":("last "+w+" days"); }
+/* each person's move over the window, from the matches' own rating deltas (the server's numbers, signed by side) */
+function movers(ms,w){
+  var mv={};
+  ms.forEach(function(m){ if(ago(m.match_date)>w || m.rating_delta==null) return;
+    side(m,1).forEach(function(n){ mv[n]=(mv[n]||0)+(+m.rating_delta); });
+    side(m,2).forEach(function(n){ mv[n]=(mv[n]||0)-(+m.rating_delta); }); });
+  return Object.keys(mv).map(function(n){ return {name:n, move:Math.round(mv[n])}; }).filter(function(x){ return x.move!==0; }).sort(function(a,b){ return b.move-a.move; });
+}
+function trailOf(name, ms){   /* the person's last 12 rated matches here, oldest first, as cumulative moves */
+  var mine=ms.filter(function(m){ return m.rating_delta!=null && (side(m,1).indexOf(name)>=0 || side(m,2).indexOf(name)>=0); }).slice(0,12).reverse();
+  var s=0, out=[0]; mine.forEach(function(m){ s+= (side(m,1).indexOf(name)>=0?1:-1)*(+m.rating_delta); out.push(s); }); return out;
+}
+function miniChart(vals,col){
+  if(vals.length<2) return '';
+  var lo=Math.min.apply(null,vals), hi=Math.max.apply(null,vals), sp=(hi-lo)||1, W=300, H=60;
+  var pts=vals.map(function(v,i){ return [Math.round(i*(W/(vals.length-1))), Math.round(H-6-(v-lo)/sp*(H-12))]; });
+  var line=pts.map(function(p){ return p.join(","); }).join(" ");
+  return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none"><polygon points="0,'+H+' '+line+' '+W+','+H+'" fill="'+col+'" opacity=".12"/><polyline points="'+line+'" fill="none" stroke="'+col+'" stroke-width="2.5"/><circle cx="'+pts[pts.length-1][0]+'" cy="'+pts[pts.length-1][1]+'" r="4" fill="'+col+'"/></svg>';
+}
 /* the router: the address IS the page. ?pool=P&v=node&id=7 · v=pair&n=… · v=me&n=… */
 function here(){ var q=new URLSearchParams(location.search); return {v:q.get("v")||"home", id:q.get("id"), n:q.get("n")}; }
 function href(v,extra){ var q=new URLSearchParams(location.search); ["v","id","n"].forEach(function(k){ q.delete(k); }); if(v!=="home") q.set("v",v); Object.keys(extra||{}).forEach(function(k){ q.set(k,extra[k]); }); return location.pathname+"?"+q.toString(); }
@@ -180,6 +216,8 @@ function show(){
 window.addEventListener("scroll",function(){ var v=app.querySelector(".view.on"); if(v) v.setAttribute("data-y", String(window.scrollY)); },{passive:true});
 function draw(h){
   if(h.v==="node"){ var c=D.byId[h.id]; return c ? (c.kids.length?nodePage(c):divisionPage(c)) : homePage(); }
+  if(h.v==="ladder"){ var c2=D.byId[h.id]; return c2?ladderPage(c2):homePage(); }
+  if(h.v==="members"){ var c3=D.byId[h.id]; return c3?membersPage(c3):homePage(); }
   if(h.v==="pair") return pairPage(h.n);
   if(h.v==="me") return mePage(h.n);
   return homePage();
@@ -220,19 +258,63 @@ function nodePage(c){
     +'<div class="blk" style="--c:'+col+'"><h2>Recent matches</h2>'+matchRows(ms,null,10)+'</div></div>';
 }
 function divisionPage(c){
-  var col=colourOf(c), parent=c.parentId?D.byId[c.parentId]:null;
+  /* nat3's GROUP page, for a division: the five squares, In form, Biggest climb, Steepest fall, Movers, Recent */
+  var col=colourOf(c), parent=c.parentId?D.byId[c.parentId]:null, ms=matchesUnder(c), w=windowOf(ms), when=whenTxt(w);
+  var recent=ms.filter(function(m){ return ago(m.match_date)<=w; });
+  var mv=movers(ms,w);
+  var acts='<div class="acts" style="--c:'+col+'">'
+    +'<button class="act primary" data-go="enter" data-id="'+c.id+'"><i>+</i>Enter a score</button>'
+    +'<button class="act" data-go="ladder" data-id="'+c.id+'"><i>\u2195</i>Ratings &amp; ladders</button>'
+    +'<button class="act" data-go="members" data-id="'+c.id+'"><i>\u263a</i>Division members</button>'
+    +'<button class="act" data-go="soon" data-what="Court card"><i>\u25a6</i>Court card</button>'
+    +'<button class="act" data-go="soon" data-what="Tournaments"><i>\u2605</i>Tournaments</button></div>';
+  /* In form: the pairs who won the most games in the window */
+  var form={}; recent.forEach(function(m){ var a=sideName(m,1), b=sideName(m,2); form[a]=form[a]||{w:0,p:0}; form[b]=form[b]||{w:0,p:0};
+    form[a].w+=(+m.t1_sets||0); form[a].p+=(+m.t1_sets||0)+(+m.t2_sets||0); form[b].w+=(+m.t2_sets||0); form[b].p+=(+m.t1_sets||0)+(+m.t2_sets||0); });
+  var formRows=Object.keys(form).map(function(n){ return {n:n,w:form[n].w,p:form[n].p}; }).filter(function(x){ return x.p; }).sort(function(a,b){ return (b.w/b.p)-(a.w/a.p)||b.w-a.w; }).slice(0,2);
+  var inForm='<div class="blk" style="--c:'+col+'"><h2>In form</h2>'+(formRows.length?formRows.map(function(x){
+      var pr=D.pairs.filter(function(p){ return p.name===x.n; })[0];
+      return '<button class="row" style="--c:'+col+'" data-go="pair" data-n="'+esc(x.n)+'"><span class="face">'+esc(initials(x.n))+'</span><span class="nm"><b>'+esc(x.n)+'</b><span>'+x.w+' of '+x.p+' games won '+when+'</span></span><span class="val"><b>'+(pr?Math.round(pr.current_rating):"")+'</b><span>pair rating</span></span></button>'; }).join(""):'<div class="empty">No matches '+when+'.</div>')
+    +'<button class="row" style="--c:'+col+';justify-content:center;font-weight:800;color:var(--c)" data-go="ladder" data-id="'+c.id+'">Ratings and ladders \u2192</button></div>';
+  var chartBlk=function(x,title){
+    if(!x) return '';
+    var p=D.person[x.name]||{}, up=x.move>0, tr=trailOf(x.name,ms), cur=p.current_rating!=null?Math.round(p.current_rating):null;
+    var series=cur!=null?tr.map(function(v){ return cur-(tr[tr.length-1]-v); }):tr;
+    return '<div class="blk" style="--c:'+col+'"><h2>'+title+' '+when+'</h2>'
+      +'<button class="row" style="--c:'+col+'" data-go="me" data-n="'+esc(x.name)+'"><span class="face">'+esc(initials(x.name))+'</span><span class="nm"><b>'+esc(x.name)+'</b><span>'+esc(c.name)+'</span></span>'
+      +(p.seed_rating!=null?'<span class="ini">Initial '+Math.round(p.seed_rating)+'</span>':'')
+      +'<span class="val mv"><b class="'+(up?"up":"dn")+'">'+(up?"\u25b2 +":"\u25bc ")+x.move+'</b><span>'+when+'</span></span></button>'
+      +'<div class="mini">'+miniChart(series,col)+'<div class="lab"><span>from '+Math.round(series[0])+'</span><b style="color:'+col+'">now '+(cur!=null?cur:Math.round(series[series.length-1]))+'</b></div></div></div>';
+  };
+  var climb=mv.length&&mv[0].move>0?mv[0]:null, fall=mv.length&&mv[mv.length-1].move<0?mv[mv.length-1]:null;
+  var moversBlk='<div class="blk" style="--c:'+col+'"><h2>Movers '+when+'</h2>'+(mv.length?mv.slice(0,3).concat(mv.length>3?[mv[mv.length-1]]:[]).map(function(x){
+      return '<button class="row" style="--c:'+col+'" data-go="me" data-n="'+esc(x.name)+'"><span class="face">'+esc(initials(x.name))+'</span><span class="nm"><b>'+esc(x.name)+'</b><span>'+esc(c.name)+'</span></span><span class="val mv"><b class="'+(x.move>0?"up":"dn")+'">'+(x.move>0?"+":"")+x.move+'</b><span>'+when+'</span></span></button>'; }).join(""):'<div class="empty">Nobody moved '+when+'.</div>')+'</div>';
+  return '<div data-c="'+col+'" data-t="'+esc(c.name)+'"><div class="hero" style="--c:'+col+'">'+mark(parent?parent.name:D.pool.name)+'<div class="kick">Division</div><h1>'+esc(c.name)+'</h1>'
+    +'<div class="chips">'+back(parent?parent.name:D.pool.name)+'<span class="chip hot">'+recent.length+' '+when+'</span></div></div>'
+    + acts + inForm + chartBlk(climb,"Biggest climb") + chartBlk(fall,"Steepest fall") + moversBlk
+    +'<div class="blk" style="--c:'+col+'"><h2>Recent matches</h2>'+matchRows(ms,null,12)+'</div></div>';
+}
+function ladderPage(c){
+  var col=colourOf(c), ms=matchesUnder(c);
   var pairs=D.pairs.filter(function(p){ return Number(p.club_id)===Number(c.id); }).sort(function(a,b){ return (b.current_rating||0)-(a.current_rating||0); });
-  var ms=matchesUnder(c);
   var ladder=pairs.length ? pairs.map(function(p,i){
       return '<button class="row" style="--c:'+col+'" data-go="pair" data-n="'+esc(p.name)+'"><span class="rank">'+(i+1)+'</span><span class="face">'+esc(initials(p.name.split(" & ")[0]))+'</span>'
         +'<span class="nm"><b>'+esc(p.name)+'</b><span>'+(p.sets_played||0)+' games played</span></span>'
         +(p.initial_rating!=null?'<span class="ini">Initial '+Math.round(p.initial_rating)+'</span>':'')
         +'<span class="val"><b>'+Math.round(p.current_rating||0)+'</b><span>rating</span></span></button>';
     }).join("") : '<div class="empty">No pairs have played in this division yet.</div>';
-  return '<div data-c="'+col+'" data-t="'+esc(c.name)+'"><div class="hero" style="--c:'+col+'">'+mark(parent?parent.name:D.pool.name)+'<div class="kick">Division</div><h1>'+esc(c.name)+'</h1>'
-    +'<div class="chips">'+back(parent?parent.name:D.pool.name)+'<span class="chip hot">'+pairs.length+' pairs</span></div></div>'
-    +'<div class="blk" style="--c:'+col+'"><h2>Ladder \u00b7 pair rating</h2>'+ladder+'</div>'
-    +'<div class="blk" style="--c:'+col+'"><h2>Recent matches</h2>'+matchRows(ms,null,12)+'</div></div>';
+  return '<div data-c="'+col+'" data-t="'+esc(c.name)+' \u00b7 Ladders"><div class="hero" style="--c:'+col+'">'+mark(c.name)+'<div class="kick">Ratings &amp; ladders</div><h1>'+esc(c.name)+'</h1>'
+    +'<div class="chips">'+back()+'<span class="chip hot">'+pairs.length+' pairs</span></div></div>'
+    +'<div class="blk" style="--c:'+col+'"><h2>Pair ladder \u00b7 pair rating</h2>'+ladder+'</div></div>';
+}
+function membersPage(c){
+  var col=colourOf(c), ms=matchesUnder(c), seen={};
+  ms.forEach(function(m){ side(m,1).concat(side(m,2)).forEach(function(n){ seen[n]=1; }); });
+  var list=Object.keys(seen).map(function(n){ return D.person[n]||{full_name:n}; }).sort(function(a,b){ return String(a.full_name).localeCompare(String(b.full_name)); });
+  return '<div data-c="'+col+'" data-t="'+esc(c.name)+' \u00b7 Members"><div class="hero" style="--c:'+col+'">'+mark(c.name)+'<div class="kick">Division members</div><h1>'+esc(c.name)+'</h1>'
+    +'<div class="chips">'+back()+'<span class="chip hot">'+list.length+' members</span></div></div>'
+    +'<div class="blk" style="--c:'+col+'"><h2>Members \u00b7 '+list.length+'</h2>'+(list.length?list.map(function(p){
+      return '<button class="row" style="--c:'+col+'" data-go="me" data-n="'+esc(p.full_name)+'"><span class="face">'+esc(initials(p.full_name))+'</span><span class="nm"><b>'+esc(p.full_name)+'</b><span>'+(p.seed_rating!=null?'Initial '+Math.round(p.seed_rating):'')+'</span></span><span class="val"><b>'+(p.current_rating!=null?Math.round(p.current_rating):"\u2014")+'</b><span>rating</span></span><span class="chev">\u203a</span></button>'; }).join(""):'<div class="empty">Nobody has played in this division yet.</div>')+'</div></div>';
 }
 function pairPage(name){
   var rows=D.pairs.filter(function(p){ return p.name===name; }), p=rows[0]||{name:name};
@@ -271,6 +353,9 @@ document.addEventListener("click",function(ev){
   if(g==="home"){ var depth=0; go("home"); return; }
   if(g==="node") return go("node",{id:t.getAttribute("data-id")});
   if(g==="pair") return go("pair",{n:t.getAttribute("data-n")});
+  if(g==="ladder") return go("ladder",{id:t.getAttribute("data-id")});
+  if(g==="members") return go("members",{id:t.getAttribute("data-id")});
+  if(g==="soon") return alert((t.getAttribute("data-what")||"This")+" comes in a coming build.");
   if(g==="me") return go("me",{n:t.getAttribute("data-n")});
   if(g==="enter") return alert("Entering a score comes in the next build.");
 });
