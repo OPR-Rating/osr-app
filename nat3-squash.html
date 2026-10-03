@@ -3555,7 +3555,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q018";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q020";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17866,11 +17866,13 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var url=String(u&&u.url?u.url:u), p=f0.apply(this,arguments);
       if(/\/functions\/v1\/nat_admin/.test(url)){
         var body={}; try{ body=JSON.parse((i&&i.body)||"{}"); }catch(e){}
-        if(body.action==="add_pool_member" || body.action==="bulk_add_pool_members"){
-          var names=body.action==="add_pool_member"?[body.full_name]:(body.rows||[]).map(function(r){ return r.full_name; });
+        if(body.action==="add_pool_member" || body.action==="bulk_add_pool_members" || body.action==="add_member"){
+          /* add_member: OSR's own Admin box (single add and "Bulk add individuals", one call per player) */
+          var names=(body.action==="bulk_add_pool_members")?(body.rows||[]).map(function(r){ return r.full_name; }):[body.full_name];
           /* THE ADMIN'S RATING IS THE RATING (Andre): the add function stores the given rating as the PADEL seed only, so
              squash would fall back to 1500 / 1300. Every name added here gets its SQUASH initial rating written as given. */
           var given={}; if(body.action==="add_pool_member"){ if(body.seed!==""&&body.seed!=null) given[body.full_name]=Number(body.seed); }
+          else if(body.action==="add_member"){ var sv=(body.seeds||{}).squash; if(sv!==""&&sv!=null&&!isNaN(Number(sv))) given[body.full_name]=Number(sv); }
           else (body.rows||[]).forEach(function(r){ if(r.rating!==""&&r.rating!=null&&!isNaN(Number(r.rating))) given[r.full_name]=Number(r.rating); });
           var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0];
           var clubId=(me && cs.some(function(c){ return +c.parent_id===+me.id; }))?me.id:0;   /* the board is a club with divisions */
@@ -17878,6 +17880,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           if(names.length) p=p.then(function(res){ res.clone().json().then(function(j){
             if(!(j && j.ok)) return;
             setTimeout(function(){
+              if(body.action==="add_member"){ queueOsrAdd(names, given, body.admin_pin||"", clubId, boardId); return; }
               setSquashSeeds(given, body.admin_pin||"", clubId||boardId).then(function(sr){
                 if(!clubId){ if(sr.set) nsqToast(sr.set+" initial rating"+(sr.set===1?"":"s")+" set as given"); return; }
                 return placePeople(clubId, body.admin_pin||"", names).then(function(r){ nsqToast((sr.set?sr.set+" initial ratings set as given \u00b7 ":"")+placeReport(r)); });
@@ -17887,6 +17890,20 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         }
       }
       return p; }; })();
+    /* OSR's "Bulk add individuals" sends one add per player; collect them and place the whole batch once, 2 s after
+       the last one arrives */
+    var OSRQ={names:[], given:{}, pin:"", club:0, board:0, t:null};
+    function queueOsrAdd(names, given, pin, clubId, boardId){
+      OSRQ.names=OSRQ.names.concat(names); Object.keys(given).forEach(function(k){ OSRQ.given[k]=given[k]; });
+      OSRQ.pin=pin; OSRQ.club=clubId; OSRQ.board=boardId; clearTimeout(OSRQ.t);
+      OSRQ.t=setTimeout(function(){
+        var q=OSRQ; OSRQ={names:[], given:{}, pin:"", club:0, board:0, t:null};
+        setSquashSeeds(q.given, q.pin, q.club||q.board).then(function(sr){
+          if(!q.club){ if(sr.set) nsqToast(sr.set+" initial ratings set as given"); return; }
+          return placePeople(q.club, q.pin, q.names).then(function(r){ nsqToast((sr.set?sr.set+" initial ratings set as given \u00b7 ":"")+placeReport(r)); });
+        });
+      }, 2000);
+    }
     function nsqToast(t){
       var d=document.createElement("div"); d.textContent="Divisions: "+t;
       d.style.cssText="position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:9500;background:#1c110a;color:#fff;padding:12px 14px;border-radius:12px;font-size:13.5px;box-shadow:0 6px 20px rgba(0,0,0,.25)";
@@ -17930,7 +17947,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var bs=S.bands.slice().sort(function(a,b){ return a.sort-b.sort; });
       var chip=function(b){ return b?'<span class="chip" style="background:'+(b.colour||"#D35400")+'">'+e(b.label)+'</span>':'<span style="color:#b9a597">\u2014</span>'; };
       var pill=function(on,label,click){ return '<button class="'+(on?"on":"")+'" onclick="'+click+'">'+label+'</button>'; };
-      var h='<div class="hd"><button class="x" onclick="window.nsqClose()">Close</button><div style="font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.85">DIVISIONS &amp; RANKINGS</div><h1>'+e(RK.name)+'</h1>'
+      var h='<div class="hd"><button class="x" onclick="window.nsqClose()">Close</button><div style="font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.85">CLUB OVERALL \u2014 ON PAPER</div><h1>'+e(RK.name)+'</h1>'
         +'<div style="font-size:13px;opacity:.9">'+RK.people.length+' players \u00b7 '+RK.pairs.length+' pairs</div></div>';
       h+='<div class="card"><div class="in"><div class="seg">'+pill(RK.tab==="io","Individual Overall","window.nsqRk(\'tab\',\'io\')")+pill(RK.tab==="dv","Divisions","window.nsqRk(\'tab\',\'dv\')")+'</div></div></div>';
       if(RK.tab==="io"){
@@ -17966,16 +17983,112 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     function rkPill(){
       try{
         var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0];
-        if(!me || !W.PLAT.clubDoor || !cs.some(function(c){ return +c.parent_id===+me.id; })) return;
+        if(!me || !cs.some(function(c){ return +c.parent_id===+me.id; })) return;
+        if((new URLSearchParams(location.search).get("go")||"")!=="records") return;   /* Records only — not on the door */
         var nh=document.getElementById("nh"); if(!nh || nh.querySelector("#nsqRkPill")) return;
-        var anchorBtn=Array.prototype.filter.call(nh.querySelectorAll("button"),function(b){ return /Ratings\s*\u00b7\s*Ladders/.test(b.textContent||""); })[0];
-        if(!anchorBtn) return;
-        var p=document.createElement("button"); p.id="nsqRkPill"; p.className=anchorBtn.className; p.setAttribute("style",anchorBtn.getAttribute("style")||"");
-        p.textContent="Divisions & rankings"; p.onclick=function(){ W.nsqRankings(me.id); };
-        anchorBtn.parentNode.insertBefore(p, anchorBtn);
+        var band=nh.querySelector(".band"); if(!band) return;
+        var p=document.createElement("div"); p.id="nsqRkPill"; p.className="brk";
+        p.innerHTML='<h2>Club overall \u2014 on paper</h2><button onclick="window.nsqRankings('+me.id+')" style="display:block;width:calc(100% - 28px);margin:12px 14px;padding:11px;border-radius:12px;border:1.5px solid #D35400;background:#fff;color:#D35400;font:inherit;font-weight:800">Pairs and players across every division \u2192</button>';
+        band.parentNode.insertBefore(p, band.nextSibling);
       }catch(e2){}
     }
     setInterval(rkPill, 700);
+    /* =================================================================================================================
+       ON COURT vs ON PAPER (Andre: "on paper they're better — but are they in reality?").
+       THE LADDER — on court: who DID win; only ladder matches move it (and a tournament's final placings where that
+       tournament counts). STATS — on paper: who SHOULD win, from every match. The two never share a screen unexplained.
+       ================================================================================================================= */
+    function isDivisionBoard(){
+      var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0]; if(!me || !me.parent_id) return null;
+      var par=cs.filter(function(c){ return +c.id===+me.parent_id; })[0];
+      return (par && par.parent_id) ? me : null;     /* province -> club -> DIVISION */
+    }
+    /* 1. every ladder move is written down the moment the ladder function reports it */
+    (function(){ var f0=W.fetch; W.fetch=function(u,i){ var url=String(u&&u.url?u.url:u), p=f0.apply(this,arguments);
+      if(/\/functions\/v1\/(plat_ladder_squash|ladder)(\?|$)/.test(url)){
+        var body={}; try{ body=JSON.parse((i&&i.body)||"{}"); }catch(e){}
+        if(body.action==="apply_ladder_result") p=p.then(function(res){ res.clone().json().then(function(j){
+          if(j && j.ok && j.changed){
+            var nm=function(t){ return t?[t.p1,t.p2].filter(Boolean).join(" & "):""; };
+            var cid=Number(W.PLAT.cid||body.club_id||0);
+            rpc("nsq_log_move",{p_club:cid,p_cat:body.category||"",p_winner:nm(body.winner),p_loser:nm(body.loser),p_from:j.from||null,p_to:j.to||null});
+          } }).catch(function(){}); return res; });
+      }
+      return p; }; })();
+    /* 2. THE LADDER — on court, at the top of a division's door */
+    function ago2(ts){ var d=(Date.now()-new Date(ts).getTime())/86400000; return d<1?"today":d<2?"yesterday":Math.floor(d)+" days ago"; }
+    function ladderCard(div){
+      var col=(div.colour||"#D35400");
+      return Promise.all([
+        rest("plat_squash_club_ladder?club_id=eq."+div.id+"&select=category,p1,p2,position&order=position.asc&limit=200").catch(function(){ return []; }),
+        rest("nsq_ladder_moves?club_id=eq."+div.id+"&select=category,winner,loser,from_pos,to_pos,moved_at&order=moved_at.desc&limit=6").catch(function(){ return []; })
+      ]).then(function(r){
+        var rows=Array.isArray(r[0])?r[0]:[], moves=Array.isArray(r[1])?r[1]:[];
+        var cats={}; rows.forEach(function(x){ (cats[x.category]=cats[x.category]||[]).push(x); });
+        var h='<div class="brk" id="nsqLadderCard" data-plat-keep="1" style="border:2px solid '+col+'">'
+          +'<h2 style="display:flex;align-items:center;gap:8px">\ud83e\ude9c The Ladder <span style="font-size:11px;letter-spacing:.06em;text-transform:none;font-weight:800;color:#7a6658">\u2014 on court</span></h2>';
+        if(!rows.length) h+='<div style="padding:12px 14px;color:#7a6658;font-size:13.5px">No pairs on this ladder yet. A new pair is asked after its first match \u2014 or join from the ladder.</div>';
+        Object.keys(cats).forEach(function(c){ h+='<div style="padding:8px 14px 2px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:'+col+'">'+e(c)+'</div>'
+          +cats[c].slice(0,5).map(function(x){ return '<div style="display:flex;gap:10px;align-items:center;padding:7px 14px;border-top:1px solid #f3e7de"><b style="width:22px;color:'+col+'">'+x.position+'</b><span style="flex:1;font-weight:700;font-size:14px">'+e([x.p1,x.p2].filter(Boolean).join(" & "))+'</span></div>'; }).join("")
+          +(cats[c].length>5?'<div style="padding:4px 14px 6px;font-size:12px;color:#7a6658">+ '+(cats[c].length-5)+' more</div>':''); });
+        h+='<div style="padding:10px 14px 4px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#7a6658">Ladder moves</div>'
+          +(moves.length?moves.map(function(m){ return '<div style="padding:6px 14px;font-size:13px;border-top:1px solid #f3e7de">\u25b2 <b>'+e(m.winner)+'</b> '+(m.from_pos&&m.to_pos?(m.from_pos+' \u2192 '+m.to_pos):'climbed')+', beating '+e(m.loser)+' <span style="color:#9a8a7e">\u00b7 '+e(m.category)+' \u00b7 '+ago2(m.moved_at)+'</span></div>'; }).join("")
+            :'<div style="padding:6px 14px 10px;font-size:13px;color:#7a6658">No ladder moves yet \u2014 win a ladder match against a pair above you to climb.</div>')
+          +'<button onclick="window.nsqOpenLadder()" style="display:block;width:calc(100% - 28px);margin:10px 14px 14px;padding:11px;border-radius:12px;border:0;background:'+col+';color:#fff;font:inherit;font-weight:800">Open the ladder \u2192</button></div>';
+        return h;
+      });
+    }
+    W.nsqOpenLadder=function(){ try{ W.nhGo("ladders"); }catch(e){} setTimeout(function(){ try{ W.showScreen("clubLadderScreen"); if(typeof W.loadClubLadder==="function") W.loadClubLadder(); }catch(e){} }, 250); };
+    var LC={board:0, busy:false};
+    function placeLadderCard(){
+      var div=isDivisionBoard(), nh=document.getElementById("nh"); if(!div || !nh) return;
+      var band=nh.querySelector(".band"); if(!band) return;
+      if(nh.querySelector("#nsqLadderCard") && LC.board===div.id) return;
+      if(LC.busy) return; LC.busy=true;
+      ladderCard(div).then(function(h){ LC.busy=false; var n2=document.getElementById("nh"); if(!n2 || +W.PLAT.cid!==+div.id) return;
+        var old=n2.querySelector("#nsqLadderCard"); if(old) old.remove();
+        var b2=n2.querySelector(".band"); if(!b2) return;
+        var box=document.createElement("div"); box.innerHTML=h; var card=box.firstChild;
+        var after=b2.nextElementSibling && /Climb|Move|Recent/.test(b2.nextElementSibling.textContent||"") ? b2.nextElementSibling : b2;
+        after.parentNode.insertBefore(card, after.nextSibling); LC.board=div.id;
+      }).catch(function(){ LC.busy=false; });
+    }
+    /* 3. STATS — on paper: the square is renamed; the individual climb / fall brackets give way to PAIR ones on Stats */
+    function relabel(){
+      var div=isDivisionBoard(), nh=document.getElementById("nh"); if(!div || !nh) return;
+      Array.prototype.forEach.call(nh.querySelectorAll("button"),function(b){
+        if(/^\s*Ratings\s*&(amp;)?\s*ladders\s*$/i.test(b.textContent||"") && !b.getAttribute("data-nsq")){ b.setAttribute("data-nsq","1"); b.childNodes.forEach(function(n){ if(n.nodeType===3 && /Ratings/.test(n.nodeValue)) n.nodeValue="Stats \u2014 on paper"; }); if(!/Stats/.test(b.textContent)) b.textContent="Stats \u2014 on paper"; }
+      });
+      Array.prototype.forEach.call(nh.querySelectorAll(".brk"),function(k){ var h2=k.querySelector("h2"); if(h2 && /^\s*(Biggest climb|Steepest fall)/i.test(h2.textContent||"")) k.style.display="none"; });
+    }
+    function statsHeader(){
+      var div=isDivisionBoard(); var scr=document.getElementById("laddersScreen"); if(!div || !scr || !scr.classList.contains("active") || scr.querySelector("#nsqPaper")) return;
+      var box=document.createElement("div"); box.id="nsqPaper"; box.setAttribute("data-plat-keep","1");
+      box.style.cssText="margin:12px;padding:12px 14px;border-radius:14px;background:#fbf1ea;border:1px solid #ecdcd0;color:#3b2a1e;font-size:13.5px;line-height:1.5";
+      box.innerHTML='<b>Stats \u2014 on paper.</b> On paper says who <i>should</i> win. The ladder says who <i>did</i>. Only ladder matches move the ladder.'
+        +'<details style="margin-top:6px"><summary style="cursor:pointer;color:#D35400;font-weight:800">Rated higher, but below me on the ladder?</summary>That pair is better on paper. You\u2019re above them on court. Beat them in a ladder match and the ladder shows it.</details>'
+        +'<div id="nsqPairMoves" style="margin-top:10px"></div>';
+      var head=scr.querySelector(".header"); if(head && head.nextSibling) scr.insertBefore(box, head.nextSibling); else scr.insertBefore(box, scr.firstChild);
+      pairMoves(div).then(function(h){ var t=document.getElementById("nsqPairMoves"); if(t) t.innerHTML=h; });
+    }
+    function pairMoves(div){
+      var since=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+      return rest("plat_matches?club_id=eq."+div.id+"&discipline=eq.squash&match_date=gte."+since+"&select=t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,rating_delta,match_date&limit=1000").then(function(ms){
+        ms=Array.isArray(ms)?ms:[]; var mv={}, up=null;
+        var nm=function(a,b){ return [a,b].filter(Boolean).join(" & "); };
+        ms.forEach(function(m){ var A=nm(m.t1p1,m.t1p2), B=nm(m.t2p1,m.t2p2), d=+m.rating_delta||0; if(!A||!B) return;
+          mv[A]=(mv[A]||0)+d; mv[B]=(mv[B]||0)-d;
+          var winA=(+m.t1_sets||0)>(+m.t2_sets||0); var gain=winA?d:-d;
+          if(!up || gain>up.gain) up={w:winA?A:B, l:winA?B:A, gain:gain, date:m.match_date}; });
+        var list=Object.keys(mv).map(function(k){ return {p:k, v:Math.round(mv[k])}; }).filter(function(x){ return x.v!==0; }).sort(function(a,b){ return b.v-a.v; });
+        if(!list.length) return '<div style="color:#7a6658">No rated matches in the last 30 days yet.</div>';
+        var row=function(t,x,c){ return '<div style="display:flex;gap:8px;padding:4px 0"><span style="width:118px;color:#7a6658;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:800">'+t+'</span><b style="flex:1">'+e(x.p)+'</b><b style="color:'+c+'">'+(x.v>0?"+":"")+x.v+'</b></div>'; };
+        return row("Biggest climb",list[0],"#1e8449")+(list.length>1&&list[list.length-1].v<0?row("Steepest fall",list[list.length-1],"#c0392b"):"")
+          +(up&&up.gain>0?'<div style="display:flex;gap:8px;padding:4px 0"><span style="width:118px;color:#7a6658;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:800">Biggest upset</span><span style="flex:1"><b>'+e(up.w)+'</b> beat '+e(up.l)+'</span></div>':'')
+          +'<div style="font-size:11.5px;color:#9a8a7e;margin-top:4px">Pairs, last 30 days, on paper.</div>';
+      }).catch(function(){ return ""; });
+    }
+    setInterval(function(){ try{ placeLadderCard(); relabel(); statsHeader(); }catch(e){} }, 600);
     /* the Masters card on Club admin */
     var _ap=W.nhAdminPage;
     if(typeof _ap==="function") W.nhAdminPage=function(){
