@@ -3555,7 +3555,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q009";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q010";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -16861,6 +16861,59 @@ W.nhOpenPair=function(name){
   })();
   /* n328: remember which ladder table is open, so a back can draw it again */
   (function(){ var _ll=W.loadLadder; if(typeof _ll!=="function") return; W.loadLadder=function(){ W.__nhLadderArgs=Array.prototype.slice.call(arguments); return _ll.apply(this,arguments); }; })();
+  /* n335: A TOURNAMENT LEAVES THE PHONE (Andre, 3 Oct). Print and WhatsApp for every tournament: on the tournament
+     screen (Draw & Rounds, Tournament Stats) and on the full draw sheet, a bar with 🖨 Print and 💬 WhatsApp acting on
+     what the tournament is showing. Print sends just that content to the phone's printer / PDF; WhatsApp sends it as
+     plain text — the phone's share sheet where there is one, else WhatsApp directly. Only ever existed for a knockout
+     bracket (print) and the court card (print / text). */
+  var TOUR_SCREENS={tournamentScreen:1, tournamentSheetScreen:1};
+  function nhTourContent(){
+    var act=document.querySelector(".screen.active"); if(!act || !TOUR_SCREENS[act.id]) return null;
+    return act;
+  }
+  function nhTourTitle(act){
+    var t=""; try{ var h=act.querySelector("h1,h2,.tm-title,#tournamentTitle"); t=(h&&h.textContent||"").trim(); }catch(e){}
+    var sel=document.getElementById("tournamentSelect"); var tn=(W.TOURNAMENT_EVENT|| (sel&&sel.value) || "");
+    return (tn||t||"Tournament").trim();
+  }
+  function nhTourText(act){
+    /* what is ON SCREEN (innerText of the live screen honours hidden parts), less every button and menu label, the
+       explanatory paragraphs and the "Viewing:" line — leaving the draw, the rounds, the scores and the tables */
+    var skip={}; act.querySelectorAll("button, select, option, .nhTourBar, .header").forEach(function(x){ (x.innerText||x.textContent||"").split(/\n/).forEach(function(l){ l=l.replace(/\s+/g," ").trim(); if(l) skip[l]=1; }); });
+    var lines=(act.innerText||"").split(/\n/).map(function(l){ return l.replace(/\s+/g," ").trim(); })
+      .filter(function(l){ return l && !skip[l] && l.length<=110 && !/^Viewing:/i.test(l) && !/^(Change tournament|Draw & Rounds|Tournament Stats)$/i.test(l) && !/^[\u25be\u25bc\u25b8\u25b4\u203a\u2039]+$/.test(l); });
+    var out=[], prev=null; lines.forEach(function(l){ if(l!==prev) out.push(l); prev=l; });
+    var club=""; try{ var c=(W.PLAT.clubs||[]).filter(function(x){ return Number(x.id)===Number(W.PLAT.cid); })[0]; club=c?c.name:""; }catch(e){}
+    return "\ud83c\udfc6 "+nhTourTitle(act)+(club?" \u00b7 "+club:"")+"\n\n"+out.join("\n");
+  }
+  W.nhTourPrint=function(){
+    var act=nhTourContent(); if(!act) return;
+    var clone=act.cloneNode(true); clone.querySelectorAll("button, select, .nhTourBar, .header, .back-btn, script").forEach(function(x){ x.remove(); });
+    var css=Array.prototype.map.call(document.querySelectorAll("style"),function(s){ return s.textContent; }).join("\n");
+    var w=W.open("","_blank");
+    if(!w){ W.print(); return; }   /* a blocked pop-up: print the page itself */
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(nhTourTitle(act))+'</title><style>'+css
+      +'\n body{background:#fff!important;padding:16px} .screen{display:block!important} .hidden{display:block!important} @page{margin:12mm}</style></head><body>'
+      +'<h1 style="font-size:20px;margin:0 0 10px">'+esc(nhTourTitle(act))+'</h1>'+clone.innerHTML+'</body></html>');
+    w.document.close(); w.focus(); setTimeout(function(){ try{ w.print(); }catch(e){} }, 350);
+  };
+  W.nhTourWhatsApp=function(){
+    var act=nhTourContent(); if(!act) return;
+    var t=nhTourText(act);
+    if(navigator.share){ navigator.share({title:nhTourTitle(act), text:t}).catch(function(){}); return; }
+    W.open("https://wa.me/?text="+encodeURIComponent(t), "_blank");
+  };
+  function nhTourBar(){
+    var act=nhTourContent(); if(!act || act.querySelector(".nhTourBar")) return;
+    var bar=document.createElement("div"); bar.className="nhTourBar"; bar.setAttribute("data-plat-keep","1");
+    bar.style.cssText="display:flex;gap:8px;margin:10px 12px 4px";
+    var b=function(label,fnName){ return '<button onclick="window.'+fnName+'()" style="flex:1;padding:10px 8px;border-radius:12px;border:1.5px solid var(--nhc,#D35400);background:#fff;color:var(--nhc,#D35400);font:inherit;font-weight:800;font-size:13.5px;cursor:pointer">'+label+'</button>'; };
+    bar.innerHTML=b("\ud83d\udda8 Print","nhTourPrint")+b("\ud83d\udcac WhatsApp","nhTourWhatsApp");
+    var head=act.querySelector(".header"); if(head && head.parentNode===act) head.insertAdjacentElement("afterend", bar); else act.insertBefore(bar, act.firstChild);
+  }
+  (function(){ var _ss=W.showScreen; if(typeof _ss!=="function") return;
+    W.showScreen=function(id){ var r=_ss.apply(this,arguments); if(TOUR_SCREENS[id]) setTimeout(nhTourBar,0); return r; }; })();
+  setInterval(function(){ try{ nhTourBar(); }catch(e){} }, 800);
   /* n306: THE PATH YOU CAME. Every view — an address and the screen open on it — is written to one trail as you move,
      and every back arrow steps back along it: the group's sheet back to the region's sheet, that back to the door;
      Men's Pairs back to the ladders menu, that back to the group's page. No rules about doors and parents. */
