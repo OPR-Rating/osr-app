@@ -3555,7 +3555,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q010";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q011";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -16866,7 +16866,8 @@ W.nhOpenPair=function(name){
      what the tournament is showing. Print sends just that content to the phone's printer / PDF; WhatsApp sends it as
      plain text — the phone's share sheet where there is one, else WhatsApp directly. Only ever existed for a knockout
      bracket (print) and the court card (print / text). */
-  var TOUR_SCREENS={tournamentScreen:1, tournamentSheetScreen:1};
+  /* n336: only on the DRAW itself (the sheet: Teams, Rounds, Standings) — not on the tournament's front page (Andre) */
+  var TOUR_SCREENS={tournamentSheetScreen:1};
   function nhTourContent(){
     var act=document.querySelector(".screen.active"); if(!act || !TOUR_SCREENS[act.id]) return null;
     return act;
@@ -16903,13 +16904,22 @@ W.nhOpenPair=function(name){
     if(navigator.share){ navigator.share({title:nhTourTitle(act), text:t}).catch(function(){}); return; }
     W.open("https://wa.me/?text="+encodeURIComponent(t), "_blank");
   };
+  function nhTabStrip(act){
+    var t=Array.prototype.filter.call(act.querySelectorAll("button"),function(x){ return /Standings/.test(x.textContent||"") && x.offsetParent!==null && !x.closest(".nhTourBar"); })[0];
+    return t?t.parentNode:null;
+  }
   function nhTourBar(){
-    var act=nhTourContent(); if(!act || act.querySelector(".nhTourBar")) return;
+    var act=nhTourContent(); if(!act) return;
+    var have=act.querySelector(".nhTourBar");
+    if(have){ var st=nhTabStrip(act); if(st && st.parentNode && have.previousElementSibling!==st) st.parentNode.insertBefore(have, st.nextSibling); return; }   /* settle under the tabs once they exist */
     var bar=document.createElement("div"); bar.className="nhTourBar"; bar.setAttribute("data-plat-keep","1");
-    bar.style.cssText="display:flex;gap:8px;margin:10px 12px 4px";
-    var b=function(label,fnName){ return '<button onclick="window.'+fnName+'()" style="flex:1;padding:10px 8px;border-radius:12px;border:1.5px solid var(--nhc,#D35400);background:#fff;color:var(--nhc,#D35400);font:inherit;font-weight:800;font-size:13.5px;cursor:pointer">'+label+'</button>'; };
+    bar.style.cssText="display:flex;justify-content:flex-end;gap:8px;margin:8px 0 2px";   /* a slim row under the draw's tabs */
+    var b=function(label,fnName){ return '<button onclick="window.'+fnName+'()" style="flex:none;white-space:nowrap;padding:6px 13px;border-radius:999px;border:1.5px solid var(--nhc,#D35400);background:#fff;color:var(--nhc,#D35400);font:inherit;font-weight:800;font-size:12.5px;cursor:pointer">'+label+'</button>'; };
     bar.innerHTML=b("\ud83d\udda8 Print","nhTourPrint")+b("\ud83d\udcac WhatsApp","nhTourWhatsApp");
-    var head=act.querySelector(".header"); if(head && head.parentNode===act) head.insertAdjacentElement("afterend", bar); else act.insertBefore(bar, act.firstChild);
+    /* directly under the draw's Teams / Rounds / Standings tabs, in the draw's own column */
+    var strip=nhTabStrip(act);
+    if(strip && strip.parentNode){ strip.parentNode.insertBefore(bar, strip.nextSibling); }
+    else { var head=act.querySelector(".header"); if(head && head.parentNode===act) head.insertAdjacentElement("afterend", bar); else act.insertBefore(bar, act.firstChild); }
   }
   (function(){ var _ss=W.showScreen; if(typeof _ss!=="function") return;
     W.showScreen=function(id){ var r=_ss.apply(this,arguments); if(TOUR_SCREENS[id]) setTimeout(nhTourBar,0); return r; }; })();
