@@ -3555,7 +3555,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q016";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q017";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17576,6 +17576,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         +(S.bands.length?S.bands.map(function(b){ var d=divOfBand(b); return '<div class="band"><span class="chip" style="background:'+(b.colour||"#D35400")+'">'+e(b.label)+'</span><span style="flex:1;font-size:13px;color:#7a6658">'+rangeTxt(b)+'</span><b style="font-size:13px;color:'+(d?"#1e8449":"#b9a597")+'">'+(d?"ready":"not yet created")+'</b></div>'; }).join(""):'<div class="in" style="color:#7a6658;font-size:13px">Save the national divisions first.</div>')
         +(missing.length?'<div class="in"><label>Club code</label><input id="nsqClubCode" type="password" inputmode="numeric" placeholder="'+e(S.clubName)+'\u2019s code"><button class="btn" onclick="window.nsqMakeDivs()">Create '+missing.length+' division'+(missing.length===1?"":"s")+' in '+e(S.clubName)+'</button><div class="msg" id="nsqM2"></div></div>':'')
         +'</div>';
+      /* initial ratings, exactly as the admin gives them */
+      h+='<div class="card"><h2>Initial ratings</h2><div class="in">'
+        +'<div style="font-size:13px;color:#7a6658">The rating you give is the rating \u2014 never a default. Players added from now on get it automatically. To correct players already registered, paste them here: <b>Name, Gender, Rating</b> (or Name, Rating), one per line.</div>'
+        +'<textarea id="nsqSeedPaste" rows="5" placeholder="Alpha, M, 1756"></textarea>'
+        +'<label>Club code</label><input id="nsqSeedCode" type="password" inputmode="numeric" placeholder="'+e(S.clubName)+'\u2019s code">'
+        +'<button class="btn" onclick="window.nsqFixSeeds()">Set these initial ratings</button><div class="msg" id="nsqM5"></div></div></div>';
       /* 3. players and their divisions (placement by rating) */
       h+='<div class="card"><h2>3 \u00b7 Players and their divisions</h2><div class="in">'
         +'<div style="font-size:13px;color:#7a6658">A division is decided by rating, not chosen. New players are placed as they are registered; this places everyone in this club again \u2014 after ratings have moved, or for players registered before the divisions existed.</div>'
@@ -17821,6 +17827,34 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(r.fails) t+=" \u00b7 "+r.fails+" change"+(r.fails===1?"":"s")+" refused (check the code)";
       return t;
     }
+    /* write each named player's SQUASH initial rating exactly as given (edit_member, seeds:{squash:…}) */
+    function setSquashSeeds(given, pin, clubId){
+      var names=Object.keys(given||{}); if(!names.length) return Promise.resolve({set:0, missing:[]});
+      var P=Number(W.PLAT.pool||0), q=names.map(function(n){ return '"'+String(n).replace(/"/g,'')+'"'; }).join(",");
+      return rest("plat_individuals?pool_id=eq."+P+"&full_name=in.("+encodeURIComponent(q)+")&select=id,full_name").then(function(rows){
+        rows=Array.isArray(rows)?rows:[]; var byName={}; rows.forEach(function(r){ byName[r.full_name]=r.id; });
+        var set=0, missing=[], fails=0;
+        var step=function(i){ if(i>=names.length) return Promise.resolve({set:set, missing:missing, fails:fails});
+          var id=byName[names[i]]; if(!id){ missing.push(names[i]); return step(i+1); }
+          return fn("nat_admin",{action:"edit_member",club_id:clubId,admin_pin:pin,individual_id:id,seeds:{squash:given[names[i]]}}).then(function(j){ if(j&&j.ok!==false) set++; else fails++; return step(i+1); });
+        };
+        return step(0);
+      });
+    }
+    W.nsqFixSeeds=function(){
+      var pin=(document.getElementById("nsqSeedCode").value||"").trim(), m=document.getElementById("nsqM5");
+      if(!pin){ m.className="msg bad"; m.textContent="The club\u2019s code is needed."; return; }
+      var given={}, n=0;
+      (document.getElementById("nsqSeedPaste").value||"").split(/\n/).forEach(function(l){ var p=l.split(/\t|,/).map(function(x){ return x.trim(); }).filter(function(x){ return x!==""; });
+        if(p.length<2) return; var r=Number(p[p.length-1]); if(isNaN(r)) return; given[p[0]]=r; n++; });
+      if(!n){ m.className="msg bad"; m.textContent="Paste lines of Name, Gender, Rating (or Name, Rating)."; return; }
+      m.className="msg"; m.textContent="Setting "+n+" initial ratings\u2026";
+      setSquashSeeds(given, pin, S.club).then(function(r){
+        m.className=(r.missing.length||r.fails)?"msg bad":"msg ok";
+        m.textContent=r.set+" initial rating"+(r.set===1?"":"s")+" set as given."+(r.missing.length?" Not on the register: "+r.missing.join(", ")+".":"")+(r.fails?" "+r.fails+" refused (check the code).":"")
+          +" Next: Region Ledger \u2192 Recompute all ratings, then Place everyone by rating.";
+      });
+    };
     W.nsqPlaceAll=function(){
       var pin=(document.getElementById("nsqPlaceCode").value||"").trim(), m=document.getElementById("nsqM4");
       if(!pin){ m.className="msg bad"; m.textContent="The club\u2019s code is needed."; return; }
@@ -17834,10 +17868,21 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var body={}; try{ body=JSON.parse((i&&i.body)||"{}"); }catch(e){}
         if(body.action==="add_pool_member" || body.action==="bulk_add_pool_members"){
           var names=body.action==="add_pool_member"?[body.full_name]:(body.rows||[]).map(function(r){ return r.full_name; });
+          /* THE ADMIN'S RATING IS THE RATING (Andre): the add function stores the given rating as the PADEL seed only, so
+             squash would fall back to 1500 / 1300. Every name added here gets its SQUASH initial rating written as given. */
+          var given={}; if(body.action==="add_pool_member"){ if(body.seed!==""&&body.seed!=null) given[body.full_name]=Number(body.seed); }
+          else (body.rows||[]).forEach(function(r){ if(r.rating!==""&&r.rating!=null&&!isNaN(Number(r.rating))) given[r.full_name]=Number(r.rating); });
           var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0];
           var clubId=(me && cs.some(function(c){ return +c.parent_id===+me.id; }))?me.id:0;   /* the board is a club with divisions */
-          if(clubId && names.length) p=p.then(function(res){ res.clone().json().then(function(j){
-            if(j && j.ok) setTimeout(function(){ placePeople(clubId, body.admin_pin||"", names).then(function(r){ nsqToast(placeReport(r)); }); }, 600);
+          var boardId=Number(W.PLAT.cid||0);
+          if(names.length) p=p.then(function(res){ res.clone().json().then(function(j){
+            if(!(j && j.ok)) return;
+            setTimeout(function(){
+              setSquashSeeds(given, body.admin_pin||"", clubId||boardId).then(function(sr){
+                if(!clubId){ if(sr.set) nsqToast(sr.set+" initial rating"+(sr.set===1?"":"s")+" set as given"); return; }
+                return placePeople(clubId, body.admin_pin||"", names).then(function(r){ nsqToast((sr.set?sr.set+" initial ratings set as given \u00b7 ":"")+placeReport(r)); });
+              });
+            }, 600);
           }).catch(function(){}); return res; });
         }
       }
