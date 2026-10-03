@@ -910,7 +910,8 @@ st0.textContent += "html{overflow-y:scroll}";   // p98: the scrollbar's space is
              so a club with none — Eswatini today — opened straight onto its board and never saw Where you
              play, Go to, the last match or its ledgers. A club with no groups simply has one place to play,
              and says so. A GROUP still has no door: it is a board. */
-          var isClubRung = (W.PLAT.kids.length>0) || (W.NEWAPP && !W.PLAT.parentId);
+          /* Nat-Squash: a club under a province is a door even before it has divisions (its parent has no parent) */
+          var isClubRung = (W.PLAT.kids.length>0) || (W.NEWAPP && !W.PLAT.parentId) || (W.NEWAPP && W.PLAT.parentId && !pm[W.PLAT.parentId]);
           try{ localStorage.setItem("plat_nat_isclub_"+CID, W.PLAT.parentId?"0":"1"); }catch(e){}
           W.PLAT.clubDoor=(CID>0 && !BOARDQ && isClubRung);
           /* n29: WHO HAS ACTUALLY PLAYED HERE. A board listed every member, the ledger only those who have
@@ -3554,7 +3555,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q006";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q009";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -11459,7 +11460,9 @@ async function clRemove(id, label){
     var face = photo
       ? '<span style="width:30px;height:30px;border-radius:50%;flex:0 0 30px;background:#fff url('+photo+') center/cover no-repeat"></span>'
       : (me ? '<span style="width:30px;height:30px;border-radius:50%;flex:0 0 30px;border:2px solid #FFA033;color:#FFA033;display:grid;place-items:center;font-size:11px;font-weight:800;box-sizing:border-box">'+esc(inits(me))+'</span>' : '');
-    return '<a href="'+href+'" style="flex:0 0 auto;display:flex;align-items:center;gap:7px;text-decoration:none;color:#fff;'
+    var _upRow=(W.PLAT.clubDoor && W.PLAT.parentId)?(W.PLAT.clubs||[]).filter(function(c){ return Number(c.id)===Number(W.PLAT.parentId); })[0]:null;
+    var _up=_upRow?('<a href="'+PAGE+'?club='+_upRow.id+'" onclick="return window.nhBack(this.href)" style="flex:0 0 auto;display:flex;align-items:center;text-decoration:none;color:#fff;background:rgba(0,0,0,.18);border:1.5px solid rgba(255,255,255,.45);border-radius:99px;padding:7px 12px;font-weight:800;font-size:13px;margin-right:6px">\u2039 '+esc(_upRow.name)+'</a>'):'';
+    return _up+'<a href="'+href+'" style="flex:0 0 auto;display:flex;align-items:center;gap:7px;text-decoration:none;color:#fff;'
       +'background:rgba(255,255,255,.16);border:1.5px solid rgba(255,255,255,.45);border-radius:99px;'
       +(face?'padding:4px 12px 4px 4px':'padding:7px 13px')+';font-weight:800;font-size:13px">'+face+'My page \u203a</a>';
   }
@@ -16514,7 +16517,12 @@ W.nhOpenPair=function(name){
     var row=(W.PLAT.clubs||[]).filter(function(c){ return Number(c.id)===cid; })[0]; if(!row) return null;   /* another register: a real load */
     if(go==="records") return "records"; if(go==="pair") return "pair"; if(go==="me") return "me"; if(go==="pick") return "pick";
     if(q.has("board")) return "place";
-    return row.parent_id ? "place" : "door";   /* n81: a club always has a door; a group is a board */
+    /* Nat-Squash: the LEVEL decides — province (top) and club (under a province) are doors, always, even with no
+       divisions yet; a division (third level) is a board. Children still make a door at any level. */
+    var _cs=(W.PLAT.clubs||[]), _byId={}; _cs.forEach(function(c){ _byId[Number(c.id)]=c; });
+    var _depth=0, _p=row; while(_p && _p.parent_id && _depth<6){ _depth++; _p=_byId[Number(_p.parent_id)]; }
+    var _hasKids=_cs.some(function(c){ return Number(c.parent_id)===cid; });
+    return (_depth>=2 && !_hasKids) ? "place" : "door";   /* n81: a club always has a door; a division is a board */
   }
   /* n323: a name inside a tap. An apostrophe in a name (Round Robin 8's Men's, O'Neil) broke the single-quoted address
      inside an onclick, so the tap did nothing. Every address built into a tap passes through here. */
@@ -17386,15 +17394,19 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       document.head.appendChild(st);
     }
     /* ---- the rules ---- */
-    function bandOf(r){ if(r==null||!S.bands.length) return null; var top=S.bands[0];
-      if(r>=top.high) return top;
-      for(var i=0;i<S.bands.length;i++){ var b=S.bands[i]; if(r>=b.low && r<b.high) return b; }
-      return S.bands[S.bands.length-1]; }
+    /* Div A has NO ceiling (Andre): the first band whose floor the rating reaches; below every floor, the last band */
+    function bandOf(r){ if(r==null||!S.bands.length) return null;
+      var bs=S.bands.slice().sort(function(a,b){ return a.sort-b.sort; });
+      for(var i=0;i<bs.length;i++){ if(r>=bs[i].low) return bs[i]; }
+      return bs[bs.length-1]; }
+    function rangeTxt(b){ return (b.sort===0)?(b.low+"+"):(b.low+" \u2013 "+b.high); }
     function pairRating(a,b){ return Math.max(a,b)*0.6+Math.min(a,b)*0.4; }                    /* the engine's 60/40 */
     function higher(b1,b2){ if(!b1) return b2; if(!b2) return b1; return (b1.sort<=b2.sort)?b1:b2; }   /* lower sort = higher division */
     function catOf(g1,g2){ var f=function(g){ return /^[FLW]/i.test(String(g||"")); }; return (f(g1)&&f(g2))?"Ladies":(!f(g1)&&!f(g2))?"Men's":"Mixed"; }
     function rateOf(p){ return Math.round(p.current_rating!=null?p.current_rating:(p.seed_rating!=null?p.seed_rating:(p.seed||1000))); }
-    function makeBands(n,top,step){ var out=[]; for(var i=0;i<n;i++){ out.push({label:"Div "+String.fromCharCode(65+i), high:top-i*step, low:top-(i+1)*step, colour:PAL[i%PAL.length], sort:i}); } return out; }
+    /* aFrom = where Div A starts; Div A is open-ended (stored high 99999, shown "1750+") */
+    function makeBands(n,aFrom,step){ var out=[]; for(var i=0;i<n;i++){ var low=aFrom-i*step, high=(i===0)?99999:aFrom-(i-1)*step;
+      out.push({label:"Div "+String.fromCharCode(65+i), high:high, low:low, colour:PAL[i%PAL.length], sort:i}); } return out; }
     /* ---- data ---- */
     function load(){
       return Promise.all([
@@ -17415,13 +17427,13 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     /* ---- drawing ---- */
     function draw(){
       var o=document.getElementById("nsq"); if(!o) return;
-      var n=S.bands.length||6, top=S.bands.length?S.bands[0].high:1900, step=S.bands.length?(S.bands[0].high-S.bands[0].low):150;
+      var n=S.bands.length||6, top=S.bands.length?S.bands[0].low:1750, step=(S.bands.length>1)?(S.bands[0].low-S.bands[1].low):150;
       var opts=S.people.map(function(p){ return '<option value="'+p.id+'">'+e(p.full_name)+' \u00b7 '+rateOf(p)+'</option>'; }).join("");
       var h='<div class="hd"><button class="x" onclick="window.nsqClose()">Close</button><div style="font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.85">MASTERS</div><h1>'+e(S.clubName)+'</h1><div style="font-size:13px;opacity:.9">Divisions and ladders</div></div>';
       /* 1. bands */
       h+='<div class="card"><h2>1 \u00b7 National divisions</h2><div class="in">'
         +'<div style="font-size:13px;color:#7a6658">Set once by national, the same in every province and club. A team goes into the division of its players; a team across two divisions goes into the higher one.</div>'
-        +'<div class="row"><div><label>Divisions</label><input id="nsqN" type="number" min="1" max="12" value="'+n+'"></div><div><label>Top rating</label><input id="nsqTop" type="number" step="50" value="'+top+'"></div></div>'
+        +'<div class="row"><div><label>Divisions</label><input id="nsqN" type="number" min="1" max="12" value="'+n+'"></div><div><label>Div A from</label><input id="nsqTop" type="number" step="50" value="'+top+'"></div></div>'
         +'<label>Step</label><div class="seg" id="nsqStep">'+[100,150,200].map(function(s){ return '<button data-s="'+s+'" class="'+(s===step?"on":"")+'" onclick="window.nsqStep('+s+')">'+s+'</button>'; }).join("")+'</div>'
         +'<div id="nsqPreview" style="margin:10px -14px 0"></div>'
         +'<label>National code</label><input id="nsqNat" type="password" inputmode="numeric" placeholder="the register\u2019s code">'
@@ -17429,13 +17441,13 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       /* 2. this club's divisions */
       var missing=S.bands.filter(function(b){ return !divOfBand(b); });
       h+='<div class="card"><h2>2 \u00b7 '+e(S.clubName)+'\u2019s divisions</h2>'
-        +(S.bands.length?S.bands.map(function(b){ var d=divOfBand(b); return '<div class="band"><span class="chip" style="background:'+(b.colour||"#D35400")+'">'+e(b.label)+'</span><span style="flex:1;font-size:13px;color:#7a6658">'+b.low+' \u2013 '+b.high+'</span><b style="font-size:13px;color:'+(d?"#1e8449":"#b9a597")+'">'+(d?"ready":"not yet created")+'</b></div>'; }).join(""):'<div class="in" style="color:#7a6658;font-size:13px">Save the national divisions first.</div>')
+        +(S.bands.length?S.bands.map(function(b){ var d=divOfBand(b); return '<div class="band"><span class="chip" style="background:'+(b.colour||"#D35400")+'">'+e(b.label)+'</span><span style="flex:1;font-size:13px;color:#7a6658">'+rangeTxt(b)+'</span><b style="font-size:13px;color:'+(d?"#1e8449":"#b9a597")+'">'+(d?"ready":"not yet created")+'</b></div>'; }).join(""):'<div class="in" style="color:#7a6658;font-size:13px">Save the national divisions first.</div>')
         +(missing.length?'<div class="in"><label>Club code</label><input id="nsqClubCode" type="password" inputmode="numeric" placeholder="'+e(S.clubName)+'\u2019s code"><button class="btn" onclick="window.nsqMakeDivs()">Create '+missing.length+' division'+(missing.length===1?"":"s")+' in '+e(S.clubName)+'</button><div class="msg" id="nsqM2"></div></div>':'')
         +'</div>';
       /* 3. divisions with their teams (from each division's ladder) */
       h+='<div class="card"><h2>3 \u00b7 Divisions and their ladders</h2>'
         +(S.kids.length?S.bands.map(function(b){ var d=divOfBand(b); if(!d) return ""; var rows=S.ladders.filter(function(l){ return +l.club_id===+d.id; });
-            return '<div class="band" style="background:#fbf7f3"><span class="chip" style="background:'+(b.colour||d.colour)+'">'+e(b.label)+'</span><b style="flex:1;font-size:13px">'+rows.length+' team'+(rows.length===1?"":"s")+'</b><span style="font-size:12px;color:#7a6658">'+b.low+'\u2013'+b.high+'</span></div>'
+            return '<div class="band" style="background:#fbf7f3"><span class="chip" style="background:'+(b.colour||d.colour)+'">'+e(b.label)+'</span><b style="flex:1;font-size:13px">'+rows.length+' team'+(rows.length===1?"":"s")+'</b><span style="font-size:12px;color:#7a6658">'+rangeTxt(b)+'</span></div>'
               +rows.map(function(l){ return '<div class="team"><span style="width:22px;color:#b9a597;font-weight:800">'+l.position+'</span><b>'+e(l.p1)+(l.p2?' &amp; '+e(l.p2):'')+'</b><span style="font-size:12px;color:#7a6658">'+e(l.category)+'</span></div>'; }).join("");
           }).join(""):'<div class="in" style="color:#7a6658;font-size:13px">No divisions in this club yet.</div>')
         +'</div><div style="height:40px"></div>';
@@ -17445,7 +17457,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       step:+((document.querySelector("#nsqStep button.on")||{}).getAttribute?document.querySelector("#nsqStep button.on").getAttribute("data-s"):150)}; }
     function preview(){
       var box=document.getElementById("nsqPreview"); if(!box) return; var c=curInputs(), list=makeBands(c.n,c.top,c.step);
-      box.innerHTML=list.map(function(b){ return '<div class="band"><span class="chip" style="background:'+b.colour+'">'+b.label+'</span><span style="font-size:13px">'+b.low+' \u2013 '+b.high+'</span></div>'; }).join("");
+      box.innerHTML=list.map(function(b){ return '<div class="band"><span class="chip" style="background:'+b.colour+'">'+b.label+'</span><span style="font-size:13px">'+rangeTxt(b)+'</span></div>'; }).join("");
     }
     /* ---- actions ---- */
     W.nsqStep=function(s){ document.querySelectorAll("#nsqStep button").forEach(function(x){ x.classList.toggle("on", +x.getAttribute("data-s")===s); }); preview(); };
@@ -17521,6 +17533,107 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         });
       });
     };
+    /* THE RIGHT WORD AT EACH LEVEL. nat3 says "group" everywhere. Nat-Squash: on a province's door its children are
+       CLUBS; on a club's door they are DIVISIONS; a division's page says DIVISION. Only words on screen change (text
+       nodes inside #nh), never code or names. */
+    function levelWord(){
+      var cid=Number(W.PLAT.cid||0), cs=W.PLAT.clubs||[];
+      var kids=cs.filter(function(c){ return Number(c.parent_id)===cid; });
+      var grand=kids.some(function(k){ return cs.some(function(c){ return Number(c.parent_id)===Number(k.id); }); });
+      if(W.PLAT.clubDoor) return grand?["club","clubs"]:["division","divisions"];
+      return ["division","divisions"];
+    }
+    function reword(root){
+      if(!root) return; var w=levelWord(), one=w[0], many=w[1];
+      var cap=function(x){ return x.charAt(0).toUpperCase()+x.slice(1); };
+      var walker=document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), n, list=[];
+      while((n=walker.nextNode())) list.push(n);
+      list.forEach(function(t){ var v=t.nodeValue, o=v;
+        v=v.replace(/\bGROUPS\b/g, many.toUpperCase()).replace(/\bGROUP\b/g, one.toUpperCase())
+           .replace(/\bGroups\b/g, cap(many)).replace(/\bGroup\b/g, cap(one))
+           .replace(/\bgroups\b/g, many).replace(/\bgroup\b/g, one);
+        if(v!==o) t.nodeValue=v; });
+    }
+    (function(){
+      /* runs INSIDE the observer callback — before the browser paints — so the old word is never on screen */
+      var mo, nhEl=null, OPTS={childList:true,subtree:true,characterData:true};
+      var run=function(){ var nh=document.getElementById("nh"); if(!nh) return; mo.disconnect(); try{ reword(nh); }catch(e){} mo.observe(nh,OPTS); nhEl=nh; };
+      mo=new MutationObserver(function(){ run(); });
+      var start=function(){ var nh=document.getElementById("nh"); if(!nh){ return setTimeout(start,100); } mo.observe(nh,OPTS); nhEl=nh; run(); };
+      /* #nh can be replaced by a fresh element (staged draws): watch the page for that too */
+      new MutationObserver(function(){ var nh=document.getElementById("nh"); if(nh && nh!==nhEl){ run(); } }).observe(document.documentElement,{childList:true,subtree:true});
+      if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", start); else start();
+    })();
+    /* "ARE YOU A LADDER PAIR?" (Andre, 3 Oct). When a match is saved and a pair has NEVER played together before, the
+       app asks once: yes puts the pair on its division's ladder (the division rule decides which: each player's division
+       by rating, across two the higher one), in its category (from the genders). A player already on that division's
+       ladder is not added twice — the app says who and where. (Rule to be refined by Andre.) */
+    function sidesOf(ed){ return [[ed.t1p1,ed.t1p2],[ed.t2p1,ed.t2p2]].filter(function(s){ return s[0]&&s[1]; }); }
+    /* a pair has played before when the platform already has its pair record (born at the pair's first match) */
+    function playedBefore(a,b){
+      var P=Number(W.PLAT.pool||0), q=function(x){ return encodeURIComponent('"'+String(x).replace(/"/g,'')+'"'); };
+      return rest("plat_players?pool_id=eq."+P+"&discipline=eq.squash&select=name&limit=1&or=(name.eq."+q(a+" & "+b)+",name.eq."+q(b+" & "+a)+")")
+        .then(function(r){ return Array.isArray(r)&&r.length>0; }).catch(function(){ return true; });  /* unsure: don't ask */
+    }
+    var SUBMIT_OK=false;
+    (function(){ var f0=W.fetch; W.fetch=function(u,i){ var p=f0.apply(this,arguments);
+      if(/\/functions\/v1\/(plat_)?submit_match/.test(String(u&&u.url?u.url:u))) p=p.then(function(r){ try{ r.clone().json().then(function(j){ SUBMIT_OK=!!(j&&j.ok); }); }catch(e){} return r; });
+      return p; }; })();
+    function offerLadder(a,b){
+      return ruleData().then(function(R){
+        S.bands=R.bands; if(!R.bands.length) return;
+        var pa=R.people[a], pb=R.people[b]; if(!pa||!pb) return;
+        var div=higher(bandOf(rateOf(pa)),bandOf(rateOf(pb))); if(!div) return;
+        var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0]; if(!me) return;
+        /* this CLUB: the board's parent when the board is a division (its parent has a parent), else the board itself */
+        var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
+        var clubId=(par && par.parent_id)?par.id:me.id;
+        var d=cs.filter(function(c){ return +c.parent_id===+clubId && String(c.name).trim().toLowerCase()===String(div.label).toLowerCase(); })[0];
+        if(!d) return;
+        var cat=catOf(pa.gender,pb.gender);
+        /* already a ladder pair? (it may have joined through Enter / Join before playing) — then never ask: look on every
+           division ladder of this club */
+        var divIds=cs.filter(function(c){ return +c.parent_id===+clubId; }).map(function(c){ return c.id; });
+        return rest("plat_squash_club_ladder?club_id=in.("+divIds.join(",")+")&select=p1,p2").then(function(all){
+          all=Array.isArray(all)?all:[];
+          if(all.some(function(r){ return (r.p1===a&&r.p2===b)||(r.p1===b&&r.p2===a); })) return;   /* on a ladder already */
+          return askAndJoin();
+        });
+        function askAndJoin(){
+        if(!W.confirm(a+" & "+b+" have played together for the first time.\n\nAre you a ladder pair?\n\nOK \u2014 put them on "+div.label+"\u2019s ladder ("+cat+").\nCancel \u2014 not a ladder pair.")) return;
+        return rest("plat_squash_club_ladder?club_id=eq."+d.id+"&select=p1,p2,category").then(function(rows){
+          rows=Array.isArray(rows)?rows:[];
+          var clash=rows.filter(function(r){ return [r.p1,r.p2].indexOf(a)>=0 || [r.p1,r.p2].indexOf(b)>=0; })[0];
+          if(clash){ var who=([clash.p1,clash.p2].indexOf(a)>=0)?a:b, mate=(clash.p1===who)?clash.p2:clash.p1;
+            W.alert("Not added: "+who+" is already on "+div.label+"\u2019s ladder with "+mate+" ("+clash.category+"). A player can be on a ladder only once."); return; }
+          return fn("ladder",{action:"join_ladder",club_id:d.id,category:cat,p1:a,p2:b}).then(function(j){
+            W.alert((j&&j.ok) ? (a+" & "+b+" are on "+div.label+"\u2019s ladder, position "+j.position+".") : ("Not added: "+((j&&j.error)||"the ladder did not take them.")));
+          });
+        });
+        }
+      });
+    }
+    /* the app installs its own doSubmit after this code loads (and may replace it again), so the wrapper is attached
+       lazily and re-attached whenever the current doSubmit is not ours */
+    function wrapSubmit(){
+      var cur=W.doSubmit; if(typeof cur!=="function" || cur.__nsq) return;
+      var _ds=cur;
+      var mine=function(){
+      if(W.__nsqInSubmit) return _ds.apply(this,arguments);     /* once per save, however many wrappers sit around it */
+      W.__nsqInSubmit=true;
+      var self=this, args=arguments, ed=Object.assign({}, (typeof entryData!=="undefined"?entryData:W.entryData)||{}), sides=sidesOf(ed);
+      return Promise.all(sides.map(function(sd){ return playedBefore(sd[0],sd[1]); })).then(function(before){
+        SUBMIT_OK=false;
+        return Promise.resolve(_ds.apply(self,args)).then(function(v){ W.__nsqInSubmit=false;
+          var go=function(i){ if(i>=sides.length) return; if(!SUBMIT_OK || before[i]) return go(i+1); return Promise.resolve(offerLadder(sides[i][0],sides[i][1])).then(function(){ return go(i+1); }); };
+          setTimeout(function(){ go(0); }, 500);
+          return v;
+        });
+      });
+      };
+      mine.__nsq=true; W.doSubmit=mine;
+    }
+    wrapSubmit(); setInterval(wrapSubmit, 400);
     /* the Masters card on Club admin */
     var _ap=W.nhAdminPage;
     if(typeof _ap==="function") W.nhAdminPage=function(){
