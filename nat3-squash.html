@@ -1160,7 +1160,7 @@ st0.textContent += "html{overflow-y:scroll}";   // p98: the scrollbar's space is
         if(method==="PATCH"&&tbl==="individuals"&&rid){
           var payload={action:"edit_member",club_id:CID,admin_pin:apin,individual_id:rid};   /* the room's own board */
           if(pb.full_name!=null) payload.new_name=pb.full_name; if(pb.pin!==undefined) payload.pin=pb.pin==null?"":pb.pin; if(pb.gender!=null) payload.gender=pb.gender;
-          if(pb.seed_rating!=null) payload.seeds={padel:Number(pb.seed_rating)};
+          if(pb.seed_rating!=null) payload.seeds={squash:Number(pb.seed_rating)};
           return call("nat_admin",payload).then(function(o){ if(!o||!o.ok) return jsonResp({message:(o&&o.error)||"edit failed"},400); return jsonResp([],204); });
         }
         if(method==="PATCH"&&tbl==="players"&&rid){
@@ -3555,7 +3555,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q017";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q018";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
