@@ -1155,13 +1155,13 @@ st0.textContent += "html{overflow-y:scroll}";   // p98: the scrollbar's space is
              sandbox group. In the new app the target is the board you are standing on, full stop. */
           var target=(W.NEWAPP&&CID>0)?CID:(Number(pb.club_id)||CID); if(!target) return jsonResp({message:"Choose a club to register into."},400);
           return call("nat_admin",{action:"add_member",club_id:target,admin_pin:apin,full_name:pb.full_name,gender:pb.gender,pin:pb.pin||null,seeds:{squash:(pb.seed_rating!=null&&pb.seed_rating!==""?Number(pb.seed_rating):null)}})
-            .then(function(o){ if(!o||!o.ok) return jsonResp({message:(o&&o.error)||"could not register"},400); return jsonResp([o.member],201); });
+            .then(function(o){ if(!o||!o.ok) return jsonResp({message:(o&&o.error)||"could not register"},400); try{ if(typeof W.__nsqAfterAdd==="function") W.__nsqAfterAdd({full_name:pb.full_name, seed:pb.seed_rating, club:target, pin:apin}); }catch(e){} return jsonResp([o.member],201); });
         }
         if(method==="PATCH"&&tbl==="individuals"&&rid){
           var payload={action:"edit_member",club_id:CID,admin_pin:apin,individual_id:rid};   /* the room's own board */
           if(pb.full_name!=null) payload.new_name=pb.full_name; if(pb.pin!==undefined) payload.pin=pb.pin==null?"":pb.pin; if(pb.gender!=null) payload.gender=pb.gender;
           if(pb.seed_rating!=null) payload.seeds={squash:Number(pb.seed_rating)};
-          return call("nat_admin",payload).then(function(o){ if(!o||!o.ok) return jsonResp({message:(o&&o.error)||"edit failed"},400); return jsonResp([],204); });
+          return call("nat_admin",payload).then(function(o){ if(!o||!o.ok) return jsonResp({message:(o&&o.error)||"edit failed"},400); try{ if(pb.seed_rating!=null && typeof W.__nsqAfterEdit==="function") W.__nsqAfterEdit({id:rid, seed:pb.seed_rating, club:CID, pin:apin}); }catch(e){} return jsonResp([],204); });
         }
         if(method==="PATCH"&&tbl==="players"&&rid){
           if(pb.initial_rating==null) return jsonResp([],204);        // member-link stamps: pairs born via ensure_pair already carry their members
@@ -1183,7 +1183,7 @@ st0.textContent += "html{overflow-y:scroll}";   // p98: the scrollbar's space is
         // pool-wide replay above. Only the people LIST (it also asks for gender/current_rating) is trimmed.
         /* n29: on a BOARD, the people list is those who have played here — the same rule the ledger follows.
            Not the entry picker, the admin table or the boot load: those must still see every member. */
-        if(CID>0 && W.PLAT.playedHere && tbl==="individuals" && m[1].indexOf("gender")>=0 && m[1].indexOf("full_name=eq.")<0){
+        if(false && CID>0 && W.PLAT.playedHere && tbl==="individuals" && m[1].indexOf("gender")>=0 && m[1].indexOf("full_name=eq.")<0){   /* Nat-Squash: members are placed, not earned */
           var hereNow=(function(){ try{ var a=document.querySelector(".screen.active"); return (a&&a.id)||""; }catch(e){ return ""; } })();
           if(hereNow!=="" && hereNow!=="homeScreen" && hereNow!=="entryScreen" && hereNow!=="enterTournamentScreen"
              && hereNow!=="adminScreen" && hereNow!=="clubLadderScreen" && hereNow!=="markerScreen"){
@@ -1271,7 +1271,7 @@ st0.textContent += "html{overflow-y:scroll}";   // p98: the scrollbar's space is
           if(ab.pool_id==null && W.PLAT.pool) ab.pool_id=W.PLAT.pool;
           init=Object.assign({},init,{body:JSON.stringify(ab)}); }
         if(f[1]==="submit_match"){ if(CID===0) return jsonResp({ok:false,error:"Choose a club before entering a match."},400);
-          var bb={}; try{ bb=JSON.parse(init.body||"{}"); }catch(e){} bb.discipline=DISC; bb.club_id=CID; init=Object.assign({},init,{body:JSON.stringify(bb)}); }
+          var bb={}; try{ bb=JSON.parse(init.body||"{}"); }catch(e){} bb.discipline=DISC; bb.club_id=(typeof W.__nsqSaveClub==="function"?W.__nsqSaveClub(CID):CID); init=Object.assign({},init,{body:JSON.stringify(bb)}); }
         /* n14: the add-member confirm now happens above, before routing, so it covers both doors. */
       }
       if(f) h=fnHdrs(init.headers);
@@ -3555,7 +3555,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q020";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q022";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -9922,7 +9922,7 @@ async function clRemove(id, label){
       waitingList().then(function(names){
         var wait={}; (names||[]).forEach(function(n){ wait[n]=1; });
         Array.prototype.forEach.call(list.querySelectorAll("li.player-item"),function(li){
-          var n=li.querySelector(".player-name"); if(n && wait[n.textContent.trim()]) li.style.display="none";
+          var n=li.querySelector(".player-name"); /* Nat-Squash: placed members all show (padel n130 hid the not-yet-played) */
         });
         list.style.visibility="visible";
       }).catch(function(){ list.style.visibility="visible"; });
@@ -17489,6 +17489,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var H=function(){ return {"Content-Type":"application/json", apikey:ANON, Authorization:"Bearer "+ANON}; };
     var rest=function(p){ return fetch(B+"/rest/v1/"+p,{headers:H()}).then(function(r){ return r.json(); }); };
     var fn=function(name,body){ return fetch(B+"/functions/v1/"+name,{method:"POST",headers:H(),body:JSON.stringify(body)}).then(function(r){ return r.json(); }).catch(function(e){ return {ok:false,error:String(e)}; }); };
+    var restAll=function(p){ var out=[]; var step=function(off){ return rest(p+"&limit=1000&offset="+off).then(function(rows){ rows=Array.isArray(rows)?rows:[]; out=out.concat(rows); return rows.length<1000?out:step(off+1000); }); }; return step(0); };
     var rpc=function(name,args){ return fetch(B+"/rest/v1/rpc/"+name,{method:"POST",headers:H(),body:JSON.stringify(args)}).then(function(r){ return r.json(); }).catch(function(e){ return {ok:false,error:String(e)}; }); };
     var e=function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
     var PAL=["#1f6fbf","#16a085","#8e44ad","#c0392b","#d4ac0d","#2c3e50","#e84393","#00838f","#6d4c41","#2e7d32"];
@@ -17646,11 +17647,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var RULE={pool:0, bands:null, people:null};
     function ruleData(){
       var P=Number(W.PLAT.pool||0);
-      if(RULE.pool===P && RULE.bands && RULE.people) return Promise.resolve(RULE);
+      if(RULE.pool===P && RULE.bands && RULE.people){ S.bands=RULE.bands; return Promise.resolve(RULE); }
       return Promise.all([
         rest("nsq_division_bands?pool_id=eq."+P+"&select=label,low,high,colour,sort&order=sort.asc").catch(function(){ return []; }),
-        rest("plat_squash_v_pool_individuals?pool_id=eq."+P+"&select=full_name,gender,current_rating,seed_rating&limit=1000").catch(function(){ return []; })
-      ]).then(function(r){ RULE.pool=P; RULE.bands=Array.isArray(r[0])?r[0]:[]; RULE.people={}; (Array.isArray(r[1])?r[1]:[]).forEach(function(p){ RULE.people[p.full_name]=p; }); return RULE; });
+        restAll("plat_squash_v_pool_individuals?pool_id=eq."+P+"&select=full_name,gender,current_rating,seed_rating&order=full_name.asc").catch(function(){ return []; })
+      ]).then(function(r){ RULE.pool=P; RULE.bands=Array.isArray(r[0])?r[0]:[]; S.bands=RULE.bands;   /* the division arithmetic reads S.bands */ RULE.people={}; (Array.isArray(r[1])?r[1]:[]).forEach(function(p){ RULE.people[p.full_name]=p; }); return RULE; });
     }
     var _clJoin=W.clJoin;
     if(typeof _clJoin==="function") W.clJoin=function(){
@@ -17904,6 +17905,16 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         });
       }, 2000);
     }
+    /* the platform layer announces OSR Admin's adds and seed edits here (its own channel bypasses the page's fetch) */
+    function clubWithDivisions(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return 0;
+      if(cs.some(function(c){ return +c.parent_id===+me.id; })) return me.id;
+      var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;      /* added on a division: its club */
+      return (par && par.parent_id) ? par.id : 0; }
+    W.__nsqAfterAdd=function(x){ var given={}; if(x.seed!=null && x.seed!=="" && !isNaN(Number(x.seed))) given[x.full_name]=Number(x.seed);
+      RULE.people=null; queueOsrAdd([x.full_name], given, x.pin||"", clubWithDivisions(x.club), Number(x.club||0)); };
+    W.__nsqAfterEdit=function(x){ var c=clubWithDivisions(x.club); RULE.people=null; if(!c) return;
+      rest("plat_individuals?id=eq."+x.id+"&select=full_name").then(function(r){ var nm=(Array.isArray(r)&&r[0])?r[0].full_name:null; if(!nm) return;
+        setTimeout(function(){ placePeople(c, x.pin||"", [nm]).then(function(rr){ nsqToast(placeReport(rr)); }); }, 800); }); };
     function nsqToast(t){
       var d=document.createElement("div"); d.textContent="Divisions: "+t;
       d.style.cssText="position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:9500;background:#1c110a;color:#fff;padding:12px 14px;border-radius:12px;font-size:13.5px;box-shadow:0 6px 20px rgba(0,0,0,.25)";
@@ -17998,6 +18009,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
        THE LADDER — on court: who DID win; only ladder matches move it (and a tournament's final placings where that
        tournament counts). STATS — on paper: who SHOULD win, from every match. The two never share a screen unexplained.
        ================================================================================================================= */
+    function onDivisionFront(){ var g=(new URLSearchParams(location.search).get("go")||""); return !g; }   /* the division's own page, not a profile / pair / records */
     function isDivisionBoard(){
       var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0]; if(!me || !me.parent_id) return null;
       var par=cs.filter(function(c){ return +c.id===+me.parent_id; })[0];
@@ -18041,7 +18053,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     W.nsqOpenLadder=function(){ try{ W.nhGo("ladders"); }catch(e){} setTimeout(function(){ try{ W.showScreen("clubLadderScreen"); if(typeof W.loadClubLadder==="function") W.loadClubLadder(); }catch(e){} }, 250); };
     var LC={board:0, busy:false};
     function placeLadderCard(){
-      var div=isDivisionBoard(), nh=document.getElementById("nh"); if(!div || !nh) return;
+      var div=isDivisionBoard(), nh=document.getElementById("nh"); if(!div || !nh || !onDivisionFront()) return;
       var band=nh.querySelector(".band"); if(!band) return;
       if(nh.querySelector("#nsqLadderCard") && LC.board===div.id) return;
       if(LC.busy) return; LC.busy=true;
@@ -18055,7 +18067,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     }
     /* 3. STATS — on paper: the square is renamed; the individual climb / fall brackets give way to PAIR ones on Stats */
     function relabel(){
-      var div=isDivisionBoard(), nh=document.getElementById("nh"); if(!div || !nh) return;
+      var div=isDivisionBoard(), nh=document.getElementById("nh"); if(!div || !nh || !onDivisionFront()) return;
       Array.prototype.forEach.call(nh.querySelectorAll("button"),function(b){
         if(/^\s*Ratings\s*&(amp;)?\s*ladders\s*$/i.test(b.textContent||"") && !b.getAttribute("data-nsq")){ b.setAttribute("data-nsq","1"); b.childNodes.forEach(function(n){ if(n.nodeType===3 && /Ratings/.test(n.nodeValue)) n.nodeValue="Stats \u2014 on paper"; }); if(!/Stats/.test(b.textContent)) b.textContent="Stats \u2014 on paper"; }
       });
@@ -18088,7 +18100,172 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           +'<div style="font-size:11.5px;color:#9a8a7e;margin-top:4px">Pairs, last 30 days, on paper.</div>';
       }).catch(function(){ return ""; });
     }
-    setInterval(function(){ try{ placeLadderCard(); relabel(); statsHeader(); }catch(e){} }, 600);
+    setInterval(function(){ try{ placeLadderCard(); relabel(); }catch(e){} }, 600);
+    /* =================================================================================================================
+       q021 — DIVISIONS BELONG TO TEAMS, NOT TO PLACES (Andre, 3 Oct; as MDR's age groups follow the birth date).
+         · a PLAYER's division: their own rating (ladies one back);
+         · a TEAM's division: its HIGHER player's division (a cross-division team plays up);
+         · a match is SAVED AT THE CLUB — no division is chosen, only Social / Tournament / Ladder;
+         · each team is REPORTED in its own division, each player's move in theirs;
+         · a division's page is a VIEW: its ladder, its teams' results (against anyone), its teams' stats.
+       ================================================================================================================= */
+    function clubOfBoard(){
+      var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0]; if(!me) return null;
+      var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
+      if(par && par.parent_id) return par;                       /* the board is a division: its club */
+      if(cs.some(function(c){ return +c.parent_id===+me.id; }) && me.parent_id) return me;   /* the board is a club */
+      return null;
+    }
+    function divsOfClub(club){ return (W.PLAT.clubs||[]).filter(function(c){ return +c.parent_id===+club.id; }); }
+    function teamDivision(R, a, b){ var pa=R.people[a], pb=R.people[b]; if(!pa||!pb) return null; return higher(divOfPerson(pa), divOfPerson(pb)); }
+    /* 1 + 2. saving: the match to the CLUB; a ladder result to the ladder of the teams' own division */
+    (function(){ var f0=W.fetch; W.fetch=function(u,i){
+      var url=String(u&&u.url?u.url:u);
+      try{
+        if(i && i.body && /\/functions\/v1\/(plat_)?submit_match(\?|$)/.test(url)){
+          var club=clubOfBoard(); var b=JSON.parse(i.body);
+          if(club && +b.club_id!==+club.id){ b.club_id=club.id; i=Object.assign({},i,{body:JSON.stringify(b)}); }
+        }
+        if(i && i.body && /\/functions\/v1\/(plat_ladder_squash|ladder)(\?|$)/.test(url)){
+          var bb=JSON.parse(i.body);
+          if(bb.action==="apply_ladder_result" && RULE.bands && RULE.people){
+            var club2=clubOfBoard(), nm=function(t){ return t?[t.p1,t.p2]:[]; };
+            var w=nm(bb.winner), dv=w.length===2?teamDivision(RULE,w[0],w[1]):null;
+            var d=(club2&&dv)?divsOfClub(club2).filter(function(c){ return String(c.name).trim().toLowerCase()===String(dv.label).toLowerCase(); })[0]:null;
+            if(d && +bb.club_id!==+d.id){ bb.club_id=d.id; i=Object.assign({},i,{body:JSON.stringify(bb)}); }
+          }
+        }
+      }catch(e){}
+      return f0.call(this,u,i); }; })();
+    ruleData().catch(function(){});   /* bands + people ready before the first save */
+    W.__nsqSaveClub=function(cid){ var c=clubOfBoard(); return c?c.id:cid; };   /* the platform layer asks where a save goes */
+    /* 3. the DIVISION VIEW: the padel group page underneath makes way; results and stats are this division's TEAMS */
+    function teamName(a,b){ return [a,b].filter(Boolean).join(" & "); }
+    function sideNames(m,t){ var x=t===1?[m.t1p1,m.t1p2]:[m.t2p1,m.t2p2]; var out=[]; x.forEach(function(v){ String(v||"").split(" & ").forEach(function(n){ n=n.trim(); if(n) out.push(n); }); }); return out; }
+    function divisionMatches(div){
+      var club=clubOfBoard(); if(!club) return Promise.resolve({rows:[], R:null});
+      var ids=[club.id].concat(divsOfClub(club).map(function(c){ return c.id; }));
+      return Promise.all([ruleData(), rest("plat_matches?club_id=in.("+ids.join(",")+")&discipline=eq.squash&select=id,t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,set_scores,rating_delta,match_date,event&order=match_date.desc,id.desc&limit=400")])
+        .then(function(r){ var R=r[0], ms=Array.isArray(r[1])?r[1]:[];
+          var rows=[];
+          ms.forEach(function(m){ var A=sideNames(m,1), B=sideNames(m,2); if(A.length!==2||B.length!==2) return;
+            var dA=teamDivision(R,A[0],A[1]), dB=teamDivision(R,B[0],B[1]);
+            var inA=dA&&dA.label===div.name, inB=dB&&dB.label===div.name; if(!inA && !inB) return;
+            rows.push({m:m, A:A, B:B, dA:dA, dB:dB, mine:inA?1:2, both:inA&&inB}); });
+          return {rows:rows, R:R}; });
+    }
+    function resultsCard(div){
+      var col=div.colour||"#D35400";
+      return divisionMatches(div).then(function(x){
+        var h='<div class="brk" id="nsqResultsCard" data-plat-keep="1"><h2>Results \u2014 '+e(div.name)+' teams</h2>';
+        if(!x.rows.length) h+='<div style="padding:12px 14px;color:#7a6658;font-size:13.5px">No results for '+e(div.name)+' teams yet. A team plays in the division of its higher player.</div>';
+        h+=x.rows.slice(0,12).map(function(r){ var m=r.m, me=r.mine===1?r.A:r.B, op=r.mine===1?r.B:r.A, opD=r.mine===1?r.dB:r.dA;
+          var sMe=r.mine===1?+m.t1_sets:+m.t2_sets, sOp=r.mine===1?+m.t2_sets:+m.t1_sets, won=sMe>sOp;
+          var d=(m.rating_delta!=null)?Math.round((r.mine===1?1:-1)*(+m.rating_delta)):null;
+          return '<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 14px;border-top:1px solid #f3e7de;font-size:13px">'
+            +'<span style="flex:none;width:20px;height:20px;border-radius:4px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:10px;background:'+(won?"#1e8449":"#c0392b")+'">'+(won?"W":"L")+'</span>'
+            +'<span style="flex:1;min-width:0"><b>'+e(teamName(me[0],me[1]))+'</b> v '+e(teamName(op[0],op[1]))
+            +(opD&&opD.label!==div.name?' <span style="font-size:11px;font-weight:800;color:#fff;background:'+(opD.colour||"#999")+';border-radius:999px;padding:1px 7px">'+e(opD.label)+'</span>':'')
+            +'<br><span style="color:#9a8a7e;font-size:11.5px">'+e(String(m.match_date||"").slice(0,10))+' \u00b7 '+e(m.event||"")+(m.set_scores?' \u00b7 '+e(m.set_scores):'')+'</span></span>'
+            +'<span style="flex:none;text-align:right"><b>'+sMe+'\u2013'+sOp+'</b>'+(d!=null?'<br><span style="font-size:11.5px;color:'+(d>=0?"#1e8449":"#c0392b")+'">'+(d>0?"+":"")+d+'</span>':'')+'</span></div>'; }).join("");
+        return h+'</div>';
+      });
+    }
+    /* STATS — on paper, for this division's TEAMS (opens from the renamed square) */
+    W.nsqDivStats=function(){
+      var div=isDivisionBoard(); if(!div) return;
+      cssOnce(); W.nsqClose();
+      var o=document.createElement("div"); o.id="nsq"; o.innerHTML='<div class="hd"><button class="x" onclick="window.nsqClose()">Close</button><div style="font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.85">STATS \u2014 ON PAPER</div><h1>'+e(div.name)+'</h1><div>Loading\u2026</div></div>'; document.body.appendChild(o);
+      var P=Number(W.PLAT.pool||0);
+      Promise.all([divisionMatches(div), rest("plat_player_results?pool_id=eq."+P+"&discipline=eq.squash&select=name,current_rating,sets_played,sets_won&limit=5000").catch(function(){ return []; })]).then(function(r){
+        var X=r[0], R=X.R||RULE, res=Array.isArray(r[1])?r[1]:[];
+        var teams={};
+        res.forEach(function(t){ var nm=String(t.name||"").split(" & ").map(function(z){ return z.trim(); }); if(nm.length!==2) return;
+          var dv=teamDivision(R,nm[0],nm[1]); if(!dv||dv.label!==div.name) return;
+          var pa=R.people[nm[0]], pb=R.people[nm[1]];
+          teams[t.name]={name:t.name, rating:Math.round(t.current_rating!=null?t.current_rating:pairRating(rateOf(pa),rateOf(pb))), cat:catOf(pa.gender,pb.gender), games:t.sets_played||0, won:t.sets_won||0}; });
+        var mv={}, up=null;
+        X.rows.forEach(function(rw){ var m=rw.m, d=+m.rating_delta||0, A=teamName(rw.A[0],rw.A[1]), B=teamName(rw.B[0],rw.B[1]);
+          if(rw.dA&&rw.dA.label===div.name) mv[A]=(mv[A]||0)+d; if(rw.dB&&rw.dB.label===div.name) mv[B]=(mv[B]||0)-d;
+          var winA=(+m.t1_sets||0)>(+m.t2_sets||0), gain=winA?d:-d, w=winA?A:B, l=winA?B:A, wD=winA?rw.dA:rw.dB;
+          if(wD&&wD.label===div.name && (!up||gain>up.gain)) up={w:w,l:l,gain:gain}; });
+        var list=Object.keys(mv).map(function(k){ return {p:k,v:Math.round(mv[k])}; }).filter(function(z){ return z.v; }).sort(function(a,b){ return b.v-a.v; });
+        var ts=Object.keys(teams).map(function(k){ return teams[k]; }).sort(function(a,b){ return b.rating-a.rating; });
+        var h='<div class="hd"><button class="x" onclick="window.nsqClose()">Close</button><div style="font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.85">STATS \u2014 ON PAPER</div><h1>'+e(div.name)+'</h1><div style="font-size:13px;opacity:.9">'+ts.length+' team'+(ts.length===1?"":"s")+'</div></div>'
+          +'<div class="card"><div class="in" style="font-size:13.5px;line-height:1.5"><b>On paper</b> says who <i>should</i> win. <b>The ladder</b> says who <i>did</i>. Only ladder matches move the ladder.'
+          +'<details style="margin-top:6px"><summary style="cursor:pointer;color:#D35400;font-weight:800">Rated higher, but below me on the ladder?</summary>That team is better on paper. You\u2019re above them on court. Beat them in a ladder match and the ladder shows it.</details></div></div>';
+        h+='<div class="card"><h2>Moves \u2014 last results</h2>'+(list.length?
+            ((list[0].v>0)?('<div class="team"><span style="width:110px;font-size:11px;font-weight:800;color:#7a6658">BIGGEST CLIMB</span><b>'+e(list[0].p)+'</b><span style="color:#1e8449;font-weight:800">+'+list[0].v+'</span></div>'):'')
+            +(list[list.length-1].v<0?'<div class="team"><span style="width:110px;font-size:11px;font-weight:800;color:#7a6658">STEEPEST FALL</span><b>'+e(list[list.length-1].p)+'</b><span style="color:#c0392b;font-weight:800">'+list[list.length-1].v+'</span></div>':'')
+            +(up&&up.gain>0?'<div class="team"><span style="width:110px;font-size:11px;font-weight:800;color:#7a6658">BIGGEST UPSET</span><b>'+e(up.w)+'</b><span style="font-size:13px">beat '+e(up.l)+'</span></div>':'')
+          :'<div class="in" style="color:#7a6658">No results for '+e(div.name)+' teams yet.</div>')+'</div>';
+        h+='<div class="card"><h2>'+e(div.name)+' teams \u2014 on paper</h2>'+(ts.length?ts.map(function(t,i){ return '<div class="team"><span style="width:24px;color:#b9a597;font-weight:800">'+(i+1)+'</span><b>'+e(t.name)+'</b><span style="font-size:12px;color:#7a6658;width:56px">'+e(t.cat)+'</span><span style="font-size:13px;width:44px;text-align:right">'+t.rating+'</span></div>'; }).join("")
+          :'<div class="in" style="color:#7a6658">No teams have played yet \u2014 a team appears here after its first match.</div>')+'</div><div style="height:40px"></div>';
+        o.innerHTML=h;
+      });
+    };
+    function divisionView(){
+      var div=isDivisionBoard(), nh=document.getElementById("nh"); if(!div || !nh || !onDivisionFront()) return;
+      var band=nh.querySelector(".band"); if(!band) return;
+      /* the padel group page underneath makes way: its brackets and its jump strip */
+      Array.prototype.forEach.call(nh.querySelectorAll(".brk"),function(k){
+        if(k.id==="nsqLadderCard" || k.id==="nsqResultsCard" || k.closest("#nsqLadderCard,#nsqResultsCard")) return;
+        k.style.display="none"; });
+      Array.prototype.forEach.call(nh.querySelectorAll("div"),function(d){   /* the jump strip: Climb · Move · Recent · Card · Up */
+        if(d.children.length>=2 && d.children.length<=6 && /^\s*(Climb\s*)?(Move\s*)?Recent\s*(Card\s*)?Up\s*$/.test((d.textContent||"").replace(/\s+/g," ")) && !d.querySelector(".brk")) d.style.display="none"; });
+      /* the "this week / playing / top pair / upset" figure blocks */
+      Array.prototype.forEach.call(nh.querySelectorAll("div"),function(d){
+        if(!d.dataset.nsqHid && d.children.length>=2 && d.children.length<=4 && /^(THIS WEEK|LAST \d+ DAYS)/i.test((d.textContent||"").trim()) && /PLAYING/i.test(d.textContent||"")){ d.style.display="none"; d.dataset.nsqHid="1"; } });
+      /* the squares: Stats opens the division's own on-paper view */
+      Array.prototype.forEach.call(nh.querySelectorAll("button"),function(b){
+        if(/Stats\s*\u2014\s*on paper/.test(b.textContent||"") && !b.getAttribute("data-nsq-stats")){ b.setAttribute("data-nsq-stats","1");
+          b.addEventListener("click",function(ev){ ev.preventDefault(); ev.stopImmediatePropagation(); W.nsqDivStats(); }, true); }
+      });
+      if(!nh.querySelector("#nsqResultsCard") && !DV.busy){ DV.busy=true;
+        resultsCard(div).then(function(h){ DV.busy=false; var n2=document.getElementById("nh"); if(!n2 || +W.PLAT.cid!==+div.id || n2.querySelector("#nsqResultsCard")) return;
+          var box=document.createElement("div"); box.innerHTML=h; var card=box.firstChild;
+          var lad=n2.querySelector("#nsqLadderCard"); if(lad) lad.parentNode.insertBefore(card, lad.nextSibling); else { var b2=n2.querySelector(".band"); b2.parentNode.insertBefore(card, b2.nextSibling); }
+        }).catch(function(){ DV.busy=false; });
+      }
+    }
+    var DV={busy:false};
+    setInterval(function(){ try{ divisionView(); }catch(e){} }, 500);
+    /* entering a score from the CLUB's door: straight to one sheet — no division chooser (the save goes to the club) */
+    (function(){ var _dp=W.doorPick; if(typeof _dp!=="function") return;
+      W.doorPick=function(what){
+        var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0];
+        if(what==="score" && me && me.parent_id){ var ds=cs.filter(function(c){ return +c.parent_id===+me.id; }).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+          var pg=(location.pathname.split("/").pop()||"nat3-squash.html");
+          if(ds.length){ W.nhNav(pg+"?club="+ds[0].id+"&go=entry&back="+encodeURIComponent("?club="+me.id)); return; } }
+        return _dp.apply(this,arguments);
+      }; })();
+    /* the sheet never asks for a division in Masters */
+    (function(){ var st=document.createElement("style"); st.textContent="body.nsqMasters #platEntryClub{display:none!important}"; document.head.appendChild(st);
+      setInterval(function(){ document.body.classList.toggle("nsqMasters", !!clubOfBoard()); }, 500); })();
+    /* A DIVISION'S MEMBERS, AS MDR SHOWS THEM: Men, then Ladies, each ranked by rating */
+    function membersBySex(){
+      if(!isDivisionBoard()) return;
+      var scr=document.getElementById("profileSearchScreen"); if(!scr || !scr.classList.contains("active")) return;
+      var list=document.getElementById("playerList"); if(!list) return;
+      Array.prototype.forEach.call(scr.querySelectorAll(".header h1, .header h2, .header .title, .header span"),function(h){ if(/^\s*Group Members\s*$/i.test(h.textContent||"")) h.textContent="Division members"; });
+      var items=Array.prototype.filter.call(list.children,function(li){ return li.classList && li.classList.contains("player-item"); });
+      if(!items.length || list.getAttribute("data-nsq-sexed")===String(items.length)) return;
+      var txt=function(li){ return (li.textContent||"").replace(/\s+/g," ").trim(); };      /* textContent: right even if hidden */
+      var rank=function(li){ var m=txt(li).match(/\((\d+)\)\s*$/); return m?Number(m[1]):9999; };   /* OSR's own rank per gender */
+      var num=function(li){ return -rank(li); };
+      var lady=function(li){ return /Female/i.test(txt(li)); };
+      items.forEach(function(li){ li.style.display=""; });                                  /* placed members always show */
+      var men=items.filter(function(li){ return !lady(li); }).sort(function(a,b){ return num(b)-num(a); });
+      var ladies=items.filter(lady).sort(function(a,b){ return num(b)-num(a); });
+      var head=function(t,n){ var h=document.createElement("li"); h.className="nsqSexHead"; h.setAttribute("data-plat-keep","1");
+        h.style.cssText="list-style:none;padding:12px 14px 6px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#7E3200;background:#fbf1ea;border-bottom:1px solid #ecdcd0";
+        h.textContent=t+" \u00b7 "+n; return h; };
+      Array.prototype.forEach.call(list.querySelectorAll(".nsqSexHead"),function(h){ h.remove(); });
+      if(men.length){ list.appendChild(head("Men",men.length)); men.forEach(function(li){ list.appendChild(li); }); }
+      if(ladies.length){ list.appendChild(head("Ladies",ladies.length)); ladies.forEach(function(li){ list.appendChild(li); }); }
+      list.setAttribute("data-nsq-sexed", String(items.length));
+    }
+    setInterval(function(){ try{ membersBySex(); }catch(e){} }, 400);
     /* the Masters card on Club admin */
     var _ap=W.nhAdminPage;
     if(typeof _ap==="function") W.nhAdminPage=function(){
