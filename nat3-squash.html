@@ -3555,7 +3555,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q011";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q013";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17462,6 +17462,17 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var bs=S.bands.slice().sort(function(a,b){ return a.sort-b.sort; });
       for(var i=0;i<bs.length;i++){ if(r>=bs[i].low) return bs[i]; }
       return bs[bs.length-1]; }
+    /* A PERSON'S DIVISION. Men by the bands as set. LADIES ONE DIVISION BACK (Andre, 3 Oct): a lady is measured against
+       floors one step lower — a lady in the men's Div B range is Div A — so Div A holds men from its floor and ladies from
+       Div B's floor, and the ladies' last division reaches one step below the men's. */
+    function isLady(g){ return /^[FLW]/i.test(String(g||"")); }
+    function divOfPerson(p){
+      var r=rateOf(p); if(!isLady(p.gender)) return bandOf(r);
+      var bs=S.bands.slice().sort(function(a,b){ return a.sort-b.sort; }); if(!bs.length) return null;
+      var step=(bs.length>1)?(bs[0].low-bs[1].low):150;
+      for(var i=0;i<bs.length;i++){ var floor=(i+1<bs.length)?bs[i+1].low:(bs[bs.length-1].low-step); if(r>=floor) return bs[i]; }
+      return bs[bs.length-1];
+    }
     function rangeTxt(b){ return (b.sort===0)?(b.low+"+"):(b.low+" \u2013 "+b.high); }
     function pairRating(a,b){ return Math.max(a,b)*0.6+Math.min(a,b)*0.4; }                    /* the engine's 60/40 */
     function higher(b1,b2){ if(!b1) return b2; if(!b2) return b1; return (b1.sort<=b2.sort)?b1:b2; }   /* lower sort = higher division */
@@ -17507,8 +17518,13 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         +(S.bands.length?S.bands.map(function(b){ var d=divOfBand(b); return '<div class="band"><span class="chip" style="background:'+(b.colour||"#D35400")+'">'+e(b.label)+'</span><span style="flex:1;font-size:13px;color:#7a6658">'+rangeTxt(b)+'</span><b style="font-size:13px;color:'+(d?"#1e8449":"#b9a597")+'">'+(d?"ready":"not yet created")+'</b></div>'; }).join(""):'<div class="in" style="color:#7a6658;font-size:13px">Save the national divisions first.</div>')
         +(missing.length?'<div class="in"><label>Club code</label><input id="nsqClubCode" type="password" inputmode="numeric" placeholder="'+e(S.clubName)+'\u2019s code"><button class="btn" onclick="window.nsqMakeDivs()">Create '+missing.length+' division'+(missing.length===1?"":"s")+' in '+e(S.clubName)+'</button><div class="msg" id="nsqM2"></div></div>':'')
         +'</div>';
+      /* 3. players and their divisions (placement by rating) */
+      h+='<div class="card"><h2>3 \u00b7 Players and their divisions</h2><div class="in">'
+        +'<div style="font-size:13px;color:#7a6658">A division is decided by rating, not chosen. New players are placed as they are registered; this places everyone in this club again \u2014 after ratings have moved, or for players registered before the divisions existed.</div>'
+        +'<label>Club code</label><input id="nsqPlaceCode" type="password" inputmode="numeric" placeholder="'+e(S.clubName)+'\u2019s code">'
+        +'<button class="btn" onclick="window.nsqPlaceAll()">Place everyone by rating</button><div class="msg" id="nsqM4"></div></div></div>';
       /* 3. divisions with their teams (from each division's ladder) */
-      h+='<div class="card"><h2>3 \u00b7 Divisions and their ladders</h2>'
+      h+='<div class="card"><h2>4 \u00b7 Divisions and their ladders</h2>'
         +(S.kids.length?S.bands.map(function(b){ var d=divOfBand(b); if(!d) return ""; var rows=S.ladders.filter(function(l){ return +l.club_id===+d.id; });
             return '<div class="band" style="background:#fbf7f3"><span class="chip" style="background:'+(b.colour||d.colour)+'">'+e(b.label)+'</span><b style="flex:1;font-size:13px">'+rows.length+' team'+(rows.length===1?"":"s")+'</b><span style="font-size:12px;color:#7a6658">'+rangeTxt(b)+'</span></div>'
               +rows.map(function(l){ return '<div class="team"><span style="width:22px;color:#b9a597;font-weight:800">'+l.position+'</span><b>'+e(l.p1)+(l.p2?' &amp; '+e(l.p2):'')+'</b><span style="font-size:12px;color:#7a6658">'+e(l.category)+'</span></div>'; }).join("");
@@ -17548,7 +17564,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       step(0);
     };
     function teamFacts(a,b){
-      var ra=rateOf(a), rb=rateOf(b), ba=bandOf(ra), bb=bandOf(rb), div=higher(ba,bb);
+      var ra=rateOf(a), rb=rateOf(b), ba=divOfPerson(a), bb=divOfPerson(b), div=higher(ba,bb);
       return {ra:ra, rb:rb, pr:Math.round(pairRating(ra,rb)), ba:ba, bb:bb, band:div, cat:catOf(a.gender,b.gender), cross:!!(ba&&bb&&ba!==bb)};
     }
     W.nsqClose=function(){ var o=document.getElementById("nsq"); if(o) o.remove(); };
@@ -17583,7 +17599,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var here=R.bands.filter(function(b){ return String(b.label).toLowerCase()===String(board.name).trim().toLowerCase(); })[0];
         if(!here) return _clJoin.apply(self,args);                                  /* not a division: the ladder as it was */
         var a=R.people[p1], b=R.people[p2]; if(!a||!b) return _clJoin.apply(self,args);
-        var ra=rateOf(a), rb=rateOf(b), ba=bandOf(ra), bb=bandOf(rb), div=higher(ba,bb);
+        var ra=rateOf(a), rb=rateOf(b), ba=divOfPerson(a), bb=divOfPerson(b), div=higher(ba,bb);
         var why=e(p1)+' '+ra+' ('+e(ba?ba.label:"\u2014")+') \u00b7 '+e(p2)+' '+rb+' ('+e(bb?bb.label:"\u2014")+')'+(ba&&bb&&ba!==bb?' \u2014 across two divisions, so the higher one':'');
         var msg=document.getElementById("clMsg");
         if(div && div.label!==here.label){
@@ -17646,7 +17662,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       return ruleData().then(function(R){
         S.bands=R.bands; if(!R.bands.length) return;
         var pa=R.people[a], pb=R.people[b]; if(!pa||!pb) return;
-        var div=higher(bandOf(rateOf(pa)),bandOf(rateOf(pb))); if(!div) return;
+        var div=higher(divOfPerson(pa),divOfPerson(pb)); if(!div) return;
         var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0]; if(!me) return;
         /* this CLUB: the board's parent when the board is a division (its parent has a parent), else the board itself */
         var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
@@ -17697,6 +17713,160 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       mine.__nsq=true; W.doSubmit=mine;
     }
     wrapSubmit(); setInterval(wrapSubmit, 400);
+    /* PLACEMENT BY RATING (Andre, 3 Oct): a division is NOT chosen — the rating decides it, as the birth year decides
+       an MDR age group. Each player of a club is a member of exactly ONE of its divisions: the one their rating falls in
+       (current rating; before any match, the initial). Placing them there takes them out of any other division of the
+       club. Runs by itself after names are added in a club's register room, and from the Masters room for everyone. */
+    function clubDivisions(clubId){
+      return rest("nat_club_parent?club_id=eq."+clubId+"&select=group_id").then(function(r){
+        var ids=(Array.isArray(r)?r:[]).map(function(x){ return x.group_id; });
+        return ids.length?rest("plat_clubs?id=in.("+ids.join(",")+")&select=id,name,colour"):[];
+      }).then(function(r){ return Array.isArray(r)?r:[]; });
+    }
+    function placePeople(clubId, pin, onlyNames){
+      var P=Number(W.PLAT.pool||0);
+      return Promise.all([
+        rest("nsq_division_bands?pool_id=eq."+P+"&select=label,low,high,colour,sort&order=sort.asc").catch(function(){ return []; }),
+        clubDivisions(clubId),
+        rest("plat_squash_v_pool_individuals?pool_id=eq."+P+"&select=id,full_name,gender,current_rating,seed_rating&limit=1000")
+      ]).then(function(r){
+        var bands=Array.isArray(r[0])?r[0]:[], divs=r[1], people=Array.isArray(r[2])?r[2]:[];
+        if(!bands.length) return {ok:false, error:"The national divisions have not been set yet."};
+        if(!divs.length) return {ok:false, error:"This club has no divisions yet."};
+        S.bands=bands;
+        var divByLabel={}; divs.forEach(function(d){ divByLabel[String(d.name).trim().toLowerCase()]=d; });
+        var divIds=divs.map(function(d){ return d.id; }), clubAndDivs=[clubId].concat(divIds);
+        return rest("plat_memberships?club_id=in.("+clubAndDivs.join(",")+")&select=individual_id,club_id&limit=5000").then(function(ms){
+          ms=Array.isArray(ms)?ms:[];
+          var inClub={}, curDiv={};
+          ms.forEach(function(m){ inClub[m.individual_id]=1; if(divIds.indexOf(+m.club_id)>=0) (curDiv[m.individual_id]=curDiv[m.individual_id]||[]).push(+m.club_id); });
+          var want=onlyNames?people.filter(function(p){ return onlyNames.indexOf(p.full_name)>=0; }):people.filter(function(p){ return inClub[p.id]; });
+          var jobs=[], moved=[], already=0, missing=[];
+          want.forEach(function(p){
+            var b=divOfPerson(p), d=b?divByLabel[String(b.label).toLowerCase()]:null;
+            if(!d){ missing.push(p.full_name+" ("+(b?b.label:"?")+")"); return; }
+            var cur=curDiv[p.id]||[];
+            if(cur.length===1 && cur[0]===+d.id){ already++; return; }
+            jobs.push(function(){ return fn("nat_admin",{action:"add_membership",club_id:d.id,admin_pin:pin,individual_id:p.id}); });
+            cur.filter(function(c){ return c!==+d.id; }).forEach(function(c){ jobs.push(function(){ return fn("nat_admin",{action:"remove_membership",club_id:c,admin_pin:pin,individual_id:p.id}); }); });
+            moved.push(p.full_name+" \u2192 "+b.label);
+          });
+          var fails=0, run=function(i){ if(i>=jobs.length) return Promise.resolve(); return jobs[i]().then(function(j){ if(!j||j.ok===false) fails++; return run(i+1); }); };
+          return run(0).then(function(){ return {ok:fails===0, placed:moved, already:already, missing:missing, fails:fails}; });
+        });
+      });
+    }
+    function placeReport(r){
+      if(!r.ok && r.error) return r.error;
+      var t=(r.placed.length?r.placed.length+" placed by rating":"Nobody needed placing")+(r.already?" \u00b7 "+r.already+" already in the right division":"");
+      if(r.missing.length) t+=" \u00b7 no such division in this club for: "+r.missing.slice(0,4).join(", ")+(r.missing.length>4?"\u2026":"");
+      if(r.fails) t+=" \u00b7 "+r.fails+" change"+(r.fails===1?"":"s")+" refused (check the code)";
+      return t;
+    }
+    W.nsqPlaceAll=function(){
+      var pin=(document.getElementById("nsqPlaceCode").value||"").trim(), m=document.getElementById("nsqM4");
+      if(!pin){ m.className="msg bad"; m.textContent="The club\u2019s code is needed."; return; }
+      m.className="msg"; m.textContent="Placing\u2026";
+      placePeople(S.club, pin, null).then(function(r){ return load().then(function(){ draw(); var mm=document.getElementById("nsqM4"); if(mm){ mm.className=(r.ok?"msg ok":"msg bad"); mm.textContent=placeReport(r); } }); });
+    };
+    /* automatic: after names are added in a club's register room, place exactly those names */
+    (function(){ var f0=W.fetch; W.fetch=function(u,i){
+      var url=String(u&&u.url?u.url:u), p=f0.apply(this,arguments);
+      if(/\/functions\/v1\/nat_admin/.test(url)){
+        var body={}; try{ body=JSON.parse((i&&i.body)||"{}"); }catch(e){}
+        if(body.action==="add_pool_member" || body.action==="bulk_add_pool_members"){
+          var names=body.action==="add_pool_member"?[body.full_name]:(body.rows||[]).map(function(r){ return r.full_name; });
+          var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0];
+          var clubId=(me && cs.some(function(c){ return +c.parent_id===+me.id; }))?me.id:0;   /* the board is a club with divisions */
+          if(clubId && names.length) p=p.then(function(res){ res.clone().json().then(function(j){
+            if(j && j.ok) setTimeout(function(){ placePeople(clubId, body.admin_pin||"", names).then(function(r){ nsqToast(placeReport(r)); }); }, 600);
+          }).catch(function(){}); return res; });
+        }
+      }
+      return p; }; })();
+    function nsqToast(t){
+      var d=document.createElement("div"); d.textContent="Divisions: "+t;
+      d.style.cssText="position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:9500;background:#1c110a;color:#fff;padding:12px 14px;border-radius:12px;font-size:13.5px;box-shadow:0 6px 20px rgba(0,0,0,.25)";
+      document.body.appendChild(d); setTimeout(function(){ d.remove(); }, 6000);
+    }
+    /* DIVISIONS & RANKINGS — reported like MDR (Andre: "all the tables and rating areas reported Div A … down to the last
+       div, then one overall — just like MDR"). A club-level page with two tabs:
+         Individual Overall — Men / Ladies: one full ranking (rank, name, rating, level, move) with a Division column;
+         Divisions — Overall / Men / Ladies / Mixed / All Sorts, then All / Div A … : the pairs, by pair rating (60/40).
+       Scope: the players of this club (members of the club or any of its divisions). */
+    var RK={club:0, name:"", people:[], pairs:[], tab:"io", g:"M", cat:"ALL", div:"all"};
+    function rkLoad(clubId){
+      var P=Number(W.PLAT.pool||0);
+      return Promise.all([
+        rest("nsq_division_bands?pool_id=eq."+P+"&select=label,low,high,colour,sort&order=sort.asc").catch(function(){ return []; }),
+        clubDivisions(clubId),
+        rest("plat_squash_v_pool_individuals?pool_id=eq."+P+"&select=id,full_name,gender,current_rating,seed_rating&limit=1000"),
+        rest("plat_player_results?pool_id=eq."+P+"&discipline=eq.squash&select=name,current_rating,initial_rating,sets_played,sets_won&limit=5000").catch(function(){ return []; })
+      ]).then(function(r){
+        S.bands=Array.isArray(r[0])?r[0]:[]; var divs=r[1];
+        var ids=[clubId].concat(divs.map(function(d){ return d.id; }));
+        return rest("plat_memberships?club_id=in.("+ids.join(",")+")&select=individual_id&limit=5000").then(function(ms){
+          var mine={}; (Array.isArray(ms)?ms:[]).forEach(function(m){ mine[m.individual_id]=1; });
+          RK.people=(Array.isArray(r[2])?r[2]:[]).filter(function(p){ return mine[p.id]; });
+          var byName={}; RK.people.forEach(function(p){ byName[p.full_name]=p; });
+          RK.pairs=(Array.isArray(r[3])?r[3]:[]).map(function(x){ var nm=String(x.name||"").split(" & ").map(function(t){ return t.trim(); });
+              if(nm.length!==2 || !byName[nm[0]] || !byName[nm[1]]) return null;
+              var a=byName[nm[0]], b=byName[nm[1]]; return {name:x.name, a:a, b:b, rating:Math.round(x.current_rating!=null?x.current_rating:pairRating(rateOf(a),rateOf(b))),
+                initial:x.initial_rating!=null?Math.round(x.initial_rating):null, games:x.sets_played||0, won:x.sets_won||0, cat:catOf(a.gender,b.gender), div:higher(divOfPerson(a),divOfPerson(b))}; })
+            .filter(Boolean).sort(function(p,q){ return q.rating-p.rating; });
+        });
+      });
+    }
+    function rkDraw(){
+      var o=document.getElementById("nsq"); if(!o) return;
+      var bs=S.bands.slice().sort(function(a,b){ return a.sort-b.sort; });
+      var chip=function(b){ return b?'<span class="chip" style="background:'+(b.colour||"#D35400")+'">'+e(b.label)+'</span>':'<span style="color:#b9a597">\u2014</span>'; };
+      var pill=function(on,label,click){ return '<button class="'+(on?"on":"")+'" onclick="'+click+'">'+label+'</button>'; };
+      var h='<div class="hd"><button class="x" onclick="window.nsqClose()">Close</button><div style="font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.85">DIVISIONS &amp; RANKINGS</div><h1>'+e(RK.name)+'</h1>'
+        +'<div style="font-size:13px;opacity:.9">'+RK.people.length+' players \u00b7 '+RK.pairs.length+' pairs</div></div>';
+      h+='<div class="card"><div class="in"><div class="seg">'+pill(RK.tab==="io","Individual Overall","window.nsqRk(\'tab\',\'io\')")+pill(RK.tab==="dv","Divisions","window.nsqRk(\'tab\',\'dv\')")+'</div></div></div>';
+      if(RK.tab==="io"){
+        var rows=RK.people.filter(function(p){ return RK.g==="F"?isLady(p.gender):!isLady(p.gender); }).map(function(p){ var cur=rateOf(p), ini=Math.round(p.seed_rating!=null?p.seed_rating:cur); return {p:p,cur:cur,mv:cur-ini,div:divOfPerson(p)}; }).sort(function(a,b){ return b.cur-a.cur; });
+        h+='<div class="card"><div class="in"><div class="seg">'+pill(RK.g==="M","Men","window.nsqRk(\'g\',\'M\')")+pill(RK.g==="F","Ladies","window.nsqRk(\'g\',\'F\')")+'</div></div>'
+          +'<h2>'+(RK.g==="F"?"Ladies":"Men")+' \u2014 Individual Overall</h2>'
+          +(rows.length?rows.map(function(r,i){ return '<div class="team"><span style="width:26px;color:#b9a597;font-weight:800">'+(i+1)+'</span><b>'+e(r.p.full_name)+'</b>'
+              +'<span style="font-size:13px;width:44px;text-align:right">'+r.cur+'</span><span style="font-size:12px;width:34px;text-align:right;color:#7a6658">'+(r.cur/200).toFixed(1)+'</span>'
+              +'<span style="font-size:12px;width:40px;text-align:right;color:'+(r.mv>=0?"#1e8449":"#c0392b")+'">'+(r.mv>0?"+":"")+r.mv+'</span><span style="width:58px;text-align:right">'+chip(r.div)+'</span></div>'; }).join("")
+            :'<div class="in" style="color:#7a6658">No players yet.</div>')+'</div>';
+      } else {
+        var cats=[["ALL","Overall"],["Men's","Men"],["Ladies","Ladies"],["Mixed","Mixed"]];
+        var list=RK.pairs.filter(function(x){ return (RK.cat==="ALL"||x.cat===RK.cat) && (RK.div==="all"||(x.div&&x.div.label===RK.div)); });
+        h+='<div class="card"><div class="in"><div class="seg" style="flex-wrap:wrap">'+cats.map(function(c){ return pill(RK.cat===c[0],c[1],"window.nsqRk(\'cat\',\'"+c[0].replace(/'/g,"\\\\'")+"\')"); }).join("")+'</div>'
+          +'<div class="seg" style="flex-wrap:wrap;margin-top:8px">'+pill(RK.div==="all","All","window.nsqRk(\'div\',\'all\')")+bs.map(function(b){ return pill(RK.div===b.label,e(b.label),"window.nsqRk(\'div\',\'"+b.label+"\')"); }).join("")+'</div>'
+          +'<div style="font-size:12px;color:#7a6658;margin-top:8px">A pair\u2019s division = the higher of its two players\u2019 divisions (ladies one division back). Pairs only.</div></div>'
+          +'<h2>'+(RK.cat==="ALL"?"Overall \u2014 all pairs":e(RK.cat)+" pairs")+(RK.div==="all"?"":" \u00b7 "+e(RK.div))+' \u00b7 '+list.length+'</h2>'
+          +(list.length?list.map(function(x,i){ return '<div class="team"><span style="width:26px;color:#b9a597;font-weight:800">'+(i+1)+'</span><b>'+e(x.name)+'</b>'
+              +'<span style="font-size:12px;color:#7a6658;width:56px">'+e(x.cat)+'</span><span style="font-size:13px;width:44px;text-align:right">'+x.rating+'</span><span style="width:58px;text-align:right">'+chip(x.div)+'</span></div>'; }).join("")
+            :'<div class="in" style="color:#7a6658">No pairs here yet.</div>')+'</div>';
+      }
+      o.innerHTML=h+'<div style="height:40px"></div>';
+    }
+    W.nsqRk=function(k,v){ RK[k]=v; if(k==="cat"||k==="tab") RK.div=RK.div; rkDraw(); };
+    W.nsqRankings=function(clubId){
+      cssOnce(); W.nsqClose();
+      RK.club=Number(clubId||W.PLAT.cid||0); var c=(W.PLAT.clubs||[]).filter(function(x){ return +x.id===RK.club; })[0]; RK.name=c?c.name:"Club";
+      var o=document.createElement("div"); o.id="nsq"; o.innerHTML='<div class="hd"><button class="x" onclick="window.nsqClose()">Close</button><h1>'+e(RK.name)+'</h1><div>Loading\u2026</div></div>'; document.body.appendChild(o);
+      rkLoad(RK.club).then(rkDraw).catch(function(err){ o.querySelector(".hd div").textContent="Could not load: "+err; });
+    };
+    /* the pill on a club's door, beside "Ratings · Ladders · Profiles" */
+    function rkPill(){
+      try{
+        var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0];
+        if(!me || !W.PLAT.clubDoor || !cs.some(function(c){ return +c.parent_id===+me.id; })) return;
+        var nh=document.getElementById("nh"); if(!nh || nh.querySelector("#nsqRkPill")) return;
+        var anchorBtn=Array.prototype.filter.call(nh.querySelectorAll("button"),function(b){ return /Ratings\s*\u00b7\s*Ladders/.test(b.textContent||""); })[0];
+        if(!anchorBtn) return;
+        var p=document.createElement("button"); p.id="nsqRkPill"; p.className=anchorBtn.className; p.setAttribute("style",anchorBtn.getAttribute("style")||"");
+        p.textContent="Divisions & rankings"; p.onclick=function(){ W.nsqRankings(me.id); };
+        anchorBtn.parentNode.insertBefore(p, anchorBtn);
+      }catch(e2){}
+    }
+    setInterval(rkPill, 700);
     /* the Masters card on Club admin */
     var _ap=W.nhAdminPage;
     if(typeof _ap==="function") W.nhAdminPage=function(){
