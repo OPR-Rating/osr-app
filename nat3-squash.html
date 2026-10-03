@@ -3555,7 +3555,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q024";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q025";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17675,6 +17675,49 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     }
     (function(){ var _rf=W.recFilter; if(typeof _rf==="function") W.recFilter=function(){ var r=_rf.apply(this,arguments); try{ var box=document.getElementById("recNames"); if(box) box.removeAttribute("data-nsq-grouped"); recGroup(); }catch(e4){} return r; }; })();
     setInterval(function(){ try{ recGroup(); }catch(e5){} }, 700);
+    /* ---- PAIRS (squash is the SLOTS family): the engine keeps the four players on the match and writes every
+       pair's results to plat_doubles_results, per division — it never stores a pair entry in the player results.
+       OSR's pair tables look for those entries, so they stood empty. When a pair table asks for its pairs, it now
+       also receives the pairs the squash engine worked out for that board; OSR's screen does the rest unchanged
+       (live 60/40 of the two players, rank, level, move). All Sorts reads its pairs from the match rows' four names. ---- */
+    var CAT={"Men's":"M","Ladies":"L","Mixed":"X"};
+    function pairRowsFor(club, code){
+      var P=Number(W.PLAT.pool||0);
+      return Promise.all([
+        rest("plat_doubles_results?pool_id=eq."+P+"&discipline=eq.squash&club_id=eq."+club+"&select=category,p1,p2,combined&limit=5000"),
+        restAll("plat_squash_v_pool_individuals?pool_id=eq."+P+"&select=full_name,seed_rating&order=full_name.asc")
+      ]).then(function(r){
+        var rows=Array.isArray(r[0])?r[0]:[], seed={}; (Array.isArray(r[1])?r[1]:[]).forEach(function(x){ seed[x.full_name]=x.seed_rating; });
+        var seen={}, out=[];
+        rows.forEach(function(d){ var g=CAT[d.category]; if(!g || !d.p1 || !d.p2) return; if(code && g!==code) return;
+          var nm=d.p1+" & "+d.p2; if(seen[nm]) return; seen[nm]=1;
+          var a=seed[d.p1], b=seed[d.p2], ini=(a!=null&&b!=null)?Math.round(Math.max(a,b)*0.6+Math.min(a,b)*0.4):d.combined;
+          out.push({name:nm, current_rating:d.combined, gender:g, initial_rating:ini}); });
+        return out;
+      }).catch(function(){ return []; });
+    }
+    (function(){ var _sg=W.sbGet; if(typeof _sg!=="function") return;
+      W.sbGet=function(pathq){
+        var pq=String(pathq||"");
+        if(pq.indexOf("player_results?select=name,current_rating,gender,initial_rating")===0){
+          var cm=pq.match(/club_id=eq\.(\d+)/), gm=pq.match(/gender=eq\.([MLX])/);
+          var club=cm?Number(cm[1]):Number(W.PLAT.cid||0);
+          if(cm && W.PLAT && W.PLAT.bootCid && Number(cm[1])===Number(W.PLAT.bootCid)) club=Number(W.PLAT.cid||club);   /* the board you stand on */
+          return Promise.all([_sg.apply(this,arguments), pairRowsFor(club, gm?gm[1]:null)]).then(function(r){
+            var base=Array.isArray(r[0])?r[0]:[], have={}; base.forEach(function(x){ if(x&&x.name) have[x.name]=1; });
+            return base.concat(r[1].filter(function(x){ return !have[x.name]; }));
+          });
+        }
+        if(pq.indexOf("matches?select=t1p1,t2p1&match_type=eq.All%20Sorts")===0){       /* All Sorts: pair names from the four slots */
+          return _sg.call(this, pq.replace("select=t1p1,t2p1","select=t1p1,t1p2,t2p1,t2p2")).then(function(ms){
+            var out=[]; (Array.isArray(ms)?ms:[]).forEach(function(m){                       /* both name orders */
+              out.push({t1p1:(m.t1p2?m.t1p1+" & "+m.t1p2:m.t1p1), t2p1:(m.t2p2?m.t2p1+" & "+m.t2p2:m.t2p1)});
+              if(m.t1p2||m.t2p2) out.push({t1p1:(m.t1p2?m.t1p2+" & "+m.t1p1:m.t1p1), t2p1:(m.t2p2?m.t2p2+" & "+m.t2p1:m.t2p1)}); });
+            return out;
+          });
+        }
+        return _sg.apply(this,arguments);
+      }; })();
     /* ---- the Masters room ---- */
     function cssOnce(){
       if(document.getElementById("nsqCss")) return;
