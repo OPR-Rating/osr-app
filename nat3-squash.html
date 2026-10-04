@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q040";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q041";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -18181,16 +18181,46 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         if(card.children.length>=2 && /^\s*National events/.test((card.textContent||"").trim()) && card.offsetHeight>80 && card.offsetHeight<400){ card.style.display="none"; card.dataset.nsqNat="1"; } });
       var walker=document.createTreeWalker(nh, NodeFilter.SHOW_TEXT, null), t, L=[]; while((t=walker.nextNode())) L.push(t);
       L.forEach(function(x){ var v=x.nodeValue, o=v;
-        var _nh=natHost(); v=v.replace(/\b(\d+) regions\b/g,function(m0,n){ var k=Number(n)-(_nh?1:0); return k+(k===1?" province":" provinces"); }).replace(/\b1 regions\b/g,"1 province").replace(/\b(\d+) divisions\b/g,function(){ var cs=W.PLAT.clubs||[], prov={}; cs.forEach(function(c){ if(!c.parent_id && c.name!==NAT_NAME) prov[+c.id]=1; }); var k=cs.filter(function(c){ return prov[+c.parent_id]; }).length; return k+(k===1?" club":" clubs"); }).replace(/Region Ledger admin/g,"Province ledger").replace(/\bNo divisions yet\b/g,"No clubs yet");
+        var _nh=natHost(); v=v.replace(/\b(\d+) regions\b/g,function(m0,n){ var k=Number(n)-(_nh?1:0); return k+(k===1?" province":" provinces"); }).replace(/\b1 regions?\b/g,"1 province").replace(/\b(\d+) divisions\b/g,function(){ var cs=W.PLAT.clubs||[], prov={}; cs.forEach(function(c){ if(!c.parent_id && c.name!==NAT_NAME) prov[+c.id]=1; }); var k=cs.filter(function(c){ return prov[+c.parent_id]; }).length; return k+(k===1?" club":" clubs"); }).replace(/Region Ledger admin/g,"Province ledger").replace(/\bNo divisions yet\b/g,"No clubs yet");
         if(v!==o) x.nodeValue=v; });
-      if(!nh.querySelector("#nsqNatDivs")){ var gl2=Array.prototype.filter.call(nh.querySelectorAll("a,button"),function(x){ return /Global Ledger admin/.test(x.textContent||""); })[0];
+      if(false && !nh.querySelector("#nsqNatDivs")){ var gl2=Array.prototype.filter.call(nh.querySelectorAll("a,button"),function(x){ return /Global Ledger admin/.test(x.textContent||""); })[0];
         if(gl2){ var b3=document.createElement(gl2.tagName==="A"?"a":"button"); b3.id="nsqNatDivs"; b3.className=gl2.className; b3.setAttribute("style",gl2.getAttribute("style")||""); b3.textContent="Masters divisions";
           if(b3.tagName==="A") b3.href="javascript:void(0)"; b3.onclick=function(ev){ if(ev) ev.preventDefault(); W.nsqOpen(0); return false; }; gl2.parentNode.insertBefore(b3, gl2.nextSibling); } }
-      if(!nh.querySelector("#nsqNatTours")){ var gl=Array.prototype.filter.call(nh.querySelectorAll("a,button"),function(x){ return /Global Ledger admin/.test(x.textContent||""); })[0];
+      if(false && !nh.querySelector("#nsqNatTours")){ var gl=Array.prototype.filter.call(nh.querySelectorAll("a,button"),function(x){ return /Global Ledger admin/.test(x.textContent||""); })[0];
         if(gl){ var b2=document.createElement(gl.tagName==="A"?"a":"button"); b2.id="nsqNatTours"; b2.className=gl.className; b2.setAttribute("style",gl.getAttribute("style")||""); b2.textContent="National tournaments";
           if(b2.tagName==="A") b2.href="javascript:void(0)"; b2.onclick=function(ev){ if(ev) ev.preventDefault(); W.nsqNationalTour(); return false; }; gl.parentNode.insertBefore(b2, gl.nextSibling); } }
     }
     setInterval(function(){ try{ natDoor(); }catch(e){} }, 600);
+    /* THE NATIONAL PAGE AS A PROPER PAGE (q041, Andre): no pills in the header — a "Provinces" section with the province
+       cards, and a "National" section with the national rooms as rows (Global Ledger, Masters divisions, National
+       tournaments, Global records), the same look as a club's admin. */
+    function natPage(){
+      var nh=document.getElementById("nh"); if(!nh) return;
+      if(Number(W.PLAT.cid||0)!==0) return;
+      var gl=Array.prototype.filter.call(nh.querySelectorAll(".band a,.band button"),function(x){ return /Global Ledger admin/.test(x.textContent||""); })[0];
+      var gr=Array.prototype.filter.call(nh.querySelectorAll(".band a,.band button"),function(x){ return /Global records/.test(x.textContent||""); })[0];
+      if(!gl) return;
+      var row=gl.parentNode; if(row && row.style.display!=="none"){ row.style.display="none"; }
+      var band=nh.querySelector(".band"); if(!band) return;
+      if(!nh.querySelector("#nsqProvHead")){ var hh=document.createElement("div"); hh.id="nsqProvHead"; hh.setAttribute("data-plat-keep","1");
+        hh.style.cssText="margin:16px 16px 0;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:#7a6658"; hh.textContent="Provinces";
+        band.parentNode.insertBefore(hh, band.nextSibling); }
+      if(nh.querySelector("#nsqNatCard")) return;
+      var card=document.createElement("div"); card.id="nsqNatCard"; card.className="brk"; card.setAttribute("data-plat-keep","1");
+      var r=function(icon,label,sub,attr){ return '<a '+attr+' style="display:flex;align-items:center;gap:12px;padding:13px 14px;border-top:1px solid #f0ecf6;text-decoration:none;color:inherit;cursor:pointer">'
+        +'<span style="flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;border:2px solid #3a3a3a;color:#3a3a3a;font-weight:800">'+icon+'</span>'
+        +'<span style="flex:1;min-width:0"><b style="display:block;font-size:15px;color:#1f1a2b">'+label+'</b><span style="font-size:12.5px;color:#7a6658">'+sub+'</span></span><span style="color:#3a3a3a;font-weight:800">\u203a</span></a>'; };
+      var regName=((band.querySelector("h1")||{}).textContent||W.PLAT.name||"the register").trim();
+      card.innerHTML='<h2>National \u00b7 '+e(regName)+'</h2>'
+        +r("\u2699","Global Ledger","every province, club and member \u2014 the national code",'href="'+gl.getAttribute("href")+'"')
+        +r("\u25a4","Masters divisions","the master list of divisions, the gap and the transition zone",'href="javascript:void(0)" onclick="window.nsqOpen(0);return false"')
+        +r("\ud83c\udfc6","National tournaments","the register\u2019s own tournaments, shown on every door",'href="javascript:void(0)" onclick="window.nsqNationalTour();return false"')
+        +(gr?r("\u2630","Global records","every member and pair across the register, with where they come from",'href="'+gr.getAttribute("href")+'"'):"");
+      /* after the province cards */
+      var lastProv=null; Array.prototype.forEach.call(nh.querySelectorAll("div"),function(d){ if(d.parentElement && /grid-template-columns/.test(d.parentElement.getAttribute("style")||"")) lastProv=d.parentElement; });
+      var host=lastProv||band; host.parentNode.insertBefore(card, host.nextSibling);
+    }
+    setInterval(function(){ try{ natPage(); }catch(e){} }, 600);
     /* a province's door: "‹ National" */
     setInterval(function(){ try{
       var q=new URLSearchParams(location.search); if(q.get("go")) return;
