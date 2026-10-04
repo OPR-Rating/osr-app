@@ -3555,7 +3555,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q025";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q026";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -11677,10 +11677,11 @@ W.mePair=function(name,col){
     var pairMatches={}, pairMove={};
     (all.matches||[]).forEach(function(m){
       var d=(m.rating_delta!=null?+m.rating_delta:0);
-      if(m.t1p1){ pairMatches[m.t1p1]=(pairMatches[m.t1p1]||0)+1; pairMove[m.t1p1]=(pairMove[m.t1p1]||0)+d; }
-      if(m.t2p1){ pairMatches[m.t2p1]=(pairMatches[m.t2p1]||0)+1; pairMove[m.t2p1]=(pairMove[m.t2p1]||0)-d; }
+      var _k1=m.t1p2?[m.t1p1+" & "+m.t1p2, m.t1p2+" & "+m.t1p1]:[m.t1p1], _k2=m.t2p2?[m.t2p1+" & "+m.t2p2, m.t2p2+" & "+m.t2p1]:[m.t2p1];   /* Nat-Squash: four names */
+      _k1.forEach(function(k){ if(k){ pairMatches[k]=(pairMatches[k]||0)+1; pairMove[k]=(pairMove[k]||0)+d; } });
+      _k2.forEach(function(k){ if(k){ pairMatches[k]=(pairMatches[k]||0)+1; pairMove[k]=(pairMove[k]||0)-d; } });
     });
-    out.partners=(all.pairs||[]).filter(function(p){ return halves(p.name).indexOf(name)>=0; })
+    out.partners=(all.pairs||[]).filter(function(p){ return String(p.name||"").indexOf(" & ")>0 && halves(p.name).indexOf(name)>=0; })   /* Nat-Squash: pairs only */
       .map(function(p){ return {name:p.name,club_id:p.club_id,gender:p.gender,rating:Math.round(p.current_rating||0),
         move:Math.round((pairMove[p.name]||0)*10)/10,matches:(pairMatches[p.name]||0),played:p.sets_played||0,won:p.sets_won||0}; })
       .sort(function(a,b){ return (b.matches-a.matches)||(b.rating-a.rating); });
@@ -11898,8 +11899,15 @@ W.mePair=function(name,col){
       fetch(B+"plat_matches?pool_id=eq."+P+"&discipline=eq.squash&or=(t1p1.ilike."+like+",t1p2.ilike."+like+",t2p1.ilike."+like+",t2p2.ilike."+like+")"
             +"&select=id,club_id,match_date,match_type,event,t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,t1_games,t2_games,set_scores,display_t1,display_t2,rating_delta,t1_rating_at,t2_rating_at"
             +"&order=match_date.desc,id.desc&limit=2000").then(J).catch(function(){ return []; }),
-      fetch(B+"plat_player_results?pool_id=eq."+P+"&discipline=eq.squash&name=ilike."+like
-            +"&select=name,gender,club_id,current_rating,initial_rating,sets_played,sets_won&limit=500").then(J).catch(function(){ return []; }),
+      /* Nat-Squash: partnerships = the squash pairs this person is in, per division (plat_doubles_results) */
+      fetch(B+"plat_doubles_results?pool_id=eq."+P+"&discipline=eq.squash&club_id=not.is.null&or=(p1.eq."+encodeURIComponent('"'+name+'"')+",p2.eq."+encodeURIComponent('"'+name+'"')+")"
+            +"&select=category,p1,p2,club_id,combined,matches,sets,sets_won&limit=500").then(J).catch(function(){ return []; }).then(function(rows){
+        var CAT={"Men's":"M","Ladies":"L","Mixed":"X"}, seen={};
+        return (Array.isArray(rows)?rows:[]).filter(function(d){ return CAT[d.category] && d.p1 && d.p2; }).map(function(d){
+          return {name:d.p1+" & "+d.p2, gender:CAT[d.category], club_id:d.club_id, current_rating:d.combined, initial_rating:null,
+                  sets_played:d.sets||0, sets_won:d.sets_won||0, matches:d.matches||0}; })
+          .filter(function(x){ var k=x.name+"|"+x.club_id+"|"+x.gender; if(seen[k]) return false; seen[k]=1; return true; });
+      }),
       fetch(B+"nat_v_member_group?pool_id=eq."+P+"&select=full_name,club_id").then(J).catch(function(){ return []; }),
       fetch(B+"plat_clubs?pool_id=eq."+W.PLAT.pool+"&select=id,name,colour,pool_id").then(J).catch(function(){ return []; }),
       /* n93: THE PERSON'S OWN RATING, WHEREVER THEY ARE REGISTERED. The page took the rating from the people
@@ -12013,14 +12021,25 @@ W.mePair=function(name,col){
     /* n182: the faces map, so the two people on a pair page wear their photos like everywhere else */
     nhFaces().then(function(){
     Promise.all([
-      fetch(B+"plat_player_results?pool_id=eq."+P+"&discipline=eq.squash&name=eq."+encodeURIComponent(pair)
-            +"&select=name,gender,club_id,current_rating,initial_rating,sets_played,sets_won,game_diff_per_set&limit=20").then(J).catch(function(){ return []; }),
-      fetch(B+"plat_matches?pool_id=eq."+P+"&discipline=eq.squash&or=(t1p1.eq."+encodeURIComponent(pair)+",t2p1.eq."+encodeURIComponent(pair)+")"
+      (function(){ /* Nat-Squash: the pair's record = its rows in plat_doubles_results (either order), per division */
+        var hv=String(pair).split(" & "), A=encodeURIComponent('"'+(hv[0]||"").trim()+'"'), Bn=encodeURIComponent('"'+(hv[1]||"").trim()+'"');
+        var CAT={"Men's":"M","Ladies":"L","Mixed":"X"};
+        return fetch(B+"plat_doubles_results?pool_id=eq."+P+"&discipline=eq.squash&club_id=not.is.null&or=(and(p1.eq."+A+",p2.eq."+Bn+"),and(p1.eq."+Bn+",p2.eq."+A+"))"
+            +"&select=category,club_id,combined,sets,sets_won,game_diff_per_set,matches&limit=20").then(J).catch(function(){ return []; }).then(function(rows){
+          return (Array.isArray(rows)?rows:[]).filter(function(d){ return CAT[d.category]; }).map(function(d){
+            return {name:pair, gender:CAT[d.category], club_id:d.club_id, current_rating:d.combined, initial_rating:d.combined,
+                    sets_played:d.sets||0, sets_won:d.sets_won||0, game_diff_per_set:d.game_diff_per_set}; }); });
+      })(),
+      fetch(B+"plat_matches?pool_id=eq."+P+"&discipline=eq.squash&or=("+(function(){ var hv=String(pair).split(" & "), a=encodeURIComponent('"'+(hv[0]||"").trim()+'"'), b2=encodeURIComponent('"'+(hv[1]||"").trim()+'"');
+              return "and(t1p1.eq."+a+",t1p2.eq."+b2+"),and(t1p1.eq."+b2+",t1p2.eq."+a+"),and(t2p1.eq."+a+",t2p2.eq."+b2+"),and(t2p1.eq."+b2+",t2p2.eq."+a+")"; })()+")"
             +"&select=id,club_id,match_date,match_type,event,t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,t1_games,t2_games,set_scores,display_t1,display_t2,rating_delta,t1_rating_at,t2_rating_at"
             +"&order=match_date.desc,id.desc&limit=500").then(J).catch(function(){ return []; }),
       fetch(B+"plat_clubs?pool_id=eq."+W.PLAT.pool+"&select=id,name,colour,pool_id").then(J).catch(function(){ return []; }),
       /* n180: every pair in the register, so this one can be ranked among pairs of its own category */
-      fetch(B+"plat_player_results?pool_id=eq."+P+"&discipline=eq.squash&select=name,gender,current_rating&limit=5000").then(J).catch(function(){ return []; })
+      /* Nat-Squash: every squash pair, for this one's rank in its category */
+      fetch(B+"plat_doubles_results?pool_id=eq."+P+"&discipline=eq.squash&club_id=is.null&select=category,p1,p2,combined&limit=5000").then(J).catch(function(){ return []; }).then(function(rows){
+        var CAT={"Men's":"M","Ladies":"L","Mixed":"X"};
+        return (Array.isArray(rows)?rows:[]).filter(function(d){ return CAT[d.category]&&d.p1&&d.p2; }).map(function(d){ return {name:d.p1+" & "+d.p2, gender:CAT[d.category], current_rating:d.combined}; }); })
     ]).then(function(r){
       var rows=Array.isArray(r[0])?r[0]:[], ms=Array.isArray(r[1])?r[1]:[], clubs=Array.isArray(r[2])?r[2]:[], allPairs=Array.isArray(r[3])?r[3]:[];
       var known={}; (W.PLAT.clubs||[]).forEach(function(c){ known[Number(c.id)]=1; });
@@ -12255,7 +12274,7 @@ W.mePair=function(name,col){
           var gc=clubPal(gid)[0];
           h+='<div style="display:flex;align-items:center;gap:8px;padding:10px 14px 4px">'
             +'<span style="width:10px;height:10px;border-radius:50%;background:'+gc+'"></span>'
-            +'<span style="font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;color:'+gc+'">Partnerships in '+esc(nhBoardName(gid)||"another region")+'</span>'
+            +'<span style="font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;color:'+gc+'">Partnerships in '+esc((typeof W.nsqPlace==="function"?W.nsqPlace(gid):"")||nhBoardName(gid)||"another region")+'</span>'
             +'<span style="font-size:11px;color:#8a8196">\u00b7 '+byGroup[gid].length+'</span></div>';
           /* n101: PLAT'S PARTNERSHIP CARD, COPIED. One card per pair: the name bold, the category as a pill on
              the right (Men's blue, Ladies pink, Mixed green — plat's own colours), then Rating · Matches · Move
@@ -17718,6 +17737,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         }
         return _sg.apply(this,arguments);
       }; })();
+    /* a place as people say it: a division reads "Rovers \u00b7 Div A" */
+    W.nsqPlace=function(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return "";
+      var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
+      return (par && par.parent_id) ? (par.name+" \u00b7 "+me.name) : me.name; };
     /* ---- the Masters room ---- */
     function cssOnce(){
       if(document.getElementById("nsqCss")) return;
