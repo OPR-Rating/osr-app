@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q029";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q030";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -10898,6 +10898,16 @@ async function clRemove(id, label){
   /* n150: fewer matches, and the week's count moved here from the banner — this is where people look for it. */
   /* n159: `bar:false` leaves the heading off — on a pair's own page the list is every match that pairing has
      played, not "recent matches", and the page already says whose matches these are. */
+  function nsqLadderBrk(d,n,scope){   /* Nat-Squash */
+    var all=(d.matches||[]).filter(function(m){ return String(m.event||"").trim()==="Ladder Match"; });
+    var wk=all.filter(function(m){ return ago(m.match_date)<7; }).length, ms=all.slice(0,n||12);
+    return '<div class="brk">'+nhLimeBar("Recent ladder matches"+(wk?(" \u00b7 "+wk+" this week"):""))
+      + (ms.length
+          ? '<div style="max-height:'+(scope==="club"?430:360)+'px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 4px 8px">'+ms.map(function(m){ return nhMatchRow(m,scope); }).join("")+'</div>'
+            + ((all.length>ms.length)?'<div style="padding:7px 10px 9px;text-align:center;font-size:11.5px;color:#8a8196">'+ms.length+' of '+all.length+' \u00b7 scroll for more</div>':'')
+          : '<div style="padding:12px 14px;font-size:13.5px;color:#7a6658">No ladder matches yet. Enter a score with <b>Event: Ladder Match</b> \u2014 beat the pair above you to take their place.</div>')
+      +'</div>';
+  }
   function nhMatchesBrk(d,n,scope,viewer,bar){
     var all=(d.matches||[]); var ms=all.slice(0,n||12); if(!ms.length) return "";
     var wk=all.filter(function(m){ return ago(m.match_date)<7; }).length;
@@ -11972,7 +11982,8 @@ W.mePair=function(name,col){
     var kids=doorPickOrder(kidsOf(C).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); }));
     var back=PAGE+"?club="+C;
     var tile=function(gr){
-      var r=clubRaw(gr.id), href=(PAGE+"?club="+gr.id+"&go=entry&back="+encodeURIComponent("?club="+C)).replace(/'/g,"%27");
+      var _hasKids=(W.PLAT.clubs||[]).some(function(c){ return +c.parent_id===+gr.id; });   /* Nat-Squash: a club -> its divisions */
+      var r=clubRaw(gr.id), href=(PAGE+"?club="+gr.id+(_hasKids?"&go=pick":"&go=entry")+"&back="+encodeURIComponent("?club="+C)).replace(/'/g,"%27");
       return '<button onclick="window.nhNav(\''+nhSafeHref(href)+'\')" style="display:flex;flex-direction:column;justify-content:flex-end;min-height:92px;text-align:left;color:#fff;'
         +'border:2px solid '+cardEdge(r)+';background:'+cardSkin(r)+';background-blend-mode:luminosity,normal;background-origin:border-box;background-clip:border-box;background-repeat:no-repeat;'
         +'border-radius:16px;padding:12px 13px;font:inherit;cursor:pointer;overflow:hidden">'
@@ -13990,7 +14001,7 @@ W.nhOpenPair=function(name){
         /* n166: RECENT MATCHES COMES FIRST, THE RECORDS SIT UNDER THEM. The three things people come for are the
            score, their own page and who played whom; the records are a place you go to afterwards. The strip under
            the header carries a "Records" pill again, so it is one tap from the top. */
-        + nhMatchesBrk(d,12,"club")
+        + nhMatchesBrk(d,12,"club") + nsqLadderBrk(d,12,"club")
         /* n168: no records band on the door — "Ratings · Ladders · Profiles" in the strip opens the records page, where the
            region's three lists sit open and the Global Ledger folds out beneath them. */
         + lastMatchRibbon(d)
@@ -14064,7 +14075,7 @@ W.nhOpenPair=function(name){
            and it is the row people come to the page to use. */
         + nhActions(ink,deep)
         + nhFormBrk(d,ink,"board")
-        + '<div class="cols">'+nhCharts(d,ink)+nhMoversBrk(d,ink,"board") + nhMatchesBrk(d,25,"board") + nhTourBrk(d) + nhCardBrk(d)+'</div>'
+        + '<div class="cols">'+nhCharts(d,ink)+nhMoversBrk(d,ink,"board") + nhMatchesBrk(d,25,"board") + nsqLadderBrk(d,12,"board") + nhTourBrk(d) + nhCardBrk(d)+'</div>'
         /* n195: the switch sits at the foot of the group's own page, where somebody decides this is their group */
         + nhHomeGroupRow()          /* n195: make this my home page */
         + nhFoot(ink,deep,"none")   /* n59: admin lives on the club door only */
