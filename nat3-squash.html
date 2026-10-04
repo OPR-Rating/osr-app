@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q038";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q039";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -18203,6 +18203,21 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       a.setAttribute("style","flex:0 0 auto;display:flex;align-items:center;text-decoration:none;color:#fff;background:rgba(0,0,0,.18);border:1.5px solid rgba(255,255,255,.45);border-radius:99px;padding:7px 12px;font-weight:800;font-size:13px;margin-right:6px");
       a.textContent="\u2039 National"; mp.parentNode.insertBefore(a, mp);
     }catch(e){} }, 700);
+    /* THE SCORE SHEET IN MASTERS (q039, Andre): no "Select group where this match is being played" — the players'
+       ratings decide the division at the save. The box is hidden (its value stays set, so the sheet still proceeds) and one
+       line says so. A tournament sheet keeps its tournament; the box is hidden there too (its group is preset). */
+    setInterval(function(){ try{
+      var scr=document.getElementById("entryScreen"); if(!scr || !scr.classList.contains("active")) return;
+      var box=document.getElementById("platEntryClub"); if(!box) return;
+      var cid=Number(W.PLAT.cid||0); if(!clubOf(cid) && levelOf(cid)!=="province") return;     /* only in the Masters structure */
+      var sel=box.querySelector("select"); if(sel && !sel.value){ var first=Array.prototype.filter.call(sel.options,function(o){ return o.value; })[0]; if(first){ sel.value=first.value; sel.dispatchEvent(new Event("change",{bubbles:true})); } }
+      if(box.style.display!=="none") box.style.display="none";
+      var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===cid; })[0], club=cs.filter(function(c){ return +c.id===+clubOf(cid); })[0];
+      if(me && club && me.id!==club.id){ Array.prototype.forEach.call(scr.querySelectorAll(".header *"),function(x){ if(x.children.length===0 && (x.textContent||"").trim()===me.name) x.textContent=club.name; }); }   /* the club, not a division */
+      if(!document.getElementById("nsqDecideNote")){ var n=document.createElement("div"); n.id="nsqDecideNote"; n.setAttribute("data-plat-keep","1");
+        n.style.cssText="margin:12px 16px 4px;padding:10px 13px;border-radius:12px;background:#fbf1ea;border:1px solid #ecdcd0;color:#3b2a1e;font-size:13.5px";
+        n.textContent="The division is decided by the players\u2019 ratings when you save."; box.parentNode.insertBefore(n, box.nextSibling); }
+    }catch(e){} }, 300);
     /* a place as people say it: a division reads "Rovers \u00b7 Div A" */
     W.nsqPlace=function(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return "";
       var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
