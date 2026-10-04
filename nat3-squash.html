@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q030";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q031";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -10634,6 +10634,13 @@ async function clRemove(id, label){
       body=nhChart(series, col, cur?("now "+cur):null, series.length?series[0]:null, "from")
         +'<div style="font-size:10.5px;color:#8a8196;text-align:right;margin-top:2px">last '+spanN+' match'+(spanN===1?"":"es")+' here</div>';
     }
+    /* n338: THE PLAYER'S OWN LAST 12. The page reads only its board's newest 120 matches, so in a busy group the line
+       held just the matches inside that window (Daniella: 5, though she has played far more). The chart is drawn at
+       once from the page's matches, then redrawn from the player's own last rated matches on this board (one small
+       read per chart), so it always shows their true last 12 here. */
+    var _lid="nhLine"+(++NH_LINE_SEQ);
+    body='<div id="'+_lid+'">'+body+'</div>';
+    setTimeout(function(){ nhLineUpgrade(_lid, mv.name, mv.club||W.PLAT.cid, col, NH_SPAN); }, 0);
     return '<div class="brk"><h2 style="display:flex;align-items:center;gap:8px">'+esc(title)+' '+nhTag()+'</h2>'
       +'<div style="padding:4px 14px 12px">'
       +'<div style="display:flex;align-items:center;gap:11px;padding:4px 0 6px">'
@@ -10644,6 +10651,26 @@ async function clRemove(id, label){
       +(seedOf!=null?'<span style="flex:none;align-self:center;white-space:nowrap;padding:3px 9px;border-radius:999px;font-size:11px;line-height:1.2;font-weight:800;letter-spacing:.02em;color:#fff;background:'+col+'">Initial '+seedOf+'</span>':'')
       +'<span class="val" style="flex:none"><b class="'+(up?"up":"dn")+'" style="font-size:18px">'+(up?"\u25b2 +":"\u25bc ")+Math.round(mv.move)+'</b><span>this week</span></span></div>'
       +body+'</div></div>';
+  }
+  var NH_LINE_SEQ=0;
+  function nhLineUpgrade(id, name, board, col, span){
+    if(!name || !board) return;
+    var like=encodeURIComponent("*"+String(name).replace(/[*,()]/g,"")+"*");
+    var url=SBREST()+"plat_matches?club_id=eq."+board+"&discipline=eq.squash&rating_delta=not.is.null"
+      +"&or=(t1p1.ilike."+like+",t1p2.ilike."+like+",t2p1.ilike."+like+",t2p2.ilike."+like+")"
+      +"&select=match_date,t1p1,t1p2,t2p1,t2p2,rating_delta&order=match_date.desc,id.desc&limit=80";
+    fetch(url).then(J).then(function(rows){
+      if(!Array.isArray(rows) || !rows.length) return;
+      var full=nhTrail(name, rows); if(!full.length) return;
+      var st0=Math.max(0, full.length-span), base=st0>0?full[st0-1]:0;
+      var pts=full.slice(st0).map(function(v){ return v-base; });
+      var ind=(NEW.data&&NEW.data.people||[]).filter(function(x){ return x.full_name===name; })[0];
+      var cur=ind?Math.round(ind.current_rating||ind.seed_rating||0):null;
+      var series=nhAsRatings(pts,cur).map(function(v){ return Math.round(v); });
+      var el=document.getElementById(id); if(!el || !series.length) return;
+      el.innerHTML=nhChart(series, col, cur?("now "+cur):null, series[0], "from")
+        +'<div style="font-size:10.5px;color:#8a8196;text-align:right;margin-top:2px">last '+pts.length+' match'+(pts.length===1?"":"es")+' here</div>';
+    }).catch(function(){});
   }
   function nhCharts(d,ink){
     /* n111: THE FALL CHART CHOSE FROM THE WRONG LIST. Climber and faller were picked from the Movers bracket's
