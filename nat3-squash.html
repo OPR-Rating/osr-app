@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q034";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q035";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -10165,7 +10165,7 @@ async function clRemove(id, label){
       fetch(B+"plat_matches?"+inList+"&discipline=eq.squash&select=id,club_id,match_date,match_type,event,t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,t1_games,t2_games,set_scores,display_t1,display_t2,rating_delta,t1_rating_at,t2_rating_at&order=match_date.desc,id.desc&limit=120").then(J),
       fetch(B+"plat_player_results?"+inList+"&discipline=eq.squash&select=name,club_id,current_rating,initial_rating,sets_played,sets_won&order=current_rating.desc&limit=2000").then(J),
       fetch(B+"plat_squash_v_individuals?"+inList+"&select=id,full_name,club_id,current_rating,seed_rating,pool_seed").then(J).catch(function(){ return []; }),
-      fetch(B+"plat_squash_tournaments?"+inList+"&select=id,name,club_id,active,archived").then(J).catch(function(){ return []; }),
+      fetch(B+"plat_squash_tournaments?club_id=in.("+(typeof W.nsqTourBoards==="function"?W.nsqTourBoards(boards):boards).join(",")+")&select=id,name,club_id,active,archived").then(J).catch(function(){ return []; }),   /* Nat-Squash: + province + national */
       fetch(B+"plat_doubles_results?"+inList+"&discipline=eq.squash&select=category,p1,p2,club_id,combined,sets,sets_won&limit=5000").then(J).catch(function(){ return []; })
     ]).then(function(r){
       var live=(r[3]||[]).filter(function(x){ return x.active&&!x.archived; });
@@ -14657,16 +14657,16 @@ W.nhOpenPair=function(name){
                           : '<div style="font-size:12px;color:#666;padding:6px 0">No groups yet \u2014 make the first one here. A group is where people play.</div>';
       h+='<div id="platSwatch2"></div>';
     }
-    h+='<div style="margin-top:14px;font-weight:700;font-size:13px;color:#444">'+((REG.role==="club")?"New group":"New club or group")+'</div>' 
+    h+='<div style="margin-top:14px;font-weight:700;font-size:13px;color:#444">'+((REG.role==="club")?"New club in this province":"New province or club")+'</div>' 
       /* n11: a CLUB is created only by the register (6001) — the organisation keeps the record of who is in it.
          A club's own code (6003) gets one choice: a group inside its own club. nat_admin refuses it server-side
          too, so this is the polite version of a rule that holds either way. */
       +((REG.role==="club")
-        ? '<select id="platNewParent" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:10px;margin:6px 0 8px"><option value="'+(REG.clubId||0)+'">A group inside '+esc(REG.clubName||"this club")+'</option></select>'
-        : '<select id="platNewParent" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:10px;margin:6px 0 8px"><option value="0">A new CLUB in this register</option>'
-          +(REG.clubs||[]).filter(function(c){ return !c.parent_id; }).map(function(c){ return '<option value="'+c.id+'">A group inside '+esc(c.name)+'</option>'; }).join("")+'</select>') 
-      +'<div style="font-size:12px;color:#666;margin:4px 0 6px">'+((REG.role==="club")?"A group runs its own board, ladder and tournaments, and shares the club\'s players and their one rating.":"A <b>club</b> gets its own door, colour, code, ledger and groups, and shares this register\'s one player base. A <b>group</b> belongs to a club and runs its own ladder and tournaments.")+'</div>' 
-      +'<div style="display:flex;gap:8px;flex-wrap:wrap"><input id="platNewName" placeholder="Group name" style="flex:2;min-width:150px;padding:10px 12px;border:1.5px solid #ddd;border-radius:10px"><input id="platNewPin" inputmode="numeric" placeholder="Its code" style="flex:1;min-width:100px;padding:10px 12px;border:1.5px solid #ddd;border-radius:10px"></div>'
+        ? '<select id="platNewParent" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:10px;margin:6px 0 8px"><option value="'+(REG.clubId||0)+'">A club inside '+esc(REG.clubName||"this province")+'</option></select>'
+        : '<select id="platNewParent" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:10px;margin:6px 0 8px"><option value="0">A new PROVINCE in this register</option>'
+          +(REG.clubs||[]).filter(function(c){ return !c.parent_id; }).map(function(c){ return (c.name==="National events")?"":'<option value="'+c.id+'">A club inside '+esc(c.name)+'</option>'; }).join("")+'</select>') 
+      +'<div style="font-size:12px;color:#666;margin:4px 0 6px">'+((REG.role==="club")?"A club gets its own door, code and ledger; in its Club admin \u2192 Masters it creates its divisions.":"A <b>province</b> (KZN, WP\u2026) gets its own door, code and ledger and holds its clubs. A <b>club</b> inside a province gets its own door and code; it creates its divisions in Club admin \u2192 Masters.")+'</div>' 
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap"><input id="platNewName" placeholder="Name" style="flex:2;min-width:150px;padding:10px 12px;border:1.5px solid #ddd;border-radius:10px"><input id="platNewPin" inputmode="numeric" placeholder="Its code" style="flex:1;min-width:100px;padding:10px 12px;border:1.5px solid #ddd;border-radius:10px"></div>'
       +'<div style="margin-top:8px;font-size:12px;color:#666">Colour</div>'+oprPurpleChoice("window.platPickNew('#D35400')")
       +moreColoursButton("New")+nhSpectrum("window.platPickNew","New")
       +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">'
@@ -17940,6 +17940,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     W.__nsqSaveBoard=function(body, cid){
       try{
         var m=(body&&body.match)||{}, cs=W.PLAT.clubs||[];
+        var ev=String(m.event||"Social").trim(); if(ev!=="Social" && ev!=="Ladder Match") return cid;   /* a tournament match stays with its tournament */
         var me=cs.filter(function(c){ return +c.id===+cid; })[0]; if(!me) return cid;
         var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
         var club=(par&&par.parent_id)?par:(cs.some(function(c){ return +c.parent_id===+me.id; })?me:null); if(!club) return cid;
@@ -18054,6 +18055,78 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       }).catch(function(){});
     }
     setInterval(function(){ try{ zoneNote(); }catch(e){} }, 1200);
+    /* ---- TOURNAMENT LEVELS (q035) ----
+       National tournaments live on a hidden top-level board "National events" (the database needs a board; the register
+       is not one); provincial ones on the province; club ones on the club. A door sees its own, its province's and the
+       national ones. A tournament score is entered on the NORMAL sheet from the front door (live umpire, View Live). */
+    var NAT_NAME="National events";
+    function natHost(){ return (W.PLAT.clubs||[]).filter(function(c){ return c.name===NAT_NAME && !c.parent_id; })[0]; }
+    function ancestors(id){ var cs=W.PLAT.clubs||[], out=[], cur=cs.filter(function(c){ return +c.id===+id; })[0];
+      while(cur && cur.parent_id){ cur=cs.filter(function(c){ return +c.id===+cur.parent_id; })[0]; if(cur) out.push(+cur.id); } return out; }
+    W.nsqTourBoards=function(boards){ var set={}; (boards||[]).forEach(function(b){ set[+b]=1; ancestors(b).forEach(function(a){ set[a]=1; }); });
+      var h=natHost(); if(h) set[+h.id]=1; return Object.keys(set).map(Number); };
+    /* the hidden national board never shows as a province */
+    setInterval(function(){ try{ var nh=document.getElementById("nh"); if(!nh) return; var h=natHost(); if(!h || +W.PLAT.cid===+h.id) return;
+      Array.prototype.forEach.call(nh.querySelectorAll("button,a"),function(x){ if((x.textContent||"").trim().indexOf(NAT_NAME)===0 || new RegExp("^\\s*"+NAT_NAME.charAt(0)+"\\s*"+NAT_NAME).test(x.textContent||"")){ var card=x.closest(".rail-card,.gcard,.brk>div,div[class*=card]")||x; card.style.display="none"; } }); }catch(e){} }, 800);
+    function tourHref(t, back){
+      var cs=W.PLAT.clubs||[], host=+t.club_id, hasKids=cs.some(function(c){ return +c.parent_id===host; });
+      var pg=(location.pathname.split("/").pop()||"nat3-squash.html");
+      return pg+"?club="+host+(hasKids?"&board=1":"")+"&go=entry&tn="+encodeURIComponent(t.name)+"&back="+encodeURIComponent(back);
+    }
+    function levelTag(id){ var h=natHost(); if(h && +h.id===+id) return "NATIONAL"; var cs=W.PLAT.clubs||[], c=cs.filter(function(x){ return +x.id===+id; })[0]; return c?String(c.name).toUpperCase():""; }
+    W.nsqTourScore=function(){
+      cssOnce(); W.nsqClose();
+      var cid=Number(W.PLAT.cid||0), club=clubOf(cid)||cid, cs=W.PLAT.clubs||[];
+      var own=[club].concat(cs.filter(function(c){ return +c.parent_id===+club; }).map(function(c){ return +c.id; }));
+      var boards=W.nsqTourBoards(own);
+      var o=document.createElement("div"); o.id="nsq"; document.body.appendChild(o);
+      o.innerHTML='<div class="hd"><button class="x" onclick="window.nsqClose()">Close</button><div style="font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.85">ENTER A TOURNAMENT SCORE</div><h1>Which tournament?</h1><div>Loading\u2026</div></div>';
+      rest("plat_squash_tournaments?club_id=in.("+boards.join(",")+")&select=id,name,club_id,divisions,active,archived&order=name.asc").then(function(ts){
+        ts=(Array.isArray(ts)?ts:[]).filter(function(t){ return t.active && !t.archived; });
+        var back="?club="+cid, h='<div class="hd"><button class="x" onclick="window.nsqClose()">Close</button><div style="font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.85">ENTER A TOURNAMENT SCORE</div><h1>Which tournament?</h1><div style="font-size:13px;opacity:.9">Tap your division \u2014 the normal score sheet opens with the tournament chosen</div></div>';
+        if(!ts.length) h+='<div class="card"><div class="in" style="color:#7a6658">No tournaments running for this club, its province or nationally.</div></div>';
+        ts.forEach(function(t){ var divs=String(t.divisions||"").split(",").map(function(x){ return x.trim(); }).filter(Boolean);
+          h+='<div class="card"><h2>'+e(levelTag(t.club_id))+' \u00b7 '+e(t.name)+'</h2><div class="in" style="display:flex;flex-wrap:wrap;gap:8px">'
+            +(divs.length?divs:["Enter a score"]).map(function(d){ return '<a href="'+tourHref(t,back)+'" onclick="window.__nsqTourDiv='+JSON.stringify(d).replace(/"/g,"&quot;")+';window.nsqClose();return window.nhBack?window.nhNav(this.href)||false:true" style="text-decoration:none;padding:10px 14px;border-radius:999px;background:#D35400;color:#fff;font-weight:800;font-size:13.5px">'+e(d)+'</a>'; }).join("")
+            +'</div></div>'; });
+        o.innerHTML=h+'<div style="height:40px"></div>';
+      }).catch(function(){});
+    };
+    /* the pill on the club door and on a division's page, under the score buttons */
+    function tourPill(){
+      var q=new URLSearchParams(location.search); if(q.get("go")) return;
+      var nh=document.getElementById("nh"); if(!nh || nh.querySelector("#nsqTourPill")) return;
+      var cid=Number(W.PLAT.cid||0); if(!clubOf(cid)) return;
+      var anchorEl=null; Array.prototype.forEach.call(nh.querySelectorAll("button"),function(b){ if(!anchorEl && /Enter (your|a score)/.test(b.textContent||"")) anchorEl=b; });
+      if(!anchorEl) return; var row=anchorEl.parentNode; if(!row || !row.parentNode) return;
+      var p=document.createElement("div"); p.id="nsqTourPill"; p.setAttribute("data-plat-keep","1"); p.style.cssText="margin:10px 12px 2px";
+      p.innerHTML='<button onclick="window.nsqTourScore()" style="display:block;width:100%;padding:12px;border-radius:999px;border:2px solid #D35400;background:#fff;color:#D35400;font:inherit;font-weight:800;font-size:15px">\ud83c\udfc6 Enter a tournament score</button>';
+      row.parentNode.insertBefore(p, row.nextSibling);
+    }
+    setInterval(function(){ try{ tourPill(); }catch(e){} }, 700);
+    /* Club admin: create a provincial tournament (on a province) / a national tournament (anywhere, register code) */
+    W.nsqNationalTour=function(){
+      var h=natHost(), pg=(location.pathname.split("/").pop()||"nat3-squash.html");
+      if(h){ W.nhNav(pg+"?club="+h.id+"&go=admin&back="+encodeURIComponent("?club="+W.PLAT.cid)); return; }
+      var pin=W.prompt("National tournaments live on the register's \u201cNational events\u201d board. Enter the national (register) code to create it:"); if(!pin) return;
+      fn("nat_admin",{action:"add_club",admin_pin:pin,pool_id:Number(W.PLAT.pool||0),name:NAT_NAME,club_admin_pin:pin,disciplines:["squash"],colour:"#2c3e50"}).then(function(r){
+        if(!r||!r.ok){ W.alert("Not created: "+((r&&r.error)||"check the national code")); return; }
+        location.href=pg+"?club="+(r.id||r.club_id||(r.club&&r.club.id))+"&go=admin";
+      });
+    };
+    W.nsqProvincialTour=function(){ var pg=(location.pathname.split("/").pop()||"nat3-squash.html"); W.nhNav(pg+"?club="+W.PLAT.cid+"&board=1&go=admin&back="+encodeURIComponent("?club="+W.PLAT.cid)); };
+    var _ap2=W.nhAdminPage;
+    if(typeof _ap2==="function") W.nhAdminPage=function(){ var r=_ap2.apply(this,arguments);
+      try{ var w=document.getElementById("nh"), band=w&&w.querySelector(".band"); if(!band || document.getElementById("nsqTourAdmin")) return r;
+        var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0], province=me && !me.parent_id && me.name!==NAT_NAME;
+        var card=document.createElement("div"); card.id="nsqTourAdmin"; card.className="brk";
+        var btn=function(label,sub,fnName){ return '<button onclick="window.'+fnName+'()" style="width:100%;text-align:left;display:flex;align-items:center;gap:10px;padding:12px 14px;background:none;border:0;border-top:1px solid #f0ecf6;font:inherit;cursor:pointer"><span style="flex:1"><b style="display:block;font-size:15px">'+label+'</b><span style="font-size:12.5px;color:#7a6658">'+sub+'</span></span><span style="color:#D35400;font-weight:800">\u203a</span></button>'; };
+        card.innerHTML='<h2>Tournaments</h2>'
+          +(province?btn("Provincial tournaments","create and run "+e(me.name)+"\u2019s tournaments \u2014 the province\u2019s code","nsqProvincialTour"):"")
+          +btn("National tournaments","the register\u2019s tournaments, shown on every door \u2014 the national code","nsqNationalTour");
+        var mc=document.getElementById("nsqCard"); (mc||band).parentNode.insertBefore(card, (mc||band).nextSibling);
+      }catch(e2){}
+      return r; };
     /* a place as people say it: a division reads "Rovers \u00b7 Div A" */
     W.nsqPlace=function(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return "";
       var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
