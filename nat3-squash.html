@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q035";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q036";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -10330,6 +10330,10 @@ async function clRemove(id, label){
    carries a thin edge in the board's colour and a tinted heading strip, so the page belongs to the group you
    are standing in. The tint is the same colour at 7%, so it never fights the numbers. */
       "#nh .brk{background:#fff;border:1px solid #e6e0ee;border-radius:14px;margin:12px 12px 0;overflow:hidden;box-shadow:0 1px 3px rgba(26,16,48,.05)}"
+      /* n340: an OPEN list — the bar is its own rounded strip, the cards sit on the page; no box around them */
+      +"#nh .brk.nhOpenList{background:transparent;border:0;box-shadow:none;overflow:visible}"
+      +"#nh .brk.nhOpenList > div:first-child{border-radius:12px;border:1px solid rgba(0,0,0,.10)}"
+      +"#nh .brk.nhOpenList > h2:first-child{border-radius:12px;border:1px solid rgba(0,0,0,.08);margin-bottom:4px}"
      +"#nh .brk h2{color:#4a4256}"
      +"#nh .more{color:var(--nhc,#D35400);background:#fcfbfd}"
      +"#nh .brk h2{font-size:13px;letter-spacing:.05em;text-transform:uppercase;font-weight:800;color:#5b2d8e;margin:0;padding:12px 14px 5px}"
@@ -10831,8 +10835,9 @@ async function clRemove(id, label){
     var id="m"+W.__nhRowN+"_"+(m.id||0);
     var pillHTML=(scope!=="one"&&bd)?('<span style="display:inline-block;background:'+col+';color:#fff;border-radius:99px;'
       +'padding:2px 9px;font-size:10px;font-weight:800;margin-right:6px;vertical-align:middle">'+esc(bd.name)+'</span>'):'';
-    /* n339: NO BOX INSIDE A BOX (Andre): a match row sits flat in its bracket — a hairline between rows, no card */
-    return '<div style="border:0;border-top:1px solid #f0ecf6;border-radius:0;padding:9px 6px;margin:0;background:#fff">'
+    /* n340: EACH RESULT IN ITS OWN CARD, AS OPR SHOWS IT (Andre): the card stays; it is the box AROUND the list that goes
+       (see nhOpenList), so a result never reads as a box inside a box */
+    return '<div style="border:1px solid #e3ddea;border-radius:12px;padding:8px 6px;margin:7px 0;background:#fff;box-shadow:0 1px 2px rgba(26,16,48,.04)">'
       +'<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#8a8196;justify-content:center;flex-wrap:wrap">'
       + pillHTML
       +'<span>'+esc(String(m.match_date||"").slice(0,10))+'</span>'
@@ -10929,7 +10934,7 @@ async function clRemove(id, label){
   function nsqLadderBrk(d,n,scope){   /* Nat-Squash */
     var all=(d.matches||[]).filter(function(m){ return String(m.event||"").trim()==="Ladder Match"; });
     var wk=all.filter(function(m){ return ago(m.match_date)<7; }).length, ms=all.slice(0,n||12);
-    return '<div class="brk">'+nhLimeBar("Recent ladder matches"+(wk?(" \u00b7 "+wk+" this week"):""))
+    return '<div class="brk nhOpenList">'+nhLimeBar("Recent ladder matches"+(wk?(" \u00b7 "+wk+" this week"):""))
       + (ms.length
           ? '<div style="max-height:'+(scope==="club"?430:360)+'px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 4px 8px">'+ms.map(function(m){ return nhMatchRow(m,scope); }).join("")+'</div>'
             + ((all.length>ms.length)?'<div style="padding:7px 10px 9px;text-align:center;font-size:11.5px;color:#8a8196">'+ms.length+' of '+all.length+' \u00b7 scroll for more</div>':'')
@@ -10939,7 +10944,7 @@ async function clRemove(id, label){
   function nhMatchesBrk(d,n,scope,viewer,bar){
     var all=(d.matches||[]); var ms=all.slice(0,n||12); if(!ms.length) return "";
     var wk=all.filter(function(m){ return ago(m.match_date)<7; }).length;
-    return '<div class="brk">'+((bar===false)?"":nhLimeBar("Recent matches"+(wk?(" \u00b7 "+wk+" this week"):"")+(NHEG?" \u00b7 example":"")))
+    return '<div class="brk nhOpenList">'+((bar===false)?"":nhLimeBar("Recent matches"+(wk?(" \u00b7 "+wk+" this week"):"")+(NHEG?" \u00b7 example":"")))
       /* n230: the row was a card inside a card — the list keeps only a hair of side padding so a match line
          gets the width OPR gives it */
       +'<div style="max-height:'+(scope==="club"?430:360)+'px;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 4px 8px">'
@@ -11004,7 +11009,7 @@ async function clRemove(id, label){
     var list=(d.tours&&d.tours.length)?d.tours:(d.tour?[d.tour]:[]);
     W.__nhTours=list;   /* n144: so a row's button can open that tournament */
     if(!list.length) return "";
-    return '<div class="brk">'+nhLimeBar("Tournaments"+(list.length>1?(" \u00b7 "+list.length+" running"):""))
+    return '<div class="brk nhOpenList">'+nhLimeBar("Tournaments"+(list.length>1?(" \u00b7 "+list.length+" running"):""))
       +'<div style="padding:6px 10px 10px">'
       + list.map(function(t,k){
           var nm=String(t.name||"").toLowerCase();
@@ -12320,7 +12325,7 @@ W.mePair=function(name,col){
           if(myGroup && Number(a)===Number(myGroup)) return -1; if(myGroup && Number(b)===Number(myGroup)) return 1;
           return byGroup[b].length-byGroup[a].length; });
         /* n134: the partnerships roll up — tap the heading to open them (a member may have fifty) */
-        h+='<div class="brk nhRoll" id="mePartners"><h2 onclick="window.mePartToggle()" style="display:flex;align-items:center;gap:8px;cursor:pointer">'
+        h+='<div class="brk nhRoll nhOpenList" id="mePartners"><h2 onclick="window.mePartToggle()" style="display:flex;align-items:center;gap:8px;cursor:pointer">'
           +(viewing?"Partnerships":"My partnerships")+' \u00b7 '+st.partners.length
           +nhExp("mePartCaret",null,"margin-left:auto")+'</h2><div id="mePartBody" style="display:none">';
         order.forEach(function(gid){
@@ -13156,7 +13161,7 @@ W.mePair=function(name,col){
       + (sc.wide ? "" : (function(){
           var wb=PAGE+"?club="+sc.C+"&go=records&all=1";
           var scW={wide:true, C:sc.C, view:"", col:"#2f2f2f", deep:"#141414", title:"Global Ledger", boards:sc.boards, base:wb};
-          return '<div class="brk nhRoll" id="recGlobal" style="margin-top:14px">'
+          return '<div class="brk nhRoll nhOpenList" id="recGlobal" style="margin-top:14px">'
             +'<h2 onclick="window.recGlobalToggle()" style="display:flex;align-items:center;cursor:pointer;gap:8px">Global Ledger'
             + nhExp("recGlobalCaret","#2f2f2f","margin-left:auto")+'</h2>'
             +'<div id="recGlobalBody" style="display:none;padding:2px 0 10px">'
