@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q036";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q037";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -13049,9 +13049,9 @@ W.mePair=function(name,col){
     var ks=doorSorted(W.__doorKids||[]), hid=doorHidden();
     var on=ks.filter(function(g){ return hid.indexOf(Number(g.id))<0; });
     if(!ks.length) return '<div style="margin:10px 12px 0;background:#fff7ed;border:1.5px solid #f59e0b;border-radius:14px;padding:13px 15px;line-height:1.5">'
-      +'<b style="display:block;font-size:14.5px;color:#7c2d12;margin-bottom:3px">Create a group to get started</b>'
-      +'<span style="font-size:13px;color:#7c2d12">A group is where people play \u2014 the Tuesday social, a ladies\' morning, a club night. '
-      +'Each one has its own page, ladder and court card. Make the first in <b>Club admin \u2192 Region Ledger</b>.</span></div>';
+      +'<b style="display:block;font-size:14.5px;color:#7c2d12;margin-bottom:3px">This club\'s divisions are not set up yet</b>'
+      +'<span style="font-size:13px;color:#7c2d12">Divisions come from the national divisions \u2014 nobody chooses them. A new club gets them by itself; '
+      +'if they are missing, open <b>Club admin \u2192 Masters \u2192 Create divisions</b>.</span></div>';
     if(!on.length) return '<div style="margin:10px 14px 0;font-size:12.5px;color:#7a6f8a">No groups shown \u2014 tap <b>Groups</b> to choose.</div>';
     return on.map(function(g){ return W.__doorCard(g); }).join("");
   }
@@ -13911,8 +13911,8 @@ W.nhOpenPair=function(name){
       if(!kids.length){
         places+='<div class="kind">Groups</div>'
           +'<div style="padding:4px 10px 10px;font-size:12.5px;color:#7c2d12;line-height:1.55">'
-          +'<b>None yet \u2014 create a group to get started.</b> A group is where people play: its own page, ladder, '
-          +'tournaments and court cards, for a regular evening or a section of the club. <b>Club admin</b> makes one.</div>';
+          +'<b>No divisions yet.</b> They come from the national divisions \u2014 a new club gets them by itself; '
+          +'if they are missing, <b>Club admin \u2192 Masters \u2192 Create divisions</b>.</div>';
       }
       if(kids.length){
         places+='<div class="kind">Groups \u00b7 each runs itself</div>';
@@ -18132,6 +18132,58 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var mc=document.getElementById("nsqCard"); (mc||band).parentNode.insertBefore(card, (mc||band).nextSibling);
       }catch(e2){}
       return r; };
+    /* ---- ONE STRUCTURE (q037): national door (?pool=) -> province -> club -> divisions ----
+       (1) a club created inside a province gets its divisions at once, from the national bands (with its own code);
+       (2) the register's page reads as the NATIONAL door: provinces, their clubs; the hidden National events board is
+           offered as "National tournaments", not as a province;
+       (3) a province's door carries "‹ National" back to it. */
+    (function(){ var f0=W.fetch; W.fetch=function(u,i){ var url=String(u&&u.url?u.url:u), p=f0.apply(this,arguments);
+      if(/\/functions\/v1\/nat_admin/.test(url)){ var body={}; try{ body=JSON.parse((i&&i.body)||"{}"); }catch(e){}
+        if(body.action==="add_club" && Number(body.parent_id) && body.name!==NAT_NAME){
+          var cs=W.PLAT.clubs||[], par=cs.filter(function(c){ return +c.id===+body.parent_id; })[0];
+          var parIsProvince=par && !par.parent_id && par.name!==NAT_NAME;
+          var isBandName=/^Div [A-Z]$/i.test(String(body.name||"").trim());
+          if(parIsProvince && !isBandName) p=p.then(function(res){ res.clone().json().then(function(j){
+            var club=j&&j.ok&&j.club; if(!club||!club.id) return;
+            var P=Number(body.pool_id||W.PLAT.pool||0), code=String(body.club_admin_pin||body.admin_pin||"");
+            rest("nsq_division_bands?pool_id=eq."+P+"&select=label,colour,sort&order=sort.asc").then(function(bs){
+              bs=Array.isArray(bs)?bs:[]; if(!bs.length){ toast2(club.name+" created \u2014 save the national divisions first, then Club admin \u2192 Masters \u2192 Create divisions."); return; }
+              var made=0, step=function(k){ if(k>=bs.length){ toast2(club.name+": "+made+" division"+(made===1?"":"s")+" created from the national divisions"); return; }
+                return fn("nat_admin",{action:"add_club",admin_pin:code,pool_id:P,name:bs[k].label,club_admin_pin:code,disciplines:["squash"],colour:bs[k].colour,parent_id:club.id}).then(function(r){ if(r&&r.ok) made++; return step(k+1); }); };
+              step(0);
+            });
+          }).catch(function(){}); return res; });
+        }
+      }
+      return p; }; })();
+    /* the register's page as the national door */
+    function natDoor(){
+      var q=new URLSearchParams(location.search); if(!q.get("pool") || q.get("club")&&q.get("club")!=="0" || q.get("go")) return;
+      var nh=document.getElementById("nh"); if(!nh) return;
+      Array.prototype.forEach.call(nh.querySelectorAll("div"),function(card){
+        if(card.dataset.nsqNat) return; var h=card.querySelector(":scope > div b, :scope > div span"); 
+        if(card.children.length>=2 && /^\s*National events/.test((card.textContent||"").trim()) && card.offsetHeight>80 && card.offsetHeight<400){ card.style.display="none"; card.dataset.nsqNat="1"; } });
+      var walker=document.createTreeWalker(nh, NodeFilter.SHOW_TEXT, null), t, L=[]; while((t=walker.nextNode())) L.push(t);
+      L.forEach(function(x){ var v=x.nodeValue, o=v;
+        var _nh=natHost(); v=v.replace(/\b(\d+) regions\b/g,function(m0,n){ var k=Number(n)-(_nh?1:0); return k+(k===1?" province":" provinces"); }).replace(/\b1 regions\b/g,"1 province").replace(/\b(\d+) divisions\b/g,function(){ var cs=W.PLAT.clubs||[], prov={}; cs.forEach(function(c){ if(!c.parent_id && c.name!==NAT_NAME) prov[+c.id]=1; }); var k=cs.filter(function(c){ return prov[+c.parent_id]; }).length; return k+(k===1?" club":" clubs"); }).replace(/Region Ledger admin/g,"Province ledger").replace(/\bNo divisions yet\b/g,"No clubs yet");
+        if(v!==o) x.nodeValue=v; });
+      if(!nh.querySelector("#nsqNatTours")){ var gl=Array.prototype.filter.call(nh.querySelectorAll("a,button"),function(x){ return /Global Ledger admin/.test(x.textContent||""); })[0];
+        if(gl){ var b2=document.createElement(gl.tagName==="A"?"a":"button"); b2.id="nsqNatTours"; b2.className=gl.className; b2.setAttribute("style",gl.getAttribute("style")||""); b2.textContent="National tournaments";
+          if(b2.tagName==="A") b2.href="javascript:void(0)"; b2.onclick=function(ev){ if(ev) ev.preventDefault(); W.nsqNationalTour(); return false; }; gl.parentNode.insertBefore(b2, gl.nextSibling); } }
+    }
+    setInterval(function(){ try{ natDoor(); }catch(e){} }, 600);
+    /* a province's door: "‹ National" */
+    setInterval(function(){ try{
+      var q=new URLSearchParams(location.search); if(q.get("go")) return;
+      var nh=document.getElementById("nh"); if(!nh || nh.querySelector("#nsqUpNat")) return;
+      var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0];
+      if(!me || me.parent_id || me.name===NAT_NAME || !cs.some(function(c){ return +c.parent_id===+me.id; })) return;
+      var mp=Array.prototype.filter.call(nh.querySelectorAll(".band a"),function(a){ return /My page/.test(a.textContent||""); })[0]; if(!mp) return;
+      var a=document.createElement("a"); a.id="nsqUpNat"; var pg=(location.pathname.split("/").pop()||"nat3-squash.html");
+      a.href=pg+"?pool="+Number(W.PLAT.pool||0); a.onclick=function(){ return W.nhBack?W.nhBack(this.href):true; };
+      a.setAttribute("style","flex:0 0 auto;display:flex;align-items:center;text-decoration:none;color:#fff;background:rgba(0,0,0,.18);border:1.5px solid rgba(255,255,255,.45);border-radius:99px;padding:7px 12px;font-weight:800;font-size:13px;margin-right:6px");
+      a.textContent="\u2039 National"; mp.parentNode.insertBefore(a, mp);
+    }catch(e){} }, 700);
     /* a place as people say it: a division reads "Rovers \u00b7 Div A" */
     W.nsqPlace=function(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return "";
       var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
