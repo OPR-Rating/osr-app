@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q041";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q042";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -11248,7 +11248,10 @@ async function clRemove(id, label){
     var w=nhWrap(); if(!w) return;
     try{ nhTrailPush("homeScreen","admin"); }catch(e){}   /* n317: a view of its own — back returns here */
     nhCSS();
-    var C=(W.PLAT.parentId||W.PLAT.cid), kids=kidsOf(C).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+    var C=(function(){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0]; if(!me) return (W.PLAT.parentId||W.PLAT.cid);
+      if(!me.parent_id) return me.id;                                                         /* a province: its own */
+      var par=cs.filter(function(c){ return +c.id===+me.parent_id; })[0];
+      return (par && par.parent_id) ? par.id : me.id; })(), kids=kidsOf(C).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });   /* Nat-Squash: club = its own; division = its club */
     var club=(W.PLAT.clubs||[]).find(function(c){ return Number(c.id)===Number(C); })||{id:C,name:W.PLAT.name};
     var pill=function(label,sub,col,onclick){
       return '<button class="row" onclick="'+onclick+'">'
@@ -18191,6 +18194,27 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           if(b2.tagName==="A") b2.href="javascript:void(0)"; b2.onclick=function(ev){ if(ev) ev.preventDefault(); W.nsqNationalTour(); return false; }; gl.parentNode.insertBefore(b2, gl.nextSibling); } }
     }
     setInterval(function(){ try{ natDoor(); }catch(e){} }, 600);
+    /* q042 words on a club's / province's admin page: "Region Ledger" -> "Club ledger" / "Province ledger" */
+    setInterval(function(){ try{
+      var nh=document.getElementById("nh"); if(!nh) return; var lv=levelOf(Number(W.PLAT.cid||0)); if(lv!=="club" && lv!=="province" && lv!=="division") return;
+      var word=(lv==="province")?"Province ledger":"Club ledger", place=(lv==="province")?"province":"club";
+      var walker=document.createTreeWalker(nh, NodeFilter.SHOW_TEXT, null), t, L=[]; while((t=walker.nextNode())) L.push(t);
+      L.forEach(function(x){ var v=x.nodeValue, o=v; v=v.replace(/Region Ledger/g, word).replace(/REGION LEDGER/g, word.toUpperCase()).replace(/this region has/g, "this "+place+" has"); if(v!==o) x.nodeValue=v; });
+    }catch(e){} }, 500);
+    /* q042 NAVIGATION: from the national page, every ledger returns to the national page; the hidden National events
+       board is never a door (its tournament admin and tournament score sheets excepted). */
+    function natBack(href){ var P=Number(W.PLAT.pool||0); return String(href||"").replace(/&from=\d+/,"").replace(/&back=[^&]*/,"")+"&back="+encodeURIComponent("?pool="+P); }
+    setInterval(function(){ try{
+      var nh=document.getElementById("nh"); if(!nh || Number(W.PLAT.cid||0)!==0) return;
+      Array.prototype.forEach.call(nh.querySelectorAll("a[href*='go=admin']"),function(a){ if(a.dataset.nsqBack) return; a.setAttribute("href", natBack(a.getAttribute("href"))); a.dataset.nsqBack="1"; });
+    }catch(e){} }, 500);
+    setInterval(function(){ try{
+      var h=natHost(); if(!h || Number(W.PLAT.cid||0)!==+h.id) return;
+      var go=new URLSearchParams(location.search).get("go")||"";
+      if(go==="admin" || go==="entry" || go==="ledger") return;                     /* its tournament admin / a tournament sheet */
+      var pg=(location.pathname.split("/").pop()||"nat3-squash.html"), P=Number(W.PLAT.pool||0);
+      if(typeof W.nhNav==="function") W.nhNav(pg+"?pool="+P, {replace:true}); else location.replace(pg+"?pool="+P);
+    }catch(e){} }, 400);
     /* THE NATIONAL PAGE AS A PROPER PAGE (q041, Andre): no pills in the header — a "Provinces" section with the province
        cards, and a "National" section with the national rooms as rows (Global Ledger, Masters divisions, National
        tournaments, Global records), the same look as a club's admin. */
@@ -18212,7 +18236,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         +'<span style="flex:1;min-width:0"><b style="display:block;font-size:15px;color:#1f1a2b">'+label+'</b><span style="font-size:12.5px;color:#7a6658">'+sub+'</span></span><span style="color:#3a3a3a;font-weight:800">\u203a</span></a>'; };
       var regName=((band.querySelector("h1")||{}).textContent||W.PLAT.name||"the register").trim();
       card.innerHTML='<h2>National \u00b7 '+e(regName)+'</h2>'
-        +r("\u2699","Global Ledger","every province, club and member \u2014 the national code",'href="'+gl.getAttribute("href")+'"')
+        +r("\u2699","Global Ledger","every province, club and member \u2014 the national code",'href="'+String(gl.getAttribute("href")||"").replace(/&from=\d+/,"")+'&back='+encodeURIComponent("?pool="+Number(W.PLAT.pool||0))+'"')   /* leaving it returns HERE */
         +r("\u25a4","Masters divisions","the master list of divisions, the gap and the transition zone",'href="javascript:void(0)" onclick="window.nsqOpen(0);return false"')
         +r("\ud83c\udfc6","National tournaments","the register\u2019s own tournaments, shown on every door",'href="javascript:void(0)" onclick="window.nsqNationalTour();return false"')
         +(gr?r("\u2630","Global records","every member and pair across the register, with where they come from",'href="'+gr.getAttribute("href")+'"'):"");
@@ -18221,6 +18245,16 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var host=lastProv||band; host.parentNode.insertBefore(card, host.nextSibling);
     }
     setInterval(function(){ try{ natPage(); }catch(e){} }, 600);
+    /* NATIONAL EVENTS IS NEVER A DOOR (q042, Andre: "I end here but I can't go anywhere"): it only holds national
+       tournaments. Any route that lands on it goes to the national page — except its own tournament admin and a
+       tournament score sheet. */
+    setInterval(function(){ try{
+      var h=natHost(); if(!h || +W.PLAT.cid!==+h.id) return;
+      var q=new URLSearchParams(location.search), go=q.get("go")||"";
+      if(go==="admin" || go==="entry") return;
+      var pg=(location.pathname.split("/").pop()||"nat3-squash.html");
+      if(typeof W.nhNav==="function") W.nhNav(pg+"?pool="+Number(W.PLAT.pool||0), {replace:true}); else location.replace(pg+"?pool="+Number(W.PLAT.pool||0));
+    }catch(e){} }, 300);
     /* a province's door: "‹ National" */
     setInterval(function(){ try{
       var q=new URLSearchParams(location.search); if(q.get("go")) return;
