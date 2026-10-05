@@ -652,7 +652,7 @@
   // unrewritten and 404'd against the platform, and whatever boot chain it sat in stopped — which is how a
   // name picker ends up empty with no obvious error.
   var DISC_TABLES={players:1,matches:1,player_results:1,doubles_results:1,live_matches:1};
-  var LANDING=(!q.has("club") && POOLQ>0);   // PLAT p3: the door — pick your club
+  var LANDING=((!q.has("club") || (window.NEWAPP && CID===0 && !q.get("go") && !q.get("nat"))) && POOLQ>0);   // PLAT p3: the door — pick your club; n344 (new app only): club 0 with no task too
   var BOARDQ=q.has("board");                             // NAT: open a club's own board, not its door
   var NATQ=parseInt(q.get("nat")||"0",10)||0;             // NAT: the ledger scoped to this club and its groups
   var W=window; W.PLAT={cid:CID,pool:POOLQ,clubs:[],poolName:"",name:"",ready:null,landing:LANDING,
@@ -993,7 +993,7 @@ st0.textContent += "html{overflow-y:scroll}";   // p98: the scrollbar's space is
     if(raw && !/^\d+$/.test(raw)){ var kn=null; try{ kn=localStorage.getItem("nat_slug_"+raw.toLowerCase()); }catch(e){} if(kn && /^\d+$/.test(kn)) raw=kn; }
     CID=parseInt(raw||"0",10)||0;
     POOLQ=parseInt(qq.get("pool")||"0",10)||0;
-    LANDING=(!qq.has("club") && POOLQ>0);
+    LANDING=((!qq.has("club") || (window.NEWAPP && CID===0 && !qq.get("go") && !qq.get("nat"))) && POOLQ>0);   /* n344 (new app only) */
     BOARDQ=qq.has("board");
     NATQ=parseInt(qq.get("nat")||"0",10)||0;
     var keepClubs=W.PLAT.clubs, keepPool=W.PLAT.pool, keepPoolName=W.PLAT.poolName, keepOrg=W.PLAT.orgId;
@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q051";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q052";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -16666,6 +16666,10 @@ W.nhOpenPair=function(name){
   }
   W.nhNav=function(url,opts){
     opts=opts||{};
+    /* n344: "?club=0&pool=P" with nothing asked of it IS the register page — go to its own address, never the parent's
+       old ledger home ("Club Overview"). */
+    try{ var _u=String(url||""), _i=_u.indexOf("?"); if(_i>=0){ var _q=new URLSearchParams(_u.slice(_i+1));
+      if(_q.get("club")==="0" && _q.get("pool") && !_q.get("go") && !_q.get("nat")) url=_u.slice(0,_i)+"?pool="+_q.get("pool"); } }catch(e){}
     var p=null, shape=null;
     try{ p=nhParseUrl(url); shape=nhShape(p.q); }catch(e){ shape=null; }
     if(!shape || !nhSamePage(p.path) || !nhOnShellPage()){
