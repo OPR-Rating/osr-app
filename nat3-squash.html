@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q042";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q043";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -13293,7 +13293,7 @@ W.mePair=function(name,col){
         /* n178: a plain list, like Group members — the card and its coloured heading made it read as a table.
            The group pill stays on every row: it is where that member has played. */
         + '<div style="margin:4px 14px 6px;font-size:11.5px;color:#8a8196"><span id="recCount">'+rows.length+'</span>'
-        + esc(sc.wide?" people have played":(" members of "+(W.PLAT.name||"")))+'</div>'
+        + esc(sc.wide?" members":(" members of "+(W.PLAT.name||"")))+'</div>'
         + '<div id="recNames"></div>' 
         + homeBar();
       nhStickFind();
@@ -17722,17 +17722,21 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     function recClub(){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0]; if(!me) return 0;
       var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null; return (par&&par.parent_id)?par.id:me.id; }
     function recLoad(club){
-      var divs=(W.PLAT.clubs||[]).filter(function(c){ return +c.parent_id===+club; }).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+      var cs=W.PLAT.clubs||[], isDiv=function(c){ var par=c.parent_id?cs.filter(function(x){ return +x.id===+c.parent_id; })[0]:null; return !!(par&&par.parent_id); };
+      var divs=(club===-1?cs.filter(isDiv):cs.filter(function(c){ return +c.parent_id===+club; })).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
       if(!divs.length) return Promise.resolve(false);
       return rest("plat_memberships?club_id=in.("+divs.map(function(d){ return d.id; }).join(",")+")&select=individual_id,club_id&limit=5000").then(function(ms){
-        var nm={}; divs.forEach(function(d){ nm[d.id]=d; });
+        /* group by division NAME (the register has a Div A in every club); one entry per name, in order */
+        var byName={}, order=[]; divs.forEach(function(d){ var k=String(d.name).trim(); if(!byName[k]){ byName[k]={id:"n_"+k.replace(/\W+/g,"_"), name:k, colour:d.colour}; order.push(byName[k]); } });
+        var nm={}; divs.forEach(function(d){ nm[d.id]=byName[String(d.name).trim()]; });
         REC.divOf={}; (Array.isArray(ms)?ms:[]).forEach(function(m){ REC.divOf[m.individual_id]=nm[m.club_id]; });
-        REC.order=divs; REC.club=club; return true; });
+        REC.order=order; REC.club=club; return true; });
     }
     function recGroup(){
-      var q=new URLSearchParams(location.search); if(q.get("go")!=="records" || q.get("view")!=="profiles" || q.get("all")==="1") return;
+      var q=new URLSearchParams(location.search); if(q.get("go")!=="records" || q.get("view")!=="profiles") return;
+      var wide=(q.get("all")==="1");
       var box=document.getElementById("recNames"); if(!box) return;
-      var club=recClub(); if(!club) return;
+      var club=wide?-1:recClub(); if(!club) return;
       if(REC.club!==club || !REC.divOf){ if(REC.busy) return; REC.busy=true; recLoad(club).then(function(ok){ REC.busy=false; if(ok) recGroup(); }); return; }
       var btns=Array.prototype.filter.call(box.children,function(x){ return x.tagName==="BUTTON"; });
       if(!btns.length || box.getAttribute("data-nsq-grouped")===String(btns.length)) return;
@@ -17746,7 +17750,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       REC.order.forEach(function(d){ var g=groups[d.id]; if(!g||!g.length) return;
         var h=document.createElement("div"); h.className="nsqRecHead"; h.id="nsqRecDiv_"+d.id; h.setAttribute("data-plat-keep","1");
         h.style.cssText="padding:10px 13px 6px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#fff;background:"+(d.colour||"#7E3200")+";scroll-margin-top:130px";
-        h.textContent=d.name+" \u00b7 "+g.length; box.appendChild(h); g.sort(byRating).forEach(function(x){ box.appendChild(x.b); });
+        h.textContent=d.name+" \u00b7 "+g.length; box.appendChild(h);
+        var lady=function(x){ return /^[FLW]/i.test(String((x.p&&x.p.gender)||"")); };
+        [["Men",g.filter(function(x){ return !lady(x); })],["Ladies",g.filter(lady)]].forEach(function(sec){ if(!sec[1].length) return;
+          var sh=document.createElement("div"); sh.className="nsqRecHead"; sh.style.cssText="padding:7px 13px 4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#7a6658;background:#fbf7f3";
+          sh.textContent=sec[0]+" \u00b7 "+sec[1].length; box.appendChild(sh); sec[1].sort(byRating).forEach(function(x){ box.appendChild(x.b); }); });
         pills.push('<button data-plat-keep="1" onclick="document.getElementById(\'nsqRecDiv_'+d.id+'\').scrollIntoView({behavior:\'smooth\',block:\'start\'})" style="flex:none;padding:6px 12px;border-radius:999px;border:0;background:'+(d.colour||"#7E3200")+';color:#fff;font:inherit;font-weight:800;font-size:12.5px">'+e(d.name)+'</button>'); });
       if(none.length){ var h2=document.createElement("div"); h2.className="nsqRecHead"; h2.id="nsqRecDiv_none"; h2.textContent="Not in a division \u00b7 "+none.length;
         h2.style.cssText="padding:10px 13px 6px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#7a6658;background:#f3e7de;scroll-margin-top:130px"; box.appendChild(h2); none.forEach(function(x){ box.appendChild(x.b); }); }
@@ -17770,7 +17778,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     function pairRowsFor(club, code){
       var P=Number(W.PLAT.pool||0);
       var cs=W.PLAT.clubs||[], byId={};
-      var divs=club?cs.filter(function(c){ return +c.parent_id===+club; }):[];
+      /* every DIVISION below the board the table was opened on (a province: its clubs' divisions; a club: its own) */
+      var below=function(id){ var out=[], kids=cs.filter(function(c){ return +c.parent_id===+id; });
+        kids.forEach(function(k){ var g=cs.filter(function(c){ return +c.parent_id===+k.id; }); if(g.length) out=out.concat(g); else out.push(k); }); return out; };
+      var divs=club?below(club):[];
       var isDiv=function(c){ var par=c.parent_id?cs.filter(function(x){ return +x.id===+c.parent_id; })[0]:null; return !!(par&&par.parent_id); };
       if(!club) cs.filter(isDiv).forEach(function(d){ byId[d.id]=d; }); else divs.forEach(function(d){ byId[d.id]=d; });
       var where=!club ? "club_id=not.is.null"                                       /* the register: every division's pairs */
@@ -17864,6 +17875,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         blk=document.createElement("div"); blk.id=blockId; blk.setAttribute("data-plat-keep","1"); first.parentNode.insertBefore(blk, first);
         members.forEach(function(id){ var el=document.getElementById(id); if(el && el.parentNode!==blk) blk.appendChild(el); }); }
       else members.forEach(function(id){ var el=document.getElementById(id); if(el && el.parentNode!==blk) blk.appendChild(el); });
+      /* inside the frozen block nothing sticks on its own (nat3's search box was position:sticky — it slid down, left a
+         gap on top and covered the pills) */
+      members.forEach(function(id){ var el=document.getElementById(id); if(el && el.style.position!=="static"){ el.style.position="static"; el.style.top="auto"; el.style.margin="0"; } });
       return blk;
     }
     function pinTick(){
@@ -17925,7 +17939,8 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       }catch(e9){}
     }, 700);
     /* where the tables were opened from: the Global Ledger (Records ?all=1) means the whole register */
-    setInterval(function(){ var q=new URLSearchParams(location.search); if(q.get("go")==="records") W.__nsqWide=(q.get("all")==="1"); else if(q.get("go")!=="ladders" && !document.getElementById("ladderScreen")?.classList.contains("active")) W.__nsqWide=false; }, 300);
+    setInterval(function(){ var q=new URLSearchParams(location.search), lad=document.getElementById("ladderScreen"), onLad=!!(lad&&lad.classList.contains("active"));
+      if(q.get("go")==="records") W.__nsqWide=(q.get("all")==="1"); else if(!onLad) W.__nsqWide=false; }, 300);
     /* ---- THE SYSTEM DECIDES THE DIVISION (q033) ----
        Each team's division = its higher player's (ladies one back); the match is recorded in the higher of the two
        teams' divisions, in this club. The platform layer asks W.__nsqSaveBoard at the save (it must answer at once,
