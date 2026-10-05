@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q044";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q045";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17735,6 +17735,20 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var REC={club:0, divOf:null, order:[], busy:false};
     function recClub(){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0]; if(!me) return 0;
       var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null; return (par&&par.parent_id)?par.id:me.id; }
+    /* q045: each division is its own ladder — the rank counts from 1 inside its section; the Global Ledger names the
+       person's club and province under the name */
+    function rankAndPlace(x, rank, wide){
+      try{
+        var spans=Array.prototype.filter.call(x.b.querySelectorAll("span,b"),function(e){ return e.children.length===0 && /^\(\d+\)$/.test((e.textContent||"").trim()); });
+        if(spans.length){ spans[spans.length-1].textContent="("+rank+")"; }
+        if(wide && x.p && REC.placeOf && !x.b.querySelector(".nsqPlaceLine")){
+          var pl=REC.placeOf[x.p.id]; if(!pl) return;
+          var nameEl=Array.prototype.filter.call(x.b.querySelectorAll("span,b,div"),function(e){ return e.children.length===0 && (e.textContent||"").trim()===String(x.p.full_name).trim(); })[0]; if(!nameEl) return;
+          var ln=document.createElement("span"); ln.className="nsqPlaceLine"; ln.style.cssText="display:block;font-size:11.5px;font-weight:600;color:#8a8196;margin-top:1px";
+          ln.textContent=pl; nameEl.parentNode.insertBefore(ln, nameEl.nextSibling);
+        }
+      }catch(e){}
+    }
     function recLoad(club){
       var cs=W.PLAT.clubs||[], isDiv=function(c){ var par=c.parent_id?cs.filter(function(x){ return +x.id===+c.parent_id; })[0]:null; return !!(par&&par.parent_id); };
       var divs=(club===-1?cs.filter(isDiv):cs.filter(function(c){ return +c.parent_id===+club; })).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
@@ -17743,7 +17757,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         /* group by division NAME (the register has a Div A in every club); one entry per name, in order */
         var byName={}, order=[]; divs.forEach(function(d){ var k=String(d.name).trim(); if(!byName[k]){ byName[k]={id:"n_"+k.replace(/\W+/g,"_"), name:k, colour:d.colour}; order.push(byName[k]); } });
         var nm={}; divs.forEach(function(d){ nm[d.id]=byName[String(d.name).trim()]; });
-        REC.divOf={}; (Array.isArray(ms)?ms:[]).forEach(function(m){ REC.divOf[m.individual_id]=nm[m.club_id]; });
+        REC.divOf={}; REC.placeOf={}; (Array.isArray(ms)?ms:[]).forEach(function(m){ REC.divOf[m.individual_id]=nm[m.club_id];
+          var dv=cs.filter(function(c){ return +c.id===+m.club_id; })[0], cl=dv&&cs.filter(function(c){ return +c.id===+dv.parent_id; })[0], pv=cl&&cs.filter(function(c){ return +c.id===+cl.parent_id; })[0];
+          if(cl) REC.placeOf[m.individual_id]=cl.name+(pv?" \u00b7 "+pv.name:""); });
         REC.order=order; REC.club=club; return true; });
     }
     function recGroup(){
@@ -17768,7 +17784,8 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var lady=function(x){ return /^[FLW]/i.test(String((x.p&&x.p.gender)||"")); };
         [["Men",g.filter(function(x){ return !lady(x); })],["Ladies",g.filter(lady)]].forEach(function(sec){ if(!sec[1].length) return;
           var sh=document.createElement("div"); sh.className="nsqRecHead"; sh.style.cssText="padding:7px 13px 4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#7a6658;background:#fbf7f3";
-          sh.textContent=sec[0]+" \u00b7 "+sec[1].length; box.appendChild(sh); sec[1].sort(byRating).forEach(function(x){ box.appendChild(x.b); }); });
+          sh.textContent=sec[0]+" \u00b7 "+sec[1].length; box.appendChild(sh);
+          sec[1].sort(byRating).forEach(function(x,k){ box.appendChild(x.b); rankAndPlace(x, k+1, wide); }); });
         pills.push('<button data-plat-keep="1" onclick="document.getElementById(\'nsqRecDiv_'+d.id+'\').scrollIntoView({behavior:\'smooth\',block:\'start\'})" style="flex:none;padding:6px 12px;border-radius:999px;border:0;background:'+(d.colour||"#7E3200")+';color:#fff;font:inherit;font-weight:800;font-size:12.5px">'+e(d.name)+'</button>'); });
       if(none.length){ var h2=document.createElement("div"); h2.className="nsqRecHead"; h2.id="nsqRecDiv_none"; h2.textContent="Not in a division \u00b7 "+none.length;
         h2.style.cssText="padding:10px 13px 6px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#7a6658;background:#f3e7de;scroll-margin-top:130px"; box.appendChild(h2); none.forEach(function(x){ box.appendChild(x.b); }); }
@@ -17877,6 +17894,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(!bar){ bar=document.createElement("div"); bar.id="nsqLadPills"; tbl.parentNode.insertBefore(bar, tbl); }
       bar.style.cssText="display:flex;gap:6px;overflow-x:auto;padding:8px 12px;background:#fff";
       bar.innerHTML=pills.join("");
+      /* each division ranks from 1 */
+      Array.prototype.forEach.call(tb.querySelectorAll("tr.nsqDivRow"),function(hd){ var k=0, tr=hd.nextElementSibling;
+        while(tr && !tr.classList.contains("nsqDivRow")){ k++; var td=tr.children[0]; if(td){ var leaf=Array.prototype.filter.call(td.querySelectorAll("*"),function(e){ return e.children.length===0 && /^\d+$/.test((e.textContent||"").trim()); })[0]||td; if(/^\d+$/.test((leaf.textContent||"").trim())) leaf.textContent=String(k); } tr=tr.nextElementSibling; } });
       tb.setAttribute("data-nsq-grouped", String(rows.length));
     }
     setInterval(function(){ try{ ladderGroup(); }catch(e6){} }, 600);
@@ -17899,11 +17919,15 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var blk=document.getElementById(bid); if(!blk || !blk.offsetParent && !blk.classList.contains("nsqFixed")) return;
         var sp=document.getElementById(bid+"_sp");
         if(!sp){ sp=document.createElement("div"); sp.id=bid+"_sp"; blk.parentNode.insertBefore(sp, blk); }
+        /* q045: freeze just UNDER a header that stays on screen (the ladder's "Men's Pairs" bar covered the pills) */
+        var topAt=0, scr=blk.closest(".screen")||document;
+        Array.prototype.forEach.call(scr.querySelectorAll(".header, .nhTopBar"),function(h){ var r=h.getBoundingClientRect();
+          if(h.offsetParent!==null && r.top<=1 && r.bottom>topAt && r.height<200) topAt=Math.round(r.bottom); });
         var anchorTop=sp.getBoundingClientRect().top;
-        if(anchorTop<0){
+        if(anchorTop<topAt){
           if(!blk.classList.contains("nsqFixed")){ sp.style.height=blk.offsetHeight+"px"; var r=sp.getBoundingClientRect();
-            blk.classList.add("nsqFixed"); blk.style.cssText="position:fixed;top:0;left:"+r.left+"px;width:"+r.width+"px;z-index:60;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);padding-top:env(safe-area-inset-top)"; }
-          else { var r2=sp.getBoundingClientRect(); blk.style.left=r2.left+"px"; blk.style.width=r2.width+"px"; }
+            blk.classList.add("nsqFixed"); blk.style.cssText="position:fixed;top:"+topAt+"px;left:"+r.left+"px;width:"+r.width+"px;z-index:60;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);padding-top:"+(topAt?"0":"env(safe-area-inset-top)")+""; }
+          else { var r2=sp.getBoundingClientRect(); blk.style.left=r2.left+"px"; blk.style.width=r2.width+"px"; blk.style.top=topAt+"px"; }
         } else if(blk.classList.contains("nsqFixed")){ blk.classList.remove("nsqFixed"); blk.style.cssText=""; sp.style.height="0px"; }
       });
     }
