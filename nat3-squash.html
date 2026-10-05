@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q045";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q046";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17008,7 +17008,7 @@ W.nhOpenPair=function(name){
     var C=W.PLAT.tourClub||W.PLAT.cid, enc=encodeURIComponent(tn);
     return Promise.all([
       W.sbGet("tournament_entries?select=category,seed,p1,p2&club_id=eq."+C+"&tournament=eq."+enc),
-      W.sbGet("tournament_fixtures?select=division,round,round_type,seed_a,seed_b,sets_a,sets_b,games_a,games_b&club_id=eq."+C+"&tournament=eq."+enc+"&order=round.asc")
+      W.sbGet("tournament_fixtures?select=division,round,round_type,seed_a,seed_b,sets_a,sets_b,games_a,games_b,band&club_id=eq."+C+"&tournament=eq."+enc+"&order=round.asc")
     ]).then(function(r){
       var ents=r[0]||[], fx=r[1]||[], divs={};
       ents.forEach(function(e2){ var d=e2.category||""; (divs[d]=divs[d]||{teams:{},rounds:{}}).teams[e2.seed]=[e2.p1,e2.p2].filter(Boolean).join(" & "); });
@@ -17016,7 +17016,10 @@ W.nhOpenPair=function(name){
       return {name:tn, divs:divs};
     });
   }
-  function nhRoundName(k){ var p=k.split("|"), n=p[0], t=p[1]; return t==="final"?"Final":t==="plate"?"Plate \u00b7 round "+n:t==="ko"?"Knockout \u00b7 round "+n:"Round "+n; }
+  function nhRoundName(k, fxs, grouped){ var p=k.split("|"), n=p[0], t=p[1];
+    /* n342: a grouped round robin is stored as rounds 1–5 (group A), 11–15 (B), 21–25 (C)… — named "Group B · Round 1" */
+    if((t==="rr" || !t) && grouped){ var r=+n; return "Group "+String.fromCharCode(65+Math.floor((r-1)/10))+" \u00b7 Round "+(((r-1)%10)+1); }
+    return t==="final"?"Final":t==="plate"?"Plate \u00b7 round "+n:t==="ko"?"Knockout \u00b7 round "+n:"Round "+n; }
   function nhFxLine(f, teams){
     var A=f.seed_a===0?"BYE":(teams[f.seed_a]||("Seed "+f.seed_a)), B=f.seed_b===0?"BYE":(teams[f.seed_b]||("Seed "+f.seed_b));
     if(f.seed_a===0||f.seed_b===0) return {a:A,b:B,s:"bye"};
@@ -17031,15 +17034,16 @@ W.nhOpenPair=function(name){
       names.forEach(function(dn){ var d=D.divs[dn], seeds=Object.keys(d.teams).map(Number).sort(function(a,b){ return a-b; });
         h+='<section><h2>'+esc(dn||"Division")+'</h2><div class="teams">'+seeds.map(function(s){ return '<span><b>'+s+'</b> '+esc(d.teams[s])+'</span>'; }).join("")+'</div>';
         Object.keys(d.rounds).sort(function(a,b){ var x=a.split("|"), y=b.split("|"); var o={rr:0,ko:1,plate:2,final:3}; return (o[x[1]]||0)-(o[y[1]]||0) || (+x[0])-(+y[0]); }).forEach(function(k){
-          h+='<h3>'+esc(nhRoundName(k))+'</h3><table>'+d.rounds[k].map(function(f){ var L=nhFxLine(f,d.teams);
-            return '<tr><td>'+esc(L.a)+'</td><td class="v">v</td><td>'+esc(L.b)+'</td><td class="s">'+esc(L.s)+'</td></tr>'; }).join("")+'</table>'; });
+          h+='<div class="rd"><h3>'+esc(nhRoundName(k, d.rounds[k], Object.keys(d.rounds).some(function(x){ return +x.split('|')[0]>10; })))+'</h3><table>'+d.rounds[k].map(function(f){ var L=nhFxLine(f,d.teams);
+            return '<tr><td>'+esc(L.a)+'</td><td class="v">v</td><td>'+esc(L.b)+'</td><td class="s">'+esc(L.s)+'</td></tr>'; }).join("")+'</table></div>'; });
         if(!Object.keys(d.rounds).length) h+='<div class="sub">No draw yet.</div>';
         h+='</section>'; });
       var w=W.open("","_blank"); if(!w){ W.alert("Allow pop-ups to print the full schedule."); return; }
       w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(D.name)+' \u2014 schedule</title><style>'
-        +'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:18px;font-size:12.5px}h1{font-size:20px;margin:0}.sub{color:#555;margin:2px 0 12px}'
-        +'section{break-inside:avoid-page;margin:0 0 18px;border-top:2px solid #333;padding-top:8px}h2{font-size:16px;margin:0 0 6px}h3{font-size:13px;margin:10px 0 4px;color:#333}'
-        +'.teams{display:flex;flex-wrap:wrap;gap:4px 14px;margin-bottom:4px}table{width:100%;border-collapse:collapse;table-layout:fixed}td{padding:4px 6px;border-bottom:1px solid #ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+        +'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:14px;font-size:12px}h1{font-size:20px;margin:0}.sub{color:#555;margin:2px 0 12px}'
+        +'section{break-inside:auto;margin:0 0 14px;border-top:2px solid #333;padding-top:6px}h2{font-size:15px;margin:0 0 5px;break-after:avoid}h3{font-size:12.5px;margin:8px 0 3px;color:#333;break-after:avoid}'
+        +'.rd{break-inside:avoid;page-break-inside:avoid}.teams{break-after:avoid}'
+        +'.teams{display:flex;flex-wrap:wrap;gap:4px 14px;margin-bottom:4px}table{width:100%;border-collapse:collapse;table-layout:fixed}td{padding:3px 6px;border-bottom:1px solid #ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
         +'td.v{width:24px;color:#888;text-align:center}td.s{width:72px;text-align:right;font-weight:bold}@page{margin:12mm}</style></head><body>'+h+'</body></html>');
       w.document.close(); w.focus(); setTimeout(function(){ try{ w.print(); }catch(e){} }, 350);
     });
@@ -17049,7 +17053,7 @@ W.nhOpenPair=function(name){
       if(!D) return;
       var out=["\ud83c\udfc6 "+D.name+" \u2014 full schedule"];
       Object.keys(D.divs).sort().forEach(function(dn){ var d=D.divs[dn]; out.push("", "*"+(dn||"Division")+"*");
-        Object.keys(d.rounds).sort(function(a,b){ return (+a.split("|")[0])-(+b.split("|")[0]); }).forEach(function(k){ out.push(nhRoundName(k)+":");
+        Object.keys(d.rounds).sort(function(a,b){ return (+a.split("|")[0])-(+b.split("|")[0]); }).forEach(function(k){ out.push(nhRoundName(k, d.rounds[k], Object.keys(d.rounds).some(function(x){ return +x.split('|')[0]>10; }))+":");
           d.rounds[k].forEach(function(f){ var L=nhFxLine(f,d.teams); out.push("  "+L.a+" v "+L.b+" \u2014 "+L.s); }); }); });
       var t=out.join("\n");
       if(navigator.share){ navigator.share({title:D.name, text:t}).catch(function(){}); return; }
