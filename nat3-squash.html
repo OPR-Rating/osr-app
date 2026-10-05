@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q043";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q044";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -10083,6 +10083,7 @@ async function clRemove(id, label){
           try{
             var _tq=new URLSearchParams(location.search), _tn=_tq.get("tn")||"";
             if(_tn){ TOURNAMENT_EVENT=_tn; try{ nhTourColour(_tn); }catch(e){} }
+            else { try{ W.nhTourFresh(); }catch(e){} }            /* n341: no tournament named — start at the list */
           }catch(e){}
           if(typeof showScreen==="function") showScreen("tournamentScreen");   /* its showScreen hook renders the picker once (n311: the second call is gone) */
           return true;
@@ -10332,6 +10333,8 @@ async function clRemove(id, label){
       "#nh .brk{background:#fff;border:1px solid #e6e0ee;border-radius:14px;margin:12px 12px 0;overflow:hidden;box-shadow:0 1px 3px rgba(26,16,48,.05)}"
       /* n340: an OPEN list — the bar is its own rounded strip, the cards sit on the page; no box around them */
       +"#nh .brk.nhOpenList{background:transparent;border:0;box-shadow:none;overflow:visible}"
+      /* n341: the draw sheet without the wasted space at the top */
+      +"#tournamentSheetContent{padding-top:8px!important}#tournamentSheetScreen .tm-divbar{padding-top:2px!important;padding-bottom:4px!important}"
       +"#nh .brk.nhOpenList > div:first-child{border-radius:12px;border:1px solid rgba(0,0,0,.10)}"
       +"#nh .brk.nhOpenList > h2:first-child{border-radius:12px;border:1px solid rgba(0,0,0,.08);margin-bottom:4px}"
      +"#nh .brk h2{color:#4a4256}"
@@ -11215,6 +11218,7 @@ async function clRemove(id, label){
         /* the app opens tournaments through its own function; the screen alone is not enough to populate it */
         /* the app's own two steps: fill the list, then show it. openInternalTournament needs an event and
            threw when called blind, which is why the button appeared dead. */
+        try{ W.nhTourFresh(); }catch(e){}                      /* n341: from a door or group page — the list */
         if(typeof loadActiveTournaments==="function"){ try{ loadActiveTournaments(); }catch(e){} }
         showScreen("tournamentScreen"); return;
       }
@@ -16871,6 +16875,15 @@ W.nhOpenPair=function(name){
           s.style.cssText="display:inline-block;margin-left:8px;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:800;color:#fff;vertical-align:middle;background:"+clubCol(r2.club_id); head.appendChild(s); } }catch(e){}
     });
   }
+  /* n341: TOURNAMENTS STARTS AT THE LIST (Andre): the parent kept "the tournament you looked at last", so after opening
+     one, the door's Tournaments always reopened it — round and round. Tapping Tournaments now clears the choice and
+     shows the list; a named tournament (a card on the door, the list, ?tn=) still opens straight to itself. */
+  W.nhTourFresh=function(){
+    try{ TOURNAMENT_EVENT=""; }catch(e){} try{ TOURNAMENT_ARCHIVED=false; }catch(e){}
+    try{ ["tournamentInternal"].forEach(function(id){ var el=document.getElementById(id); if(el) el.innerHTML=""; }); }catch(e){}
+    try{ W._tourInternalView="draw"; }catch(e){}
+    try{ var sel=document.getElementById("tournamentSelect"); if(sel) sel.value=""; }catch(e){}
+  };
   W.nhTourPick=function(name){
     var sel=document.getElementById("tournamentSelect"); if(!sel) return;
     sel.value=name||""; try{ onTournamentPick(); }catch(e){}
@@ -17059,9 +17072,10 @@ W.nhOpenPair=function(name){
     if(have){ var st=nhTabStrip(act); if(st && st.parentNode && have.previousElementSibling!==st) st.parentNode.insertBefore(have, st.nextSibling); return; }   /* settle under the tabs once they exist */
     var bar=document.createElement("div"); bar.className="nhTourBar"; bar.setAttribute("data-plat-keep","1");
     bar.style.cssText="display:flex;justify-content:flex-end;gap:8px;margin:8px 0 2px";   /* a slim row under the draw's tabs */
-    var b=function(label,fnName){ return '<button onclick="window.'+fnName+'()" style="flex:none;white-space:nowrap;padding:6px 13px;border-radius:999px;border:1.5px solid var(--nhc,#D35400);background:#fff;color:var(--nhc,#D35400);font:inherit;font-weight:800;font-size:12.5px;cursor:pointer">'+label+'</button>'; };
-    bar.innerHTML=b("\ud83d\udda8 Full schedule","nhTourSchedule")+b("\ud83d\udcac Schedule to WhatsApp","nhTourScheduleText")+b("\ud83d\udda8 This view","nhTourPrint")+b("\ud83d\udcac WhatsApp","nhTourWhatsApp");
-    bar.style.flexWrap="wrap";
+    var b=function(label,fnName){ return '<button onclick="window.'+fnName+'()" style="flex:none;white-space:nowrap;padding:5px 8px;font-size:11.5px!important;border-radius:999px;border:1.5px solid var(--nhc,#D35400);background:#fff;color:var(--nhc,#D35400);font:inherit;font-weight:800;font-size:12.5px;cursor:pointer">'+label+'</button>'; };
+    /* n341: one row, short labels — the whole schedule, or just this page */
+    bar.innerHTML=b("\ud83d\udda8 Schedule","nhTourSchedule")+b("\ud83d\udcac Schedule","nhTourScheduleText")+b("\ud83d\udda8 Page","nhTourPrint")+b("\ud83d\udcac Page","nhTourWhatsApp");
+    bar.style.flexWrap="nowrap"; bar.style.overflowX="auto"; bar.style.gap="5px"; bar.style.justifyContent="safe center";
     /* directly under the draw's Teams / Rounds / Standings tabs, in the draw's own column */
     var strip=nhTabStrip(act);
     if(strip && strip.parentNode){ strip.parentNode.insertBefore(bar, strip.nextSibling); }
