@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q053";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q054";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17614,7 +17614,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
      we created." Nothing else is changed. Three parts:
        1. the Masters room (Club admin): national divisions (count, Div A from, step) and the club's divisions;
        2. placement: a member added to a club is placed in the ONE division of that club their rating falls in
-          (ladies one division back); "Place everyone by rating" for members already registered;
+          "Place everyone by rating" for members already registered;
        3. the member's squash rating is written exactly as given (never a default).
      =================================================================================================================== */
   (function(){
@@ -17631,10 +17631,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     function rateOf(p){ return Math.round(p.current_rating!=null?p.current_rating:(p.seed_rating!=null?p.seed_rating:(p.seed||0))); }
     function isLady(g){ return /^[FLW]/i.test(String(g||"")); }
     function sortedBands(){ return S.bands.slice().sort(function(a,b){ return a.sort-b.sort; }); }
-    function divOfPerson(p){               /* Div A has no ceiling; ladies measured one division back */
+    function divOfPerson(p){               /* the top division has no ceiling; one scale for men and ladies (q054) */
       var bs=sortedBands(); if(!bs.length) return null; var r=rateOf(p);
       var step=(bs.length>1)?(bs[0].low-bs[1].low):150, lady=isLady(p.gender);
-      for(var i=0;i<bs.length;i++){ var floor=lady?((i+1<bs.length)?bs[i+1].low:(bs[bs.length-1].low-step)):bs[i].low; if(r>=floor) return bs[i]; }
+      for(var i=0;i<bs.length;i++){ var floor=bs[i].low; if(r>=floor) return bs[i]; }   /* q054: one scale for all — no ladies-one-back */
       return bs[bs.length-1];
     }
     function rangeTxt(b){ return (b.high>=99999)?(b.low+"+"):(b.low+" \u2013 "+b.high); }   /* q053: the top band (Premier or Div A) is open-ended */
@@ -18036,7 +18036,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     setInterval(function(){ var q=new URLSearchParams(location.search), lad=document.getElementById("ladderScreen"), onLad=!!(lad&&lad.classList.contains("active"));
       if(q.get("go")==="records") W.__nsqWide=(q.get("all")==="1"); else if(!onLad) W.__nsqWide=false; }, 300);
     /* ---- THE SYSTEM DECIDES THE DIVISION (q033) ----
-       Each team's division = its higher player's (ladies one back); the match is recorded in the higher of the two
+       Each team's division = its higher player's (one scale for all); the match is recorded in the higher of the two
        teams' divisions, in this club. The platform layer asks W.__nsqSaveBoard at the save (it must answer at once,
        so the bands and the players are kept loaded). */
     var DEC={pool:0, bands:[], people:{}, at:0, busy:false};
@@ -18094,7 +18094,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     function isDivision(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me||!me.parent_id) return false; var par=cs.filter(function(c){ return +c.id===+me.parent_id; })[0]; return !!(par&&par.parent_id); }
     /* ---- DIVISION MOVES with a TRANSITION ZONE (q034) ----
        The database function nsq_replace(club) applies the rule: up only at the line + zone, down only below the line
-       - zone (ladies one division back) and records every move. The app asks for it after every saved match (when the
+       - zone (one scale for all) and records every move. The app asks for it after every saved match (when the
        new ratings are in) and when a club's door opens; the doors show "Division moves"; a profile in the zone says so. */
     var ZONE={pool:0, z:10};
     function zoneLoad(){ var P=Number(W.PLAT&&W.PLAT.pool||0); if(!P || ZONE.pool===P) return; ZONE.pool=P;
@@ -18160,7 +18160,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           var div=divs.filter(function(d){ return +d.id===+m.club_id; })[0]; if(!div) return;
           var bs=DEC.bands.slice().sort(function(a,b){ return a.sort-b.sort; }), n=bs.length, step=n>1?bs[0].low-bs[1].low:150, lady=isLady(p.gender);
           var c=-1; bs.forEach(function(b,i){ if(String(b.label).toLowerCase()===String(div.name).toLowerCase()) c=i; }); if(c<0) return;
-          var floor=function(i){ return lady?((i+1<n)?bs[i+1].low:(bs[n-1].low-step)):bs[i].low; };
+          var floor=function(i){ return bs[i].low; };   /* q054: one scale for all */
           var r=Math.round(rateOf(p)), z=ZONE.z, msg="";
           if(c>0 && r>=floor(c-1)-z && r<floor(c-1)+z) msg=div.name+" \u00b7 transition zone \u2014 moves up to "+bs[c-1].label+" at "+(floor(c-1)+z);
           else if(c<n-1 && r>=floor(c)-z && r<floor(c)+z) msg=div.name+" \u00b7 transition zone \u2014 holds "+div.name+" until below "+(floor(c)-z);
@@ -18526,7 +18526,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var hasPrem=bs.length&&bs[0].label==="Premier", divs=hasPrem?bs.slice(1):bs;
         var n=divs.length||6, top=divs.length?divs[0].low:1700, step=(divs.length>1)?(divs[0].low-divs[1].low):150, prem=hasPrem?bs[0].low:"";
         h+='<div class="card"><h2>National divisions \u2014 the master list</h2><div class="in">'
-          +'<div style="font-size:13px;color:#7a6658">Provinces choose from this list, clubs from their province\u2019s. The top division has no ceiling; ladies are measured one division back.</div>'
+          +'<div style="font-size:13px;color:#7a6658">Provinces choose from this list, clubs from their province\u2019s. The top division has no ceiling. Men and ladies are on one scale.</div>'
           +'<div class="row"><div><label>Premier from (empty = none)</label><input id="nsqPrem" type="number" step="50" value="'+prem+'" placeholder="e.g. 1900" oninput="window.nsqPreview()"></div><div><label>Div A from</label><input id="nsqTop" type="number" step="50" value="'+top+'" oninput="window.nsqPreview()"></div></div>'
           +'<div class="row"><div><label>How many lettered divisions (up to 26)</label><input id="nsqN" type="number" min="1" max="26" value="'+n+'" oninput="window.nsqPreview()"></div><div></div></div>'
           +'<label>Step</label><div class="seg" id="nsqStep">'+[100,150,200].map(function(x){ return '<button data-s="'+x+'" class="'+(x===step?"on":"")+'" onclick="window.nsqStep('+x+')">'+x+'</button>'; }).join("")+'</div>'
@@ -18543,7 +18543,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         h+='<div class="card"><h2>'+e(S.clubName)+'\u2019s divisions</h2><div class="in" style="font-size:13px;color:#7a6658">From '+e(S.prov?S.prov.name:"the province")+'\u2019s list. Tick the ones this club plays; they are created inside '+e(S.clubName)+'.</div>'
           +(pl.length?checklist(pl, function(b){ return !!divOfBand(b) || !S.kids.length; }, function(b){ return !!divOfBand(b); }):'<div class="in" style="color:#7a6658">The province has no divisions chosen yet.</div>')
           +'<div class="in"><label>Club code</label><input id="nsqClubCode" type="password" inputmode="numeric"><button class="btn" onclick="window.nsqMakeDivs()">Create the ticked divisions</button><div class="msg" id="nsqM2"></div></div></div>'
-          +'<div class="card"><h2>Place members in their divisions</h2><div class="in"><div style="font-size:13px;color:#7a6658">New members are placed as they are added; this places everyone in the club again by the rule (ladies one back, the transition zone).</div>'
+          +'<div class="card"><h2>Place members in their divisions</h2><div class="in"><div style="font-size:13px;color:#7a6658">New members are placed as they are added; this places everyone in the club again by the rule (one scale for all, the transition zone).</div>'
           +'<button class="btn" onclick="window.nsqPlaceAll()">Place everyone by rating</button><div class="msg" id="nsqM3"></div></div></div>';
       }
       o.innerHTML=h+'<div style="height:40px"></div>'; if(S.level==="national") preview();
