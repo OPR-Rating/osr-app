@@ -3557,7 +3557,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q052";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q053";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -9673,7 +9673,7 @@ async function clRemove(id, label){
        with no base club keeps the older flat list of tiles, so Kloof–Sun Fun and Sandbox are unchanged. */
     var base = cs.filter(function(c){ return c.is_general; });
     var rest = cs.filter(function(c){ return !c.is_general; })
-                 .sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+                 .sort(function(a,b){ return (typeof W.nsqDivCmp==="function")?W.nsqDivCmp(a,b):String(a.name).localeCompare(String(b.name)); });
 
     var d=document.createElement("div"); d.id="platDoor";
     d.style.cssText="max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:12px;padding:0 4px 8px";
@@ -9735,7 +9735,7 @@ async function clRemove(id, label){
     var host=document.querySelector("#homeScreen .home-content"); if(!host||document.getElementById("platDoor")) return;
     Array.prototype.forEach.call(host.children,function(el){ el.style.display="none"; });
     host.style.marginTop="0"; host.style.paddingTop="26px";
-    var C=W.PLAT.cid, kids=kidsOf(C).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+    var C=W.PLAT.cid, kids=kidsOf(C).sort(function(a,b){ return (typeof W.nsqDivCmp==="function")?W.nsqDivCmp(a,b):String(a.name).localeCompare(String(b.name)); });
     var d=document.createElement("div"); d.id="platDoor";
     d.style.cssText="max-width:620px;margin:0 auto;display:flex;flex-direction:column;gap:12px;padding:0 4px 8px";
     var pill=function(c){ var p=clubPal(c.id);
@@ -11255,7 +11255,7 @@ async function clRemove(id, label){
     var C=(function(){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0]; if(!me) return (W.PLAT.parentId||W.PLAT.cid);
       if(!me.parent_id) return me.id;                                                         /* a province: its own */
       var par=cs.filter(function(c){ return +c.id===+me.parent_id; })[0];
-      return (par && par.parent_id) ? par.id : me.id; })(), kids=kidsOf(C).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });   /* Nat-Squash: club = its own; division = its club */
+      return (par && par.parent_id) ? par.id : me.id; })(), kids=kidsOf(C).sort(function(a,b){ return (typeof W.nsqDivCmp==="function")?W.nsqDivCmp(a,b):String(a.name).localeCompare(String(b.name)); });   /* Nat-Squash: club = its own; division = its club */
     var club=(W.PLAT.clubs||[]).find(function(c){ return Number(c.id)===Number(C); })||{id:C,name:W.PLAT.name};
     var pill=function(label,sub,col,onclick){
       return '<button class="row" onclick="'+onclick+'">'
@@ -12029,11 +12029,11 @@ W.mePair=function(name,col){
     var w=nhWrap(); if(!w) return;
     var raw=clubRaw(C), first=inkSafe(raw||W.PLAT.colour||"#D35400");
     nhCSS(); nhOneWayIn(); nhInk(first); nhHeaderSkin(first, nhDeep(first));
-    var kids=doorPickOrder(kidsOf(C).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); }));
+    var kids=doorPickOrder(kidsOf(C).sort(function(a,b){ return (typeof W.nsqDivCmp==="function")?W.nsqDivCmp(a,b):String(a.name).localeCompare(String(b.name)); }));
     var back=PAGE+"?club="+C;
     var tile=function(gr){
       var _hasKids=(W.PLAT.clubs||[]).some(function(c){ return +c.parent_id===+gr.id; });   /* Nat-Squash: a club -> its divisions */
-      var _first=_hasKids?(W.PLAT.clubs||[]).filter(function(c){ return +c.parent_id===+gr.id; }).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); })[0]:null;
+      var _first=_hasKids?(W.PLAT.clubs||[]).filter(function(c){ return +c.parent_id===+gr.id; }).sort(function(a,b){ return (typeof W.nsqDivCmp==="function")?W.nsqDivCmp(a,b):String(a.name).localeCompare(String(b.name)); })[0]:null;
       var r=clubRaw(gr.id), href=(PAGE+"?club="+(_first?_first.id:gr.id)+"&go=entry&back="+encodeURIComponent("?club="+C)).replace(/'/g,"%27");   /* Nat-Squash: the save decides the division */
       return '<button onclick="window.nhNav(\''+nhSafeHref(href)+'\')" style="display:flex;flex-direction:column;justify-content:flex-end;min-height:92px;text-align:left;color:#fff;'
         +'border:2px solid '+cardEdge(r)+';background:'+cardSkin(r)+';background-blend-mode:luminosity,normal;background-origin:border-box;background-clip:border-box;background-repeat:no-repeat;'
@@ -12608,7 +12608,7 @@ W.mePair=function(name,col){
     var C=(W.PLAT.parentId||W.PLAT.cid||0); if(!C) return;
     /* n321: on a DOOR the bar's Enter a score opens the group chooser page, the same as the big square */
     if(W.PLAT.clubDoor && Number(W.PLAT.cid)===Number(C)){ W.nhNav(PAGE+"?club="+C+"&go=pick"); return; }
-    var kids=kidsOf(C).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+    var kids=kidsOf(C).sort(function(a,b){ return (typeof W.nsqDivCmp==="function")?W.nsqDivCmp(a,b):String(a.name).localeCompare(String(b.name)); });
     var box=document.getElementById("nhBarWhere");
     if(box){ box.remove(); return; }
     box=document.createElement("div"); box.id="nhBarWhere"; box.dataset.platKeep="1";
@@ -13893,7 +13893,7 @@ W.nhOpenPair=function(name){
     var box=document.getElementById("doorWhere"); if(!box) return;
     if(box.dataset.open===what){ box.style.display="none"; box.dataset.open=""; return; }
     box.dataset.open=what; box.style.display="block";
-    var C=W.PLAT.cid, kids=doorPickOrder(kidsOf(C).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); }));   /* n151: the member's own order, switched-on first — the same as the rail */
+    var C=W.PLAT.cid, kids=doorPickOrder(kidsOf(C).sort(function(a,b){ return (typeof W.nsqDivCmp==="function")?W.nsqDivCmp(a,b):String(a.name).localeCompare(String(b.name)); }));   /* n151: the member's own order, switched-on first — the same as the rail */
     var ask={score:"Where did you play?",ladders:"Whose ratings and ladders?",profiles:"Whose members?",card:"Which board\u2019s court card?"}[what];
     /* n97: the way back from a score sheet is the door that opened it */
     var go=function(id){ return PAGE+"?club="+id+(id===C?"&board=1":"")+"&go="+(what==="score"?"entry":what)+"&back="+encodeURIComponent("?club="+C); };
@@ -13915,7 +13915,7 @@ W.nhOpenPair=function(name){
     var w=nhWrap(); if(!w) return;
     var RC=regCol(W.PLAT.cid);
     nhCSS(); nhOneWayIn(); nhInk(RC); nhHeaderSkin(regOwn(RC)?RC:"#7E3200", regDeep(RC));
-    var C=W.PLAT.cid, kids=kidsOf(C).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+    var C=W.PLAT.cid, kids=kidsOf(C).sort(function(a,b){ return (typeof W.nsqDivCmp==="function")?W.nsqDivCmp(a,b):String(a.name).localeCompare(String(b.name)); });
     /* n90: the faces come with the figures, so a door draws once with everything it needs */
     Promise.all([nhFetch(),nhFaces(),meVerify()]).then(function(rr){
       var d=rr[0];
@@ -17637,8 +17637,13 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       for(var i=0;i<bs.length;i++){ var floor=lady?((i+1<bs.length)?bs[i+1].low:(bs[bs.length-1].low-step)):bs[i].low; if(r>=floor) return bs[i]; }
       return bs[bs.length-1];
     }
-    function rangeTxt(b){ return (b.sort===0)?(b.low+"+"):(b.low+" \u2013 "+b.high); }
-    function makeBands(n,aFrom,step){ var out=[]; for(var i=0;i<n;i++){ out.push({label:"Div "+String.fromCharCode(65+i), low:aFrom-i*step, high:(i===0)?99999:aFrom-(i-1)*step, colour:PAL[i%PAL.length], sort:i}); } return out; }
+    function rangeTxt(b){ return (b.high>=99999)?(b.low+"+"):(b.low+" \u2013 "+b.high); }   /* q053: the top band (Premier or Div A) is open-ended */
+    function makeBands(n,aFrom,step,prem){ var out=[], k=0;
+      prem=Number(prem||0);
+      if(prem>aFrom){ out.push({label:"Premier", low:prem, high:99999, colour:"#111111", sort:k++}); }   /* q053: the top dogs */
+      for(var i=0;i<n;i++){ out.push({label:"Div "+String.fromCharCode(65+i), low:aFrom-i*step, high:(i===0)?(prem>aFrom?prem:99999):aFrom-(i-1)*step, colour:PAL[i%PAL.length], sort:k++}); }
+      return out; }
+    function _unusedMakeBands(n,aFrom,step){ var out=[]; for(var i=0;i<n;i++){ out.push({label:"Div "+String.fromCharCode(65+i), low:aFrom-i*step, high:(i===0)?99999:aFrom-(i-1)*step, colour:PAL[i%PAL.length], sort:i}); } return out; }
     function clubDivisions(clubId){
       return rest("nat_club_parent?club_id=eq."+clubId+"&select=group_id").then(function(r){
         var ids=(Array.isArray(r)?r:[]).map(function(x){ return x.group_id; });
@@ -17787,7 +17792,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var me=cs.filter(function(c){ return +c.id===+club; })[0], isProv=!!(me && !me.parent_id);
       var divs=(club===-1?cs.filter(isDiv)
                :isProv?cs.filter(function(c){ return isDiv(c) && cs.some(function(k){ return +k.id===+c.parent_id && +k.parent_id===+club; }); })   /* a province: its clubs' divisions */
-               :cs.filter(function(c){ return +c.parent_id===+club; })).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+               :cs.filter(function(c){ return +c.parent_id===+club; })).sort(function(a,b){ return W.nsqDivCmp(a,b); });
       REC.provWide=isProv;
       if(!divs.length) return Promise.resolve(false);
       return rest("plat_memberships?club_id=in.("+divs.map(function(d){ return d.id; }).join(",")+")&select=individual_id,club_id&limit=5000").then(function(ms){
@@ -17910,7 +17915,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(par && par.parent_id) return;                                              /* a division's own table stays as it is */
       /* the divisions of the pairs this table received (Records opens it in the ledger, on no board) */
       var seenD={}, divs=[]; Object.keys(W.__nsqPairDiv||{}).forEach(function(k){ var d=W.__nsqPairDiv[k]; if(d && !seenD[d.id]){ seenD[d.id]=1; divs.push(d); } });
-      divs.sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+      divs.sort(function(a,b){ return W.nsqDivCmp(a,b); });
       if(!divs.length) return;
       var clubsSeen={}; divs.forEach(function(d){ clubsSeen[d.parent_id]=1; });
       if(Object.keys(clubsSeen).length>1){                                           /* the register: where each pair comes from */
@@ -18079,7 +18084,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0];
         var par=(me&&me.parent_id)?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
         if(what==="score" && me && par && !par.parent_id){                               /* a club (under a province) */
-          var ds=cs.filter(function(c){ return +c.parent_id===+me.id; }).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+          var ds=cs.filter(function(c){ return +c.parent_id===+me.id; }).sort(function(a,b){ return W.nsqDivCmp(a,b); });
           var pg=(location.pathname.split("/").pop()||"nat3-squash.html");
           if(ds.length){ W.nhNav(pg+"?club="+ds[0].id+"&go=entry&back="+encodeURIComponent("?club="+me.id)); return; } }
         return _dp.apply(this,arguments);
@@ -18463,6 +18468,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       }).catch(function(){ TRACK.busy=null; return {}; });
       return TRACK.busy;
     };
+    /* q053: divisions in the NATIONAL order (Premier, Div A, Div B …) — not alphabetical ("Premier" would follow "Div F") */
+    W.nsqDivCmp=function(a,b){ var bs=(DEC&&DEC.bands&&DEC.bands.length)?DEC.bands:(S.bands||[]), ix=function(n){ for(var i=0;i<bs.length;i++){ if(String(bs[i].label).toLowerCase()===String(n||"").trim().toLowerCase()) return bs[i].sort; } return 999; };
+      var pr=function(n){ return /^premier$/i.test(String(n||"").trim())?-1:null; };                 /* Premier first, even before the list has loaded */
+      var x=pr(a&&a.name); if(x===null) x=ix(a&&a.name); var y=pr(b&&b.name); if(y===null) y=ix(b&&b.name);
+      return (x!==y)?(x-y):String(a&&a.name).localeCompare(String(b&&b.name)); };
     /* a place as people say it: a division reads "Rovers \u00b7 Div A" */
     W.nsqPlace=function(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return "";
       var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
@@ -18501,9 +18511,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var pl=Array.isArray(r[2])&&r[2][0]?r[2][0].labels:null; S.provLabels=(pl&&pl.length)?pl:null; });
     }
     function divOfBand(b){ return S.kids.filter(function(k){ return String(k.name).trim().toLowerCase()===String(b.label).toLowerCase(); })[0]; }
-    function curInputs(){ var on=document.querySelector("#nsqStep button.on"); return {n:Math.max(1,Math.min(26,+document.getElementById("nsqN").value||6)), top:+document.getElementById("nsqTop").value||1700, step:on?+on.getAttribute("data-s"):150}; }
+    function curInputs(){ var on=document.querySelector("#nsqStep button.on"), pe=document.getElementById("nsqPrem"); return {n:Math.max(1,Math.min(26,+document.getElementById("nsqN").value||6)), top:+document.getElementById("nsqTop").value||1700, step:on?+on.getAttribute("data-s"):150, prem:pe?(+pe.value||0):0}; }
     function preview(){ var box=document.getElementById("nsqPreview"); if(!box) return; var c=curInputs();
-      box.innerHTML=makeBands(c.n,c.top,c.step).map(function(b){ return '<div class="band"><span class="chip" style="background:'+b.colour+'">'+b.label+'</span><span style="font-size:13px">'+rangeTxt(b)+'</span></div>'; }).join(""); }
+      box.innerHTML=makeBands(c.n,c.top,c.step,c.prem).map(function(b){ return '<div class="band"><span class="chip" style="background:'+b.colour+'">'+b.label+'</span><span style="font-size:13px">'+rangeTxt(b)+'</span></div>'; }).join(""); }
     function provList(){ var bs=sortedBands(); return S.provLabels?bs.filter(function(b){ return S.provLabels.indexOf(b.label)>=0; }):bs; }
     function checklist(list, ticked, locked){
       return list.map(function(b){ var on=ticked(b), lock=locked&&locked(b);
@@ -18513,10 +18523,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var o=document.getElementById("nsq"); if(!o) return;
       var bs=sortedBands(), h='<div class="hd"><button class="x" onclick="window.nsqClose()">Close</button><div style="font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.85">MASTERS \u00b7 '+S.level.toUpperCase()+'</div><h1>'+e(S.clubName)+'</h1><div style="font-size:13px;opacity:.9">Divisions</div></div>';
       if(S.level==="national"){
-        var n=bs.length||6, top=bs.length?bs[0].low:1700, step=(bs.length>1)?(bs[0].low-bs[1].low):150;
+        var hasPrem=bs.length&&bs[0].label==="Premier", divs=hasPrem?bs.slice(1):bs;
+        var n=divs.length||6, top=divs.length?divs[0].low:1700, step=(divs.length>1)?(divs[0].low-divs[1].low):150, prem=hasPrem?bs[0].low:"";
         h+='<div class="card"><h2>National divisions \u2014 the master list</h2><div class="in">'
-          +'<div style="font-size:13px;color:#7a6658">Provinces choose from this list, clubs from their province\u2019s. Div A has no ceiling; ladies are measured one division back.</div>'
-          +'<div class="row"><div><label>How many (up to 26)</label><input id="nsqN" type="number" min="1" max="26" value="'+n+'" oninput="window.nsqPreview()"></div><div><label>Div A from</label><input id="nsqTop" type="number" step="50" value="'+top+'" oninput="window.nsqPreview()"></div></div>'
+          +'<div style="font-size:13px;color:#7a6658">Provinces choose from this list, clubs from their province\u2019s. The top division has no ceiling; ladies are measured one division back.</div>'
+          +'<div class="row"><div><label>Premier from (empty = none)</label><input id="nsqPrem" type="number" step="50" value="'+prem+'" placeholder="e.g. 1900" oninput="window.nsqPreview()"></div><div><label>Div A from</label><input id="nsqTop" type="number" step="50" value="'+top+'" oninput="window.nsqPreview()"></div></div>'
+          +'<div class="row"><div><label>How many lettered divisions (up to 26)</label><input id="nsqN" type="number" min="1" max="26" value="'+n+'" oninput="window.nsqPreview()"></div><div></div></div>'
           +'<label>Step</label><div class="seg" id="nsqStep">'+[100,150,200].map(function(x){ return '<button data-s="'+x+'" class="'+(x===step?"on":"")+'" onclick="window.nsqStep('+x+')">'+x+'</button>'; }).join("")+'</div>'
           +'<div id="nsqPreview" style="margin:10px -14px 0"></div><label>National code</label><input id="nsqNat" type="password" inputmode="numeric">'
           +'<button class="btn" onclick="window.nsqSaveBands()">Save the national divisions</button><div class="msg" id="nsqM1"></div>'
@@ -18542,7 +18554,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(!pin){ m.className="msg bad"; m.textContent="The national code is needed."; return; }
       rpc("nsq_set_zone",{p_pool:S.pool,p_pin:pin,p_zone:z}).then(function(r){ if(!r||r.ok!==true){ m.className="msg bad"; m.textContent=(r&&(r.error||r.message))||"Not saved."; return; } ZONE.z=z; m.className="msg ok"; m.textContent="Transition zone: "+z+" points."; }); };
     W.nsqStep=function(x){ document.querySelectorAll("#nsqStep button").forEach(function(b){ b.classList.toggle("on", +b.getAttribute("data-s")===x); }); preview(); };
-    W.nsqSaveBands=function(){ var c=curInputs(), list=makeBands(c.n,c.top,c.step), pin=(document.getElementById("nsqNat").value||"").trim(), m=document.getElementById("nsqM1");
+    W.nsqSaveBands=function(){ var c=curInputs(), list=makeBands(c.n,c.top,c.step,c.prem), pin=(document.getElementById("nsqNat").value||"").trim(), m=document.getElementById("nsqM1");
       if(!pin){ m.className="msg bad"; m.textContent="The national code is needed."; return; } m.className="msg"; m.textContent="Saving\u2026";
       rpc("nsq_set_bands",{p_pool:S.pool,p_pin:pin,p_bands:list}).then(function(r){ if(!r||r.ok!==true){ m.className="msg bad"; m.textContent=(r&&(r.error||r.message))||"Not saved."; return; } S.bands=list; draw(); var mm=document.getElementById("nsqM1"); mm.className="msg ok"; mm.textContent="Saved: "+list.length+" national divisions."; }); };
     function ticked(){ return Array.prototype.filter.call(document.querySelectorAll("#nsq .nsqTick"),function(x){ return x.checked && !x.disabled; }).map(function(x){ return x.value; }); }
