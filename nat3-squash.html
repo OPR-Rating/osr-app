@@ -3564,7 +3564,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q057";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q058";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -18609,7 +18609,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(levelOf(cid)!=="club") return;
       var kids=(W.PLAT.clubs||[]).filter(function(c){ return +c.parent_id===cid; }); if(!kids.length) return;
       if(EMP.busy || (EMP.club===cid && Date.now()-EMP.at<60000)) return;
-      if(EMP.club!==cid){ try{ var c0=JSON.parse(localStorage.getItem("nsq_empty_"+cid)||"null"); if(c0){ W.__nsqEmptyDivs=c0; if(W.__nsqDoorRefresh && !new URLSearchParams(location.search).get("go")) W.__nsqDoorRefresh(); } }catch(e){} }
+      if(EMP.club!==cid){ try{ var c0=JSON.parse(localStorage.getItem("nsq_empty_"+cid)||"null"); if(c0){ W.__nsqEmptyDivs=c0; } }catch(e){} }
       EMP.busy=true;
       restAll("plat_memberships?club_id=in.("+kids.map(function(k){ return k.id; }).join(",")+")&select=club_id&order=club_id.asc").then(function(ms){
         var n={}; (Array.isArray(ms)?ms:[]).forEach(function(m){ n[m.club_id]=(n[m.club_id]||0)+1; });
@@ -18617,7 +18617,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var changed=JSON.stringify(empty)!==JSON.stringify(W.__nsqEmptyDivs||[]);
         W.__nsqEmptyDivs=empty; EMP={club:cid, at:Date.now(), busy:false};
         try{ localStorage.setItem("nsq_empty_"+cid, JSON.stringify(empty)); }catch(e){}
-        if(changed && W.__nsqDoorRefresh && !new URLSearchParams(location.search).get("go")) W.__nsqDoorRefresh();   /* only while the door is on screen */
+        /* (no redraw: the door works out empty divisions itself as it draws — q056) */
       }).catch(function(){ EMP.busy=false; });
     }catch(e){} }, 250);   /* q056: checked at once — no flash of empty divisions on a first visit */
     /* ---- CREATE PAIRS (q057, Andre) ----
@@ -18664,17 +18664,42 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           :'<div style="font-size:13px;color:#7a6658">No pairs yet.</div>')+'</div>';
       pc.innerHTML=h;
     };
+    function ladderJoin(p1,p2,cat){
+      var club=PR.club, cs=W.PLAT.clubs||[], divs=cs.filter(function(c){ return +c.parent_id===+club; });
+      var ids={}; PR.ppl.forEach(function(p){ ids[p.full_name]=p.id; });
+      return restAll("plat_memberships?club_id=in.("+divs.map(function(d){ return d.id; }).join(",")+")&individual_id=in.("+[ids[p1],ids[p2]].filter(Boolean).join(",")+")&select=individual_id,club_id&order=club_id.asc").then(function(ms){
+        var mine=(Array.isArray(ms)?ms:[]).map(function(m){ return divs.filter(function(d){ return +d.id===+m.club_id; })[0]; }).filter(Boolean);
+        var div=mine.sort(function(x,y){ return W.nsqDivCmp(x,y); })[0];                         /* the higher player's division */
+        var join=function(board){ return W.fetch(B+"/functions/v1/ladder",{method:"POST",headers:H(),
+            body:JSON.stringify({action:"join_ladder",club_id:board,category:cat,p1:p1,p2:p2})}).then(function(r){ return r.json().catch(function(){ return {}; }); }).catch(function(){ return {}; }); };
+        var jobs=[join(club)]; if(div) jobs.push(join(div.id));
+        return Promise.all(jobs).then(function(rr){
+          var name=(W.PLAT.clubs||[]).filter(function(c){ return +c.id===+club; })[0], said=[];
+          said.push((rr[0]&&rr[0].ok)?("Joined the "+(name?name.name:"club")+" "+cat+" ladder."):("Club ladder: "+((rr[0]&&rr[0].error)||"not joined")+"."));
+          if(div) said.push((rr[1]&&rr[1].ok)?("Joined the "+div.name+" "+cat+" ladder."):(div.name+" ladder: "+((rr[1]&&rr[1].error)||"not joined")+"."));
+          return said.join(" ");
+        });
+      }).catch(function(){ return ""; });
+    }
     W.nsqPairsCat=function(c){ PR.cat=c; W.nsqPairsDraw(); };
     W.nsqPairsAdd=function(){
       var a=(document.getElementById("nsqPP1")||{}).value, b=(document.getElementById("nsqPP2")||{}).value, pin=((document.getElementById("nsqPPin")||{}).value||"").trim(), m=document.getElementById("nsqPPmsg");
       if(!a||!b){ m.style.color="#a33"; m.textContent="Choose both players."; return; }
       if(a===b){ m.style.color="#a33"; m.textContent="Choose two different players."; return; }
       if(!pin){ m.style.color="#a33"; m.textContent="The club\u2019s code is needed."; return; }
+      /* q058: one player, one pair per category (a ladder holds each player once) */
+      var clash=(PR.pairs||[]).filter(function(pp){ return pp.category===PR.cat && [pp.p1,pp.p2].some(function(n){ return n===a||n===b; }); })[0];
+      if(clash){ var who=[a,b].filter(function(n){ return n===clash.p1||n===clash.p2; })[0];
+        m.style.color="#a33"; m.textContent=who+" is already in a "+PR.cat+" pair: "+clash.p1+" & "+clash.p2+"."; return; }
       m.style.color="#7a6658"; m.textContent="Creating\u2026";
       var hi=(prRating(a)||0)>=(prRating(b)||0)?[a,b]:[b,a];          /* the stronger player first, as the pair is usually named */
       rpc("nsq_add_pair",{p_club:PR.club,p_pin:pin,p_category:PR.cat,p_p1:hi[0],p_p2:hi[1]}).then(function(r){
         if(!r||r.ok!==true){ m.style.color="#a33"; m.textContent=(r&&(r.error||r.message))||"Not created."; return; }
-        var keep=pin; W.nsqPairsLoad(); setTimeout(function(){ var p=document.getElementById("nsqPPin"); if(p) p.value=keep; var mm=document.getElementById("nsqPPmsg"); if(mm){ mm.style.color="#1e8449"; mm.textContent=hi[0]+" & "+hi[1]+" created \u2014 now in Ratings and Ladders."; } }, 700);
+        /* q058: the pair joins the LADDER SELECTION exactly as a pair joining by choice does (the ladder's own join_ladder) —
+           its division's ladder (the higher player's division) and the club ladder, in its category. The ladder does the rest. */
+        ladderJoin(hi[0],hi[1],PR.cat).then(function(note){
+          var keep=pin; W.nsqPairsLoad(); setTimeout(function(){ var p=document.getElementById("nsqPPin"); if(p) p.value=keep; var mm=document.getElementById("nsqPPmsg");
+            if(mm){ mm.style.color="#1e8449"; mm.textContent=hi[0]+" & "+hi[1]+" created \u2014 now in Ratings and Ladders. "+note; } }, 700); });
       });
     };
     W.nsqPairsRemove=function(id){
