@@ -953,7 +953,8 @@ st0.textContent += "html{overflow-y:scroll}";   // p98: the scrollbar's space is
               var par=(me&&me.parent_id)?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
               return (par && par.parent_id) ? par.id : CID; })();
             W.PLAT.myClub=mine;
-            W.PLAT.myBoards=[mine].concat((W.PLAT.clubs||[]).filter(function(c){ return c.parent_id===mine; }).map(function(c){ return c.id; }));
+            W.PLAT.myBoards=[mine]; (W.PLAT.clubs||[]).filter(function(c){ return +c.parent_id===+mine; }).forEach(function(k){ W.PLAT.myBoards.push(+k.id);
+              (W.PLAT.clubs||[]).filter(function(g){ return +g.parent_id===+k.id; }).forEach(function(g){ W.PLAT.myBoards.push(+g.id); }); });   /* Nat-Squash */
             if(W.PLAT.myBoards.length<2 && !W.PLAT.parentId && !W.PLAT.kids.length) W.PLAT.myBoards=null;   // a plain register: no club rung, leave p56 alone
           }
           try{ if(CID) localStorage.setItem("plat_nat_kids_"+CID, W.PLAT.kids.length?"1":"0");
@@ -3563,7 +3564,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q055";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q056";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -12760,6 +12761,10 @@ W.mePair=function(name,col){
         +'<a href="'+PAGE+'?club=0&pool='+P+'&go=admin&from='+(regions[0]?regions[0].id:0)+'">Global Ledger admin</a>'
         +'</div></div>';
       h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;padding:12px">';
+      (function(){ var cs=W.PLAT.clubs||[];                                    /* Nat-Squash: a club counts its divisions */
+        cs.forEach(function(c){ if(!c.parent_id) return; cs.filter(function(k){ return +k.parent_id===+c.id; }).forEach(function(k){
+          count[+c.id]=(count[+c.id]||0)+(count[+k.id]||0); week[+c.id]=(week[+c.id]||0)+(week[+k.id]||0);
+          var l=last[+k.id]; if(l&&(!last[+c.id]||l>last[+c.id])) last[+c.id]=l; }); }); })();
       regions.forEach(function(rg){
         var rc=colOf(rg), gs=groupsOf(rg.id);
         var rcount=count[Number(rg.id)]||0, rweek=week[Number(rg.id)]||0, rlast=last[Number(rg.id)];
@@ -13065,7 +13070,11 @@ W.mePair=function(name,col){
     var b=document.getElementById("doorRecBody"), c=document.getElementById("doorRecCaret"); if(!b) return;
     var open=b.style.display==="none"; b.style.display=open?"block":"none"; if(c) c.classList.toggle("open",open);
   };
-  function doorHidden(){ try{ return JSON.parse(localStorage.getItem("nh_door_hide_"+(W.__doorC||W.PLAT.cid))||"[]").map(Number); }catch(e){ return []; } }
+  function doorHidden(){ var _e=(W.__nsqEmptyDivs||[]).map(Number);
+    try{ var _ks=W.__doorKids||[], _pp=(NEW&&NEW.data&&NEW.data.people)||null;          /* Nat-Squash: known the moment the door draws */
+      if(_pp && _pp.length && _ks.length){ _e=_ks.filter(function(k){ return !_pp.some(function(p){ return +p.club_id===+k.id; }); }).map(function(k){ return +k.id; }); W.__nsqEmptyDivs=_e; } }catch(e){}
+    try{ var _h=JSON.parse(localStorage.getItem("nh_door_hide_"+(W.__doorC||W.PLAT.cid))||"[]"); return _h.concat(_e.filter(function(x){ return _h.indexOf(x)<0; })); }catch(e){ return _e; } }
+  function _nsqUnusedDoorHidden(){ try{ return JSON.parse(localStorage.getItem("nh_door_hide_"+(W.__doorC||W.PLAT.cid))||"[]").map(Number); }catch(e){ return []; } }
   function doorHiddenSave(a){ try{ localStorage.setItem("nh_door_hide_"+(W.__doorC||W.PLAT.cid), JSON.stringify(a)); }catch(e){} }
   /* n132: each phone can order its groups — ▲▼ in the dropdown; remembered like the switches. Groups not yet ordered
      keep their usual place after the ordered ones. */
@@ -13115,9 +13124,11 @@ W.mePair=function(name,col){
           +'<span style="width:11px;height:11px;border-radius:50%;background:'+col+';flex:0 0 11px"></span>'
           +'<span style="flex:1;min-width:0;font-size:14px;font-weight:700;color:#241d33;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(g.__own?nhGeneralName():g.name)+'</span>'
           + arrow(g.id,-1,idx>0) + arrow(g.id,1,idx<ks.length-1)
-          +'<button data-plat-keep="1" onclick="window.doorGroupSet('+Number(g.id)+','+(on?0:1)+')" aria-label="'+(on?"Hide":"Show")+'" '
+          +((W.__nsqEmptyDivs||[]).map(Number).indexOf(Number(g.id))>=0
+              ? '<span style="font-size:11.5px;color:#9a8fa8;font-weight:700;white-space:nowrap">no players yet</span><span style="flex:0 0 44px;height:24px;border-radius:99px;position:relative;background:#eee9f2;opacity:.7"><span style="position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff"></span></span>'
+              : '<button data-plat-keep="1" onclick="window.doorGroupSet('+Number(g.id)+','+(on?0:1)+')" aria-label="'+(on?"Hide":"Show")+'" '
           +'style="flex:0 0 44px;height:24px;border:none;border-radius:99px;position:relative;cursor:pointer;padding:0;background:'+(on?col:"#d9d2e3")+'">'
-          +'<span style="position:absolute;top:3px;left:'+(on?"23px":"3px")+';width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)"></span></button>'
+          +'<span style="position:absolute;top:3px;left:'+(on?"23px":"3px")+';width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)"></span></button>')
           +'</div>';
       }).join("")
       +'<div style="display:flex;gap:8px;margin-top:10px">'
@@ -13166,6 +13177,7 @@ W.mePair=function(name,col){
     if(brk) brk.style.display = open ? "block" : "none";
     if(open){ doorGroupsPaint(); try{ brk.scrollIntoView({behavior:"smooth",block:"nearest"}); }catch(e){} }
   };
+  W.__nsqDoorRefresh=function(){ try{ doorGroupsRefresh(); }catch(e){} };
   W.doorGroupSet=function(id,on){
     var hid=doorHidden().filter(function(x){ return x!==Number(id); }); if(!on) hid.push(Number(id));
     doorHiddenSave(hid); doorGroupsRefresh();
@@ -13966,7 +13978,8 @@ W.nhOpenPair=function(name){
          wide they are — and everything else small at the foot. Recent matches is untouched: plat's rows. */
       var card=function(name,col,sub,href,id){
       var raw=clubRaw(id);   /* n187: the club's true colour — the card is a banner, so a pale colour is safe here */
-        var ms=(d.matches||[]).filter(function(m){ return Number(m.club_id)===Number(id); });
+        var _below=(W.PLAT.clubs||[]).filter(function(k){ return +k.parent_id===+id; }).map(function(k){ return +k.id; });   /* Nat-Squash: + its divisions */
+        var ms=(d.matches||[]).filter(function(m){ return Number(m.club_id)===Number(id) || _below.indexOf(Number(m.club_id))>=0; });
         var today=ms.filter(function(m){ return ago(m.match_date)<1; }).length;
         var last=ms[0], lastLine;
         if(last){
@@ -16678,6 +16691,12 @@ W.nhOpenPair=function(name){
       if(_q.get("club")==="0" && _q.get("pool") && !_q.get("go") && !_q.get("nat")) url=_u.slice(0,_i)+"?pool="+_q.get("pool"); } }catch(e){}
     var p=null, shape=null;
     try{ p=nhParseUrl(url); shape=nhShape(p.q); }catch(e){ shape=null; }
+    /* n345: A BOARD-LESS START CANNOT BE RE-POINTED. The parent's own screens (member lists, ladders, its colours) are
+       re-pointed to the board you move to by swapping "the board I booted on" in their requests — impossible when the app
+       booted on the national page or the Global Ledger (no board). Leaving such a start for a real board is ONE proper
+       page load onto that board; moves between boards after that stay instant. */
+    try{ var _tq=new URLSearchParams(String(url).split("?")[1]||""), _tc=Number(_tq.get("club")||0);
+      if(W.NEWAPP && Number(W.PLAT&&W.PLAT.bootCid||0)===0 && _tc>0){ location.href=String(url); return; } }catch(e){}
     if(!shape || !nhSamePage(p.path) || !nhOnShellPage()){
       if(opts.replace) location.replace(url); else location.href=url;
       return false;
@@ -18550,6 +18569,24 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(LAD.tries>=4 || Date.now()-LAD.redo<3500) return;
       LAD.redo=Date.now(); LAD.tries++; W.loadLadder.apply(null, LAD.args); LAD.tries=Math.max(LAD.tries,1);
     }catch(e){} }, 800);
+    /* q056: which of this club's divisions have NO players yet (their door toggle is locked off until they do) */
+    var EMP={club:0, at:0, busy:false};
+    setInterval(function(){ try{
+      var cid=Number(W.PLAT.cid||0); if(!cid) return;
+      if(levelOf(cid)!=="club") return;
+      var kids=(W.PLAT.clubs||[]).filter(function(c){ return +c.parent_id===cid; }); if(!kids.length) return;
+      if(EMP.busy || (EMP.club===cid && Date.now()-EMP.at<60000)) return;
+      if(EMP.club!==cid){ try{ var c0=JSON.parse(localStorage.getItem("nsq_empty_"+cid)||"null"); if(c0){ W.__nsqEmptyDivs=c0; if(W.__nsqDoorRefresh && !new URLSearchParams(location.search).get("go")) W.__nsqDoorRefresh(); } }catch(e){} }
+      EMP.busy=true;
+      restAll("plat_memberships?club_id=in.("+kids.map(function(k){ return k.id; }).join(",")+")&select=club_id&order=club_id.asc").then(function(ms){
+        var n={}; (Array.isArray(ms)?ms:[]).forEach(function(m){ n[m.club_id]=(n[m.club_id]||0)+1; });
+        var empty=kids.filter(function(k){ return !n[k.id]; }).map(function(k){ return +k.id; });
+        var changed=JSON.stringify(empty)!==JSON.stringify(W.__nsqEmptyDivs||[]);
+        W.__nsqEmptyDivs=empty; EMP={club:cid, at:Date.now(), busy:false};
+        try{ localStorage.setItem("nsq_empty_"+cid, JSON.stringify(empty)); }catch(e){}
+        if(changed && W.__nsqDoorRefresh && !new URLSearchParams(location.search).get("go")) W.__nsqDoorRefresh();   /* only while the door is on screen */
+      }).catch(function(){ EMP.busy=false; });
+    }catch(e){} }, 250);   /* q056: checked at once — no flash of empty divisions on a first visit */
     /* a place as people say it: a division reads "Rovers \u00b7 Div A" */
     W.nsqPlace=function(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return "";
       var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
