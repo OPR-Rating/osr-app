@@ -3564,7 +3564,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q059";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q060";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17935,7 +17935,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var pq=String(pathq||"");
         if(pq.indexOf("player_results?select=name,current_rating,gender,initial_rating")===0){
           var cm=pq.match(/club_id=eq\.(\d+)/), gm=pq.match(/gender=eq\.([MLX])/);
-          var club=cm?Number(cm[1]):0;                                                   /* no club in the read: the register */
+          /* q060: a club's own ledger names its boards as a LIST (club_id=in.(…)) — the scope is then the page it was opened
+             from (?nat= or the board), not the whole register (DOUBLES IPT's table showed Rovers' pairs) */
+          var _q=new URLSearchParams(location.search), _inm=pq.match(/club_id=in\.\(([\d,]+)\)/);
+          var club=cm?Number(cm[1]):Number(_q.get("nat")||W.PLAT.cid||0);
+          if(!cm && !club && _inm){ var _ids=_inm[1].split(",").map(Number), _cs=W.PLAT.clubs||[];
+            club=_ids.filter(function(id){ var c=_cs.filter(function(x){ return +x.id===id; })[0]; return c && !_ids.some(function(o){ return o!==id && _cs.some(function(x){ return +x.id===id && +x.parent_id===o; }); }); })[0]||0; }
           if(W.__nsqWide) club=0;                                                        /* opened from the Global Ledger: the whole register */
           if(cm && W.PLAT && W.PLAT.bootCid && Number(cm[1])===Number(W.PLAT.bootCid)) club=Number(W.PLAT.cid||club);   /* the board you stand on */
           /* q055: the first visit asked before the register's clubs had loaded → no divisions → an empty table until a
@@ -18090,8 +18095,14 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       }catch(e9){}
     }, 700);
     /* where the tables were opened from: the Global Ledger (Records ?all=1) means the whole register */
-    setInterval(function(){ var q=new URLSearchParams(location.search), lad=document.getElementById("ladderScreen"), onLad=!!(lad&&lad.classList.contains("active"));
-      if(q.get("go")==="records") W.__nsqWide=(q.get("all")==="1"); else if(!onLad) W.__nsqWide=false; }, 300);
+    setInterval(function(){ var q=new URLSearchParams(location.search), lad=document.getElementById("ladderScreen"), menu=document.getElementById("laddersScreen"),
+        onLad=!!((lad&&lad.classList.contains("active"))||(menu&&menu.classList.contains("active")));   /* q060: the ratings MENU keeps the Global Ledger's scope too */
+      /* q060: read from the ADDRESS — Records ?all=1, or the ratings at register level with no board named (?club=0, no nat)
+         = the Global Ledger; a club's or province's ratings always name their board (?nat=) */
+      var go=q.get("go")||"";
+      if(go==="records") W.__nsqWide=(q.get("all")==="1");
+      else if(go==="ladders") W.__nsqWide=(Number(q.get("club")||0)===0 && !Number(q.get("nat")||0));
+      else if(!onLad) W.__nsqWide=false; }, 150);
     /* ---- THE SYSTEM DECIDES THE DIVISION (q033) ----
        Each team's division = its higher player's (one scale for all); the match is recorded in the higher of the two
        teams' divisions, in this club. The platform layer asks W.__nsqSaveBoard at the save (it must answer at once,
