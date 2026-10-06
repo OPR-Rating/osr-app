@@ -1337,6 +1337,11 @@ st0.textContent += "html{overflow-y:scroll}";   // p98: the scrollbar's space is
       <div style="background:#D35400;color:#fff;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:15px;font-weight:700;text-align:center;letter-spacing:0.3px;">Overall Ratings &amp; Ladder Standings</div>
       <div style="background:rgba(211,84,0,.08);border:1px solid rgba(211,84,0,.30);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#0d4a38;line-height:1.5;text-align:center;">Overall standings for ALL matches recorded in both Social and Tournament records</div>
       <!-- Masters: doubles only — singles ladders removed (Squash 01) -->
+      <div class="ladders-group-title">Individual Ratings</div>
+      <div class="ladders-grid">
+        <button class="menu-btn" onclick="window.nsqIndiv('M')">Men</button>
+        <button class="menu-btn" onclick="window.nsqIndiv('F')">Ladies</button>
+      </div>
       <div class="ladders-group-title">Pair Ratings</div>
       <div class="ladders-grid">
         <button class="menu-btn" onclick="loadLadder('mens','Men’s Pairs')">Men's Pairs</button>
@@ -1352,8 +1357,9 @@ st0.textContent += "html{overflow-y:scroll}";   // p98: the scrollbar's space is
         <button class="menu-btn" onclick="loadLadder('allsortsd','All Sorts Rating')">All Sorts Rating</button>
       </div>
       <div class="ladders-group-title">Universal</div>
-      <div class="ladders-grid one-col">
+      <div class="ladders-grid">
         <button class="menu-btn" onclick="loadLadder('universal','Universal Rating')">Universal Rating — all pairs combined</button>
+        <button class="menu-btn" onclick="window.nsqIndiv('ALL')">Universal Rating — all individuals combined</button>
       </div>
       <div class="ladders-group-title">Club Ladder</div>
       <div class="ladders-grid one-col">
@@ -3557,7 +3563,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q054";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q055";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17892,7 +17898,14 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           var club=cm?Number(cm[1]):0;                                                   /* no club in the read: the register */
           if(W.__nsqWide) club=0;                                                        /* opened from the Global Ledger: the whole register */
           if(cm && W.PLAT && W.PLAT.bootCid && Number(cm[1])===Number(W.PLAT.bootCid)) club=Number(W.PLAT.cid||club);   /* the board you stand on */
-          return Promise.all([_sg.apply(this,arguments), pairRowsFor(club, gm?gm[1]:null)]).then(function(r){
+          /* q055: the first visit asked before the register's clubs had loaded → no divisions → an empty table until a
+             refresh. Wait for the register (a moment at most), and if the answer is still empty, ask once more. */
+          var self=this, args=arguments, gc=gm?gm[1]:null;
+          var ready=function(){ return new Promise(function(res){ var t0=Date.now(); (function poll(){ if((W.PLAT&&W.PLAT.pool&&(W.PLAT.clubs||[]).length) || Date.now()-t0>30000) return res(); setTimeout(poll,200); })(); }); };
+          var pairs=function(){ return ready().then(function(){ return pairRowsFor(club, gc); }).then(function(rows){
+              if(rows && rows.length) return rows;
+              return new Promise(function(res){ setTimeout(res,900); }).then(function(){ return pairRowsFor(club, gc); }); }); };
+          return Promise.all([_sg.apply(self,args), pairs()]).then(function(r){
             var base=Array.isArray(r[0])?r[0]:[], have={}; base.forEach(function(x){ if(x&&x.name) have[x.name]=1; });
             return base.concat(r[1].filter(function(x){ return !have[x.name]; }));
           });
@@ -18473,6 +18486,70 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var pr=function(n){ return /^premier$/i.test(String(n||"").trim())?-1:null; };                 /* Premier first, even before the list has loaded */
       var x=pr(a&&a.name); if(x===null) x=ix(a&&a.name); var y=pr(b&&b.name); if(y===null) y=ix(b&&b.name);
       return (x!==y)?(x-y):String(a&&a.name).localeCompare(String(b&&b.name)); };
+    /* ---- INDIVIDUAL RANKINGS (q055, Andre) ----
+       Men · Ladies · Universal (all individuals). Ranked 1… by current rating, no division separation; each row: rank,
+       name with province + club pills, rating, level; a name opens the profile. SCOPE follows where the page was opened:
+       the Global Ledger → the register; a province → its clubs' divisions; a club → its divisions; a division → itself. */
+    function indivScope(){
+      var q=new URLSearchParams(location.search), cs=W.PLAT.clubs||[];
+      if(W.__nsqWide) return {label:"All clubs", ids:null};
+      var id=Number(q.get("nat")||W.PLAT.cid||0); if(!id) return {label:"All clubs", ids:null};
+      var me=cs.filter(function(c){ return +c.id===id; })[0]; if(!me) return {label:"All clubs", ids:null};
+      var lv=levelOf(id), kids=function(x){ return cs.filter(function(c){ return +c.parent_id===+x; }); };
+      if(lv==="division") return {label:me.name, ids:[id]};
+      if(lv==="club") return {label:me.name, ids:kids(id).map(function(c){ return +c.id; })};
+      if(lv==="province"){ var out=[]; kids(id).forEach(function(cl){ out=out.concat(kids(cl.id).map(function(c){ return +c.id; })); }); return {label:me.name, ids:out}; }
+      return {label:"All clubs", ids:null};
+    }
+    W.nsqIndiv=function(kind){
+      cssOnce(); W.nsqClose();
+      var sc=indivScope(), P=Number(W.PLAT.pool||0), cs=W.PLAT.clubs||[];
+      var title=(kind==="M"?"Men":kind==="F"?"Ladies":"Universal \u2014 all individuals")+" \u00b7 "+sc.label;
+      var o=document.createElement("div"); o.id="nsq"; document.body.appendChild(o);
+      o.innerHTML='<div class="hd"><button class="x" onclick="window.nsqClose()">Back</button><div style="font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.85">INDIVIDUAL RATINGS</div><h1>'+e(title)+'</h1><div>Loading\u2026</div></div>';
+      var isDiv=function(c){ var par=c.parent_id?cs.filter(function(x){ return +x.id===+c.parent_id; })[0]:null; return !!(par&&par.parent_id); };
+      var divIds=sc.ids||cs.filter(isDiv).map(function(c){ return +c.id; });
+      Promise.all([restAll("plat_squash_v_pool_individuals?pool_id=eq."+P+"&select=id,full_name,gender,current_rating,seed_rating&order=full_name.asc"),
+                   divIds.length?restAll("plat_memberships?club_id=in.("+divIds.join(",")+")&select=individual_id,club_id&order=individual_id.asc"):Promise.resolve([])]).then(function(r){
+        var ppl=Array.isArray(r[0])?r[0]:[], mem=Array.isArray(r[1])?r[1]:[], at={};
+        mem.forEach(function(m){ at[m.individual_id]=m.club_id; });
+        var rows=ppl.filter(function(p){ if(sc.ids && !at[p.id]) return false; if(kind==="M") return !isLady(p.gender); if(kind==="F") return isLady(p.gender); return true; })
+          .map(function(p){ var rt=(p.current_rating!=null?p.current_rating:p.seed_rating); return {p:p, r:(rt!=null?Number(rt):null), div:at[p.id]}; })
+          .filter(function(x){ return x.r!=null; }).sort(function(a,b){ return b.r-a.r || String(a.p.full_name).localeCompare(String(b.p.full_name)); });
+        var pg=(location.pathname.split("/").pop()||"nat3-squash.html");
+        var h='<div class="hd"><button class="x" onclick="window.nsqClose()">Back</button><div style="font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.85">INDIVIDUAL RATINGS</div><h1>'+e(title)+'</h1><div style="font-size:13px;opacity:.9">'+rows.length+' ranked by rating \u2014 tap a name for the profile</div></div>'
+          +'<div class="card"><div class="in" style="padding:8px 10px"><input id="nsqIndFind" placeholder="Find a name\u2026" oninput="window.nsqIndFilter()" style="margin:0"></div>';
+        rows.forEach(function(x,k){
+          var dv=cs.filter(function(c){ return +c.id===+x.div; })[0], cl=dv?cs.filter(function(c){ return +c.id===+dv.parent_id; })[0]:null, pv=cl?cs.filter(function(c){ return +c.id===+cl.parent_id; })[0]:null;
+          var pill=function(t,col){ return t?'<span style="font-size:11px;font-weight:800;color:#fff;background:'+col+';border-radius:999px;padding:2px 8px;white-space:nowrap">'+e(t)+'</span>':""; };
+          var href=pg+"?club="+(x.div||W.PLAT.cid||0)+"&go=me&who="+encodeURIComponent(x.p.full_name);
+          var lady=isLady(x.p.gender);
+          h+='<a class="nsqIndRow" data-n="'+e(String(x.p.full_name).toLowerCase())+'" href="'+href+'" onclick="window.nsqClose();return window.nhNav?(window.nhNav(this.getAttribute(\'href\')),false):true" style="display:flex;align-items:center;gap:10px;padding:10px 13px;border-top:1px solid #f0ecf6;text-decoration:none;color:inherit">'
+            +'<b style="flex:none;width:34px;text-align:center;color:#7a6658">'+(k+1)+'</b>'
+            +'<span style="flex:1;min-width:0"><b style="display:block;font-size:15px;color:#1f1a2b">'+e(x.p.full_name)+'</b><span style="display:flex;gap:5px;flex-wrap:wrap;margin-top:3px">'+pill(pv&&pv.name,"#7E3200")+pill(cl&&cl.name,(cl&&cl.colour)||"#D35400")+'</span></span>'
+            +'<span style="flex:none;text-align:right"><b style="display:inline-block;background:'+(lady?"#fde7f1":"#e7eefb")+';color:'+(lady?"#a01a5a":"#1d4ea0")+';border-radius:999px;padding:3px 10px;font-size:13px">'+Math.round(x.r)+'</b>'
+            +'<span style="display:inline-block;margin-left:5px;background:#f1ece6;color:#5b4636;border-radius:999px;padding:3px 9px;font-size:13px;font-weight:800">'+(x.r/200).toFixed(1)+'</span></span></a>';
+        });
+        if(!rows.length) h+='<div class="in" style="color:#7a6658">Nobody here yet.</div>';
+        o.innerHTML=h+'</div><div style="height:40px"></div>';
+      }).catch(function(){ o.querySelector(".hd div:last-child").textContent="Could not load \u2014 try again."; });
+    };
+    W.nsqIndFilter=function(){ var v=String((document.getElementById("nsqIndFind")||{}).value||"").trim().toLowerCase();
+      Array.prototype.forEach.call(document.querySelectorAll("#nsq .nsqIndRow"),function(a){ a.style.display=(!v||a.getAttribute("data-n").indexOf(v)>=0)?"flex":"none"; }); };
+    /* q055: A TABLE ASKED FOR BEFORE THE APP WAS READY IS LOADED AGAIN ONCE IT IS. On a slow start a tap on Men's Pairs
+       came before the register had loaded: nothing was asked, nothing retried — an empty table until a refresh. The last
+       table asked for is remembered; while it is on screen and still empty, it is loaded again once the register is in. */
+    var LAD={args:null, at:0, redo:0, tries:0};
+    (function(){ var ll=W.loadLadder; if(typeof ll!=="function") return;
+      W.loadLadder=function(){ LAD.args=Array.prototype.slice.call(arguments); LAD.at=Date.now(); LAD.tries=0; return ll.apply(this,arguments); }; })();
+    setInterval(function(){ try{
+      var scr=document.getElementById("ladderScreen"); if(!scr || !scr.classList.contains("active") || !LAD.args) return;
+      if(!(W.PLAT && W.PLAT.pool && (W.PLAT.clubs||[]).length)) return;                       /* not ready yet */
+      var box=document.getElementById("ladderContent"); if(!box) return;
+      if(box.querySelector("tbody tr") || /loading/i.test(box.textContent||"")) return;        /* filled, or loading */
+      if(LAD.tries>=4 || Date.now()-LAD.redo<3500) return;
+      LAD.redo=Date.now(); LAD.tries++; W.loadLadder.apply(null, LAD.args); LAD.tries=Math.max(LAD.tries,1);
+    }catch(e){} }, 800);
     /* a place as people say it: a division reads "Rovers \u00b7 Div A" */
     W.nsqPlace=function(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return "";
       var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
