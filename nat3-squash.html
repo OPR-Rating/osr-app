@@ -3585,7 +3585,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q079";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q080";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -18761,7 +18761,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var opt=function(list){ return '<option value="">\u2014 choose \u2014</option>'+list.map(function(p){ return '<option value="'+e(p.full_name)+'">'+e(p.full_name)+' \u00b7 '+Math.round(p.current_rating!=null?p.current_rating:p.seed_rating)+'</option>'; }).join(""); };
       var cats=["Men's","Ladies","Mixed","All Sorts"];
       var st='style="width:100%;padding:10px;border:1.5px solid #e2d3c6;border-radius:10px;font:inherit;margin:4px 0 8px;background:#fff"';
-      var h='<h2>Create pairs</h2><div style="padding:10px 14px">'
+      var h='<h2 onclick="window.nsqPairsFold()" style="cursor:pointer;display:flex;align-items:center">Create pairs<span style="margin-left:auto;font-size:13px">'+(PR.open?"\u25b2":"\u25bc")+'</span></h2><div style="padding:10px 14px;display:'+(PR.open?"block":"none")+'">'
         +'<div style="font-size:12.5px;color:#7a6658;margin-bottom:8px">A club\u2019s standing partnerships, shown in Ratings and Ladders before they play. Players can still play with anyone.</div>'
         +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+cats.map(function(c){ var on=(c===PR.cat); return '<button onclick="window.nsqPairsCat(\''+c.replace("'","\\'")+'\')" style="padding:7px 12px;border-radius:999px;border:1.5px solid #D35400;font:inherit;font-weight:800;font-size:13px;background:'+(on?"#D35400":"#fff")+';color:'+(on?"#fff":"#D35400")+'">'+e(c==="Ladies"?"Ladies\u2019":c)+'</button>'; }).join("")+'</div>'
         /* q059: the SAME name picker as the score sheet (search + list), filtered for the category — not a long dropdown */
@@ -18771,7 +18771,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         +'<button onclick="window.nsqPairsAdd()" style="width:100%;padding:12px;border:0;border-radius:12px;background:#D35400;color:#fff;font:inherit;font-weight:800;font-size:15px">Create the pair</button>'
         +'<div id="nsqPPmsg" style="margin-top:8px;font-size:13px"></div></div>';
       var pairs=PR.pairs||[];
-      h+='<div style="padding:4px 14px 12px"><div style="font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#7a6658;margin:6px 0">This club\u2019s pairs \u00b7 '+pairs.length+'</div>'
+      h+='<div style="padding:4px 14px 12px;display:'+(PR.open?"block":"none")+'"><div style="font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#7a6658;margin:6px 0">This club\u2019s pairs \u00b7 '+pairs.length+'</div>'
         +(pairs.length?pairs.map(function(pp){ var a=prRating(pp.p1), b=prRating(pp.p2), r=(a!=null&&b!=null)?Math.round(Math.max(a,b)*0.6+Math.min(a,b)*0.4):"\u2013";
             return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #f0ecf6"><span style="font-size:11px;font-weight:800;color:#fff;background:#7E3200;border-radius:999px;padding:2px 8px">'+e(pp.category)+'</span>'
               +'<b style="flex:1;min-width:0;font-size:14px">'+e(pp.p1)+' &amp; '+e(pp.p2)+'</b><span style="font-weight:800;color:#1d4ea0">'+r+'</span>'
@@ -18797,6 +18797,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       }).catch(function(){ return ""; });
     }
     W.nsqPairsCat=function(c){ PR.cat=c; PR.p1=""; PR.p2=""; W.nsqPairsDraw(); };
+    W.nsqPairsFold=function(){ PR.open=!PR.open; W.nsqPairsDraw(); };   /* q080: folded until tapped */
     W.nsqPairsPick=function(k){
       var list=(W["__nsqPPlist"+k]||[]).filter(function(n){ return n!==PR[k===1?"p2":"p1"]; });
       var keep=((document.getElementById("nsqPPin")||{}).value||"");
@@ -18985,14 +18986,20 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(![].some.call(ev.options,function(o){ return o.value==="Ladder Match"; })) return;
       ev.value="Ladder Match"; ev.dataset.nsqLm="1"; if(typeof ev.onchange==="function") ev.onchange();
     }catch(e){} }, 500);
-    /* every ladder: the free-challenge note */
+    /* q081: the free-challenge note — ONLY on the LADDER page (clubLadderScreen), ONLY under a ladder that is ACTIVE.
+       Never on the stats pages (Ratings and Ladders → Men's Pairs … = ladderScreen, ranked by rating). */
     setInterval(function(){ try{
-      var scr=document.querySelector(".screen.active"); if(!scr || !/ladder/i.test(scr.id||"") || scr.querySelector("#nsqFreeNote")) return;
-      var tbl=scr.querySelector("table"); if(!tbl) return;
-      var n=document.createElement("div"); n.id="nsqFreeNote";
-      n.style.cssText="margin:8px 12px;padding:9px 12px;border-radius:10px;background:#fff7e6;border:1px solid #f1d8a8;font-size:12.5px;color:#5b4636";
-      n.innerHTML="<b>New on the ladder?</b> Pairs added after the ladder is activated start at the bottom \u2014 one free challenge to set your position.";
-      tbl.parentNode.insertBefore(n, tbl);
+      Array.prototype.forEach.call(document.querySelectorAll("#ladderScreen .nsqFreeNote, #laddersScreen .nsqFreeNote, #nsqFreeNote"),function(n){ if(!n.closest("#clubLadderScreen")) n.remove(); });
+      var scr=document.getElementById("clubLadderScreen"); if(!scr || !scr.classList.contains("active")) return;
+      Array.prototype.forEach.call(scr.querySelectorAll("span"),function(chip){
+        if((chip.textContent||"").trim()!=="ACTIVE" || chip.children.length) return;
+        var head=chip.parentNode; if(!head || head.dataset.nsqFree) return;
+        var tbl=null, el=head; while(el && !tbl){ el=el.nextElementSibling; if(el && (el.tagName==="TABLE" || el.querySelector&&el.querySelector("table"))) tbl=el; if(el && /^H[1-4]$/.test(el.tagName)) break; }
+        var n=document.createElement("div"); n.className="nsqFreeNote";
+        n.style.cssText="margin:6px 0 8px;padding:9px 12px;border-radius:10px;background:#fff7e6;border:1px solid #f1d8a8;font-size:12.5px;color:#5b4636";
+        n.innerHTML="<b>New on the ladder?</b> Pairs added after the ladder is activated start at the bottom \u2014 one free challenge to set your position.";
+        head.parentNode.insertBefore(n, head.nextSibling); head.dataset.nsqFree="1";
+      });
     }catch(e){} }, 800);
     /* q077: leaving the ledger forgets its code — the next visit always asks (Club admin already asks every time) */
     setInterval(function(){ try{ var scr=document.getElementById("platRegScreen");
@@ -19026,15 +19033,35 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var row=el?(el.closest("div")||el.parentNode):null; if(!row || row.dataset.nsqBd) return; row.dataset.nsqBd="1";
         var t=document.createElement("span"); t.textContent=m._board; t.style.cssText="display:inline-block;margin-right:6px;font-size:11px;font-weight:800;color:#fff;background:#7E3200;border-radius:999px;padding:1px 8px";
         row.insertBefore(t, row.firstChild); }); }catch(e){} }, 800);
-    /* the club's admin page: the way into the full admin, first */
+    /* q080 (Andre): the club's admin page — the two admins TOGETHER at the top in one bracket "Club admin": the Club ledger
+       (members, divisions, colours, codes, backups) and the Full admin (matches, tournaments, members, recompute); then
+       Masters, Tournaments, Create pairs (folded), The register. The per-division control rooms are gone. */
     setInterval(function(){ try{
       var nh=document.getElementById("nh"), cid=Number(W.PLAT.cid||0); if(!nh || !cid || levelOf(cid)!=="club") return;
-      if(!nh.querySelector("#nsqTourAdmin, #nsqCard, #nsqPairsAdmin") || nh.querySelector("#nsqClubFull")) return;   /* only on the club's admin page */
-      var c=document.createElement("div"); c.id="nsqClubFull"; c.className="brk"; c.setAttribute("data-plat-keep","1");
-      c.innerHTML='<h2>Club admin \u2014 the whole club</h2><div style="padding:6px 14px 4px;font-size:12.5px;color:#7a6658">Tournaments, every match in every division (edit or delete), members and the club\u2019s ladders \u2014 one admin for the club and all its divisions.</div>'
-        +'<div style="padding:8px 14px 14px"><button onclick="window.nsqOpenClubAdmin()" style="width:100%;padding:12px;border:0;border-radius:12px;background:#D35400;color:#fff;font:inherit;font-weight:800;font-size:15px">Open the club admin</button></div>';
-      var band=nh.querySelector(".band"); band.parentNode.insertBefore(c, band.nextSibling);
-    }catch(e){} }, 600);
+      if(!nh.querySelector("#nsqTourAdmin, #nsqCard, #nsqPairsAdmin")) return;                       /* only on the club's admin page */
+      var brks=Array.prototype.slice.call(nh.querySelectorAll(".brk")), byH=function(rx){ return brks.filter(function(k){ return rx.test(((k.querySelector("h2")||{}).textContent||"").trim()); })[0]; };
+      var led=byH(/^Club ledger/i), divs=byH(/^Divisions$/i), mas=byH(/^Masters$/i), tour=document.getElementById("nsqTourAdmin"), pairs=document.getElementById("nsqPairsAdmin"), reg=byH(/^The register$/i);
+      if(divs) divs.style.display="none";
+      var box=document.getElementById("nsqAdmins");
+      if(!box){
+        box=document.createElement("div"); box.id="nsqAdmins"; box.className="brk"; box.setAttribute("data-plat-keep","1");
+        box.innerHTML='<h2>Club admin</h2>';
+        var band=nh.querySelector(".band"); band.parentNode.insertBefore(box, band.nextSibling);
+      }
+      if(led && led.parentNode && !box.querySelector(".nsqLedRow")){
+        var row=led.querySelector("button, a"); if(row){ row.classList.add("nsqLedRow"); box.appendChild(row); led.remove(); } }
+      if(!box.querySelector(".nsqFullRow")){
+        var ref=box.querySelector(".nsqLedRow"), fr=document.createElement("button"); fr.className=(ref?ref.className:"row")+" nsqFullRow"; fr.className=fr.className.replace("nsqLedRow","");
+        if(ref) fr.setAttribute("style", ref.getAttribute("style")||"");
+        fr.setAttribute("onclick","window.nsqOpenClubAdmin()");
+        fr.innerHTML=ref?ref.innerHTML:"";
+        var b=fr.querySelector("b"); if(b) b.textContent="Full admin";
+        var sub=fr.querySelector("span span, .nm span, small"); if(sub) sub.textContent="matches in every division (edit or delete), tournaments, members, recompute";
+        if(!ref) fr.innerHTML='<span class="nm"><b>Full admin</b><span>matches in every division (edit or delete), tournaments, members, recompute</span></span><span style="margin-left:auto">\u203a</span>';
+        box.appendChild(fr); }
+      /* the order below: Masters, Tournaments, Create pairs, The register */
+      var after=box; [mas,tour,pairs,reg].forEach(function(k){ if(k && k.parentNode===box.parentNode){ if(after.nextSibling!==k) box.parentNode.insertBefore(k, after.nextSibling); after=k; } });
+    }catch(e){} }, 500);
     W.nsqOpenClubAdmin=function(){ try{ if(typeof W.showScreen==="function") W.showScreen("adminScreen"); if(typeof W.openAdmin==="function") W.openAdmin(); }catch(e){} };
     /* divisions have NO admin: no Club admin button on a division's page; an admin address for a division → its club's admin;
        the division ladder's own admin controls (activate, remove) are hidden — the club activates, the divisions follow */
