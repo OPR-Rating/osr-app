@@ -3584,7 +3584,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q073";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q074";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -18079,48 +18079,34 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       }; })();
     /* the club's pair tables grouped by division, with the division pills pinned at the top (Andre) */
     function ladderGroup(){
+      /* q074 (Andre): ONE RANKED LIST, NO DIVISION SECTIONS. Pairs ranked 1…N by rating; each with its DIVISION PILL (in its
+         colour) before the rating; under the name only what the page does not already say — a club's table: nothing; a
+         province's: the club; the Global Ledger's: club · province. A division's own table needs no pill. */
       var scr=document.getElementById("ladderScreen"); if(!scr || !scr.classList.contains("active")) return;
-      var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0];
-      var par=(me&&me.parent_id)?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
-      if(par && par.parent_id) return;                                              /* a division's own table stays as it is */
-      /* the divisions of the pairs this table received (Records opens it in the ledger, on no board) */
-      var seenD={}, divs=[]; Object.keys(W.__nsqPairDiv||{}).forEach(function(k){ var d=W.__nsqPairDiv[k]; if(d && !seenD[d.id]){ seenD[d.id]=1; divs.push(d); } });
-      divs.sort(function(a,b){ return W.nsqDivCmp(a,b); });
-      if(!divs.length) return;
-      var clubsSeen={}; divs.forEach(function(d){ clubsSeen[d.parent_id]=1; });
-      if(Object.keys(clubsSeen).length>1){                                           /* the register: where each pair comes from */
-        var tbW=scr.querySelector("#ladderContent tbody"); if(!tbW) return;
-        var rowsP=Array.prototype.filter.call(tbW.children,function(tr){ return !tr.classList.contains("nsqDivRow"); });
-        rowsP.forEach(function(tr){ var td=tr.children[1]; if(!td || td.querySelector(".nsqPlace")) return;
-          var n=(td.textContent||"").replace(/\s+/g," ").trim(), d=null;
-          Object.keys(W.__nsqPairDiv).some(function(k){ if(n.indexOf(k)>=0){ d=W.__nsqPairDiv[k]; return true; } return false; });
-          if(!d) return; var cs2=W.PLAT.clubs||[], par=cs2.filter(function(c){ return +c.id===+d.parent_id; })[0], gp=par?cs2.filter(function(c){ return +c.id===+par.parent_id; })[0]:null;
-          var sp=document.createElement("span"); sp.className="nsqPlace";
-          sp.style.cssText="display:block;font-size:11px;font-weight:600;color:#8a8196;margin-top:1px";
-          sp.textContent=[par&&par.name, d.name, gp&&gp.name].filter(Boolean).join(" \u00b7 "); td.appendChild(sp); });
-        return;
-      }
       var tb=scr.querySelector("#ladderContent tbody"); if(!tb) return;
-      var rows=Array.prototype.filter.call(tb.children,function(tr){ return !tr.classList.contains("nsqDivRow"); });
-      if(!rows.length || tb.getAttribute("data-nsq-grouped")===String(rows.length)) return;
-      var nameOf=function(tr){ var td=tr.children[1]; return td?(td.textContent||"").replace(/\s+/g," ").trim():""; };
-      var divOf=function(tr){ var n=nameOf(tr), d=null; Object.keys(W.__nsqPairDiv).some(function(k){ if(n.indexOf(k)>=0){ d=W.__nsqPairDiv[k]; return true; } return false; }); return d; };
+      var rows=Array.prototype.filter.call(tb.children,function(tr){ return !tr.classList.contains("nsqDivRow") && tr.children.length>=4; });
+      if(!rows.length || tb.getAttribute("data-nsq-flat")===String(rows.length)+"|"+Object.keys(W.__nsqPairDiv||{}).length) return;
       Array.prototype.forEach.call(tb.querySelectorAll(".nsqDivRow"),function(r){ r.remove(); });
-      var cols=(rows[0].children.length||5), pills=[];
-      divs.forEach(function(d){ var g=rows.filter(function(tr){ var x=divOf(tr); return x && +x.id===+d.id; }); if(!g.length) return;
-        var hr=document.createElement("tr"); hr.className="nsqDivRow"; hr.id="nsqLadDiv_"+d.id;
-        hr.innerHTML='<td colspan="'+cols+'" style="padding:9px 12px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;color:#fff;background:'+(d.colour||"#7E3200")+';scroll-margin-top:70px">'+e(d.name)+(W.nsqRange(d.name)?' \u00b7 '+W.nsqRange(d.name):'')+' \u00b7 '+g.length+'</td>';
-        tb.appendChild(hr); g.forEach(function(tr){ tb.appendChild(tr); });
-        pills.push('<button onclick="document.getElementById(\'nsqLadDiv_'+d.id+'\').scrollIntoView({behavior:\'smooth\',block:\'start\'})" style="flex:none;padding:6px 12px;border-radius:999px;border:0;background:'+(d.colour||"#7E3200")+';color:#fff;font:inherit;font-weight:800;font-size:12.5px">'+e(d.name)+'</button>'); });
-      var rest2=rows.filter(function(tr){ return !divOf(tr); }); rest2.forEach(function(tr){ tb.appendChild(tr); });
-      var bar=document.getElementById("nsqLadPills"), tbl=tb.closest("table");
-      if(!bar){ bar=document.createElement("div"); bar.id="nsqLadPills"; tbl.parentNode.insertBefore(bar, tbl); }
-      bar.style.cssText="display:flex;gap:6px;overflow-x:auto;padding:8px 12px;background:#fff";
-      bar.innerHTML=pills.join("");
-      /* each division ranks from 1 */
-      Array.prototype.forEach.call(tb.querySelectorAll("tr.nsqDivRow"),function(hd){ var k=0, tr=hd.nextElementSibling;
-        while(tr && !tr.classList.contains("nsqDivRow")){ k++; var td=tr.children[0]; if(td){ var leaf=Array.prototype.filter.call(td.querySelectorAll("*"),function(e){ return e.children.length===0 && /^\d+$/.test((e.textContent||"").trim()); })[0]||td; if(/^\d+$/.test((leaf.textContent||"").trim())) leaf.textContent=String(k); } tr=tr.nextElementSibling; } });
-      tb.setAttribute("data-nsq-grouped", String(rows.length));
+      var bar=document.getElementById("nsqLadPills"); if(bar) bar.remove();
+      var q=new URLSearchParams(location.search), here=Number(q.get("nat")||W.PLAT.nat||W.PLAT.cid||0), cs=W.PLAT.clubs||[];
+      var lv=(W.__nsqWide||!here)?"national":levelOf(here);
+      var nameOf=function(tr){ var td=tr.children[1]; if(!td) return ""; var c=td.cloneNode(true); Array.prototype.forEach.call(c.querySelectorAll(".nsqPlace"),function(x){ x.remove(); }); return (c.textContent||"").replace(/\s+/g," ").trim(); };
+      var divOf=function(tr){ var n=nameOf(tr), d=null; Object.keys(W.__nsqPairDiv||{}).some(function(k){ if(n===k || n.indexOf(k)===0){ d=W.__nsqPairDiv[k]; return true; } return false; }); return d; };
+      var num=function(tr){ var td=tr.children[2]; var m=String(td?td.textContent:"").match(/(\d{3,4})(?!.*\d)/); return m?+m[1]:0; };
+      rows.sort(function(x,y){ return num(y)-num(x); });
+      rows.forEach(function(tr,k){
+        tb.appendChild(tr);
+        var td0=tr.children[0]; if(td0){ var leaf=Array.prototype.filter.call(td0.querySelectorAll("*"),function(e){ return e.children.length===0 && /\d/.test(e.textContent||""); })[0]; if(leaf) leaf.textContent=String(k+1); else td0.textContent=String(k+1); }
+        var d=divOf(tr), tdN=tr.children[1], tdR=tr.children[2];
+        if(tdR && d && lv!=="division" && !tdR.querySelector(".nsqDivPill")){ var pl=document.createElement("span"); pl.className="nsqDivPill"; pl.textContent=d.name;
+          pl.style.cssText="display:inline-block;margin-right:8px;font-size:11px;font-weight:800;color:#fff;background:"+(d.colour||"#7E3200")+";border-radius:999px;padding:2px 9px;vertical-align:middle";
+          tdR.insertBefore(pl, tdR.firstChild); }
+        if(tdN){ Array.prototype.forEach.call(tdN.querySelectorAll(".nsqPlace"),function(x){ x.remove(); });
+          if(d && (lv==="national" || lv==="province")){ var clb=cs.filter(function(c){ return +c.id===+d.parent_id; })[0], prv=clb?cs.filter(function(c){ return +c.id===+clb.parent_id; })[0]:null;
+            var txt=(lv==="national")?[clb&&clb.name, prv&&prv.name].filter(Boolean).join(" \u00b7 "):(clb?clb.name:"");
+            if(txt){ var sp=document.createElement("span"); sp.className="nsqPlace"; sp.style.cssText="display:block;font-size:11.5px;font-weight:700;color:#4a4256;margin-top:1px"; sp.textContent=txt; tdN.appendChild(sp); } } }
+      });
+      tb.setAttribute("data-nsq-flat", String(rows.length)+"|"+Object.keys(W.__nsqPairDiv||{}).length);
     }
     setInterval(function(){ try{ ladderGroup(); }catch(e6){} }, 600);
     /* FROZEN: the search bar and the division pills lock to the top of the window once you scroll past them (Andre:
@@ -18695,12 +18681,15 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         rows.forEach(function(x,k){
           var dv=cs.filter(function(c){ return +c.id===+x.div; })[0], cl=dv?cs.filter(function(c){ return +c.id===+dv.parent_id; })[0]:null, pv=cl?cs.filter(function(c){ return +c.id===+cl.parent_id; })[0]:null;
           var pill=function(t,col){ return t?'<span style="font-size:11px;font-weight:800;color:#fff;background:'+col+';border-radius:999px;padding:2px 8px;white-space:nowrap">'+e(t)+'</span>':""; };
+          var lvI=(W.__nsqWide||!sc.ids)?"national":levelOf(Number(new URLSearchParams(location.search).get("nat")||W.PLAT.cid||0));   /* q074 */
+          var placeP=(lvI==="national")?(pill(pv&&pv.name,"#7E3200")+pill(cl&&cl.name,(cl&&cl.colour)||"#D35400")):(lvI==="province")?pill(cl&&cl.name,(cl&&cl.colour)||"#D35400"):"";
+          var divP=(lvI!=="division" && dv)?'<span style="display:inline-block;margin-right:5px;background:'+(dv.colour||"#7E3200")+';color:#fff;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:800">'+e(dv.name)+'</span>':"";
           var href=pg+"?club="+(x.div||W.PLAT.cid||0)+"&go=me&who="+encodeURIComponent(x.p.full_name);
           var lady=isLady(x.p.gender);
           h+='<a class="nsqIndRow" data-n="'+e(String(x.p.full_name).toLowerCase())+'" href="'+href+'" onclick="window.nsqClose();return window.nhNav?(window.nhNav(this.getAttribute(\'href\')),false):true" style="display:flex;align-items:center;gap:10px;padding:10px 13px;border-top:1px solid #f0ecf6;text-decoration:none;color:inherit">'
             +'<b style="flex:none;width:34px;text-align:center;color:#7a6658">'+(k+1)+'</b>'
-            +'<span style="flex:1;min-width:0"><b style="display:block;font-size:15px;color:#1f1a2b">'+e(x.p.full_name)+'</b><span style="display:flex;gap:5px;flex-wrap:wrap;margin-top:3px">'+pill(pv&&pv.name,"#7E3200")+pill(cl&&cl.name,(cl&&cl.colour)||"#D35400")+'</span></span>'
-            +'<span style="flex:none;text-align:right"><b style="display:inline-block;background:'+(lady?"#fde7f1":"#e7eefb")+';color:'+(lady?"#a01a5a":"#1d4ea0")+';border-radius:999px;padding:3px 10px;font-size:13px">'+Math.round(x.r)+'</b>'
+            +'<span style="flex:1;min-width:0"><b style="display:block;font-size:15px;color:#1f1a2b">'+e(x.p.full_name)+'</b>'+(placeP?'<span style="display:flex;gap:5px;flex-wrap:wrap;margin-top:3px">'+placeP+'</span>':'')+'</span>'
+            +'<span style="flex:none;text-align:right">'+divP+'<b style="display:inline-block;background:'+(lady?"#fde7f1":"#e7eefb")+';color:'+(lady?"#a01a5a":"#1d4ea0")+';border-radius:999px;padding:3px 10px;font-size:13px">'+Math.round(x.r)+'</b>'
             +'<span style="display:inline-block;margin-left:5px;background:#f1ece6;color:#5b4636;border-radius:999px;padding:3px 9px;font-size:13px;font-weight:800">'+(x.r/200).toFixed(1)+'</span>'
             +'<span style="display:inline-block;margin-left:5px;min-width:34px;text-align:center;background:'+(x.mv>0?"#e3f4e6":x.mv<0?"#fbe4e1":"#eeeeee")+';color:'+(x.mv>0?"#1e8449":x.mv<0?"#c0392b":"#666")+';border-radius:999px;padding:3px 9px;font-size:13px;font-weight:800">'+(x.mv>0?"+":"")+x.mv+'</span></span></a>';
         });
@@ -18903,7 +18892,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         +"#ladderNoteBox{border-left-color:"+C+" !important}"
         +"#ladderNoteBox>div:first-child{background:rgba("+c.join(",")+",.14) !important;border-color:rgba("+c.join(",")+",.35) !important}"
         +"#ladderNoteBox>div:nth-child(2){background:rgba("+c.join(",")+",.06) !important;border-color:rgba("+c.join(",")+",.25) !important}"
-        +"#ladderContent thead tr, #ladderContent thead th{background:"+C+" !important;color:#fff !important}";
+        +"#ladderContent thead tr, #ladderContent thead th{background:"+C+" !important;color:#fff !important}"
+        +"#ladderContent tbody td:nth-child(2), #ladderContent tbody td:nth-child(3), #ladderContent tbody td:nth-child(4){color:#1f1a2b !important}"
+        +"#ladderContent tbody td:nth-child(2) a, #ladderContent tbody td:nth-child(2) span:not(.nsqPlace){color:#1f1a2b !important}";
       if(!st){ st=document.createElement("style"); st.id="nsqLadCol"; document.head.appendChild(st); }
       if(st.textContent!==css) st.textContent=css;
     }catch(e){} }, 400);
