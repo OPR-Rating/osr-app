@@ -615,6 +615,11 @@
        message — they live in club.html's admin until plat_admin_padel is cloned
    ============================================================================ */
 (function(){
+  try{ if(window.NEWAPP && !sessionStorage.getItem("nsq_home_seen")){ sessionStorage.setItem("nsq_home_seen","1");
+    var _hq=new URLSearchParams(location.search), _pl=_hq.get("pool");
+    if(!_hq.get("club") && !_hq.get("go")){ var _keys=Object.keys(localStorage).filter(function(k){ return /^nsq_home_/.test(k) && (!_pl || k==="nsq_home_"+_pl); });
+      var _h=_keys.length?JSON.parse(localStorage.getItem(_keys[0])||"null"):null;
+      if(_h && _h.club){ location.replace(location.pathname+"?club="+_h.club); return; } } } }catch(_e){}   /* Nat-Squash: open on my home */
   try{ var _qq=new URLSearchParams(location.search); if(window.NEWAPP && _qq.get("club")==="0" && _qq.get("nat") && !_qq.get("go")){ location.replace(location.pathname+"?club="+_qq.get("nat")); return; } }catch(_e){}   /* Nat-Squash: a ledger with no task = its door */
   var FAR="https://farlrjnaeojmypzbplmz.supabase.co";
   var PLAT="https://djmbnvikrdgnomjhtkgf.supabase.co";
@@ -3585,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q084";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q085";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -18007,14 +18012,14 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var where=!club ? "club_id=not.is.null"                                       /* the register: every division's pairs */
                : "club_id=in.("+(divs.length?divs.map(function(d){ return d.id; }):[club]).join(",")+")";   /* a club: its divisions' pairs */
       return Promise.all([
-        rest("plat_doubles_results?pool_id=eq."+P+"&discipline=eq.squash&"+where+"&select=category,p1,p2,combined,club_id&limit=5000"),
-        restAll("plat_squash_v_pool_individuals?pool_id=eq."+P+"&select=id,full_name,seed_rating,current_rating&order=full_name.asc"),
+        restM("plat_doubles_results?pool_id=eq."+P+"&discipline=eq.squash&"+where+"&select=category,p1,p2,combined,club_id&limit=5000"),
+        restAllM("plat_squash_v_pool_individuals?pool_id=eq."+P+"&select=id,full_name,seed_rating,current_rating&order=full_name.asc"),
         W.nsqPairTrack(),
         /* q057: the clubs' PRE-CREATED pairs in this scope, and where each player sits (for the pair's division) */
         (function(){ var clubIds={}; Object.keys(byId).forEach(function(k){ var d=byId[k]; if(d&&d.parent_id) clubIds[+d.parent_id]=1; });
           var ids=Object.keys(clubIds); if(!ids.length && club) ids=[club];
-          return ids.length?rest("nsq_pairs?club_id=in.("+ids.join(",")+")&select=id,club_id,category,p1,p2&limit=5000").catch(function(){ return []; }):Promise.resolve([]); })(),
-        (function(){ var ids=Object.keys(byId); return ids.length?restAll("plat_memberships?club_id=in.("+ids.join(",")+")&select=individual_id,club_id&order=individual_id.asc").catch(function(){ return []; }):Promise.resolve([]); })()
+          return ids.length?restM("nsq_pairs?club_id=in.("+ids.join(",")+")&select=id,club_id,category,p1,p2&limit=5000").catch(function(){ return []; }):Promise.resolve([]); })(),
+        (function(){ var ids=Object.keys(byId); return ids.length?restAllM("plat_memberships?club_id=in.("+ids.join(",")+")&select=individual_id,club_id&order=individual_id.asc").catch(function(){ return []; }):Promise.resolve([]); })()
       ]).then(function(r){ var track=r[2]||{}, pre=Array.isArray(r[3])?r[3]:[], mem=Array.isArray(r[4])?r[4]:[];
         var rows=Array.isArray(r[0])?r[0]:[], seed={}, now={}; (Array.isArray(r[1])?r[1]:[]).forEach(function(x){ seed[x.full_name]=x.seed_rating; now[x.full_name]=(x.current_rating!=null?x.current_rating:x.seed_rating); });
         var seen={}, out=[];
@@ -18063,6 +18068,14 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         /* q066: A LADDER IS ONE BOARD'S. The ladder screens read club_ladder for the boot board, which the platform widened to
            every board of the club — the club ladder and each division's ladder listed together (every pair twice). It now
            names exactly the board you stand on: the club (its ledger, ?nat=) or the division. */
+        /* q085: the ladder's ACTIVATED record is one board's too — read exactly the board you stand on (it was read across the
+           club and all its divisions, so a division's "not activated" could be shown after the club activated) */
+        if(pq.indexOf("club_ladder_state?")===0){
+          var _sq=new URLSearchParams(location.search), _sh=Number(_sq.get("nat")||W.PLAT.nat||W.PLAT.cid||0);
+          var _sb=(W.__nsqWide||!_sh)?W.nsqNatBoard():_sh;
+          if(_sb>0) pq=pq.replace(/club_id=(eq\.\d+|in\.\([\d,]+\))/, "club_id=in.("+_sb+")");
+          return _sg.call(this, pq);
+        }
         if(pq.indexOf("club_ladder?")===0){
           var _lq=new URLSearchParams(location.search), _here=Number(_lq.get("nat")||W.PLAT.nat||W.PLAT.cid||0);
           var _lv=(W.__nsqWide||!_here)?"national":levelOf(_here);
@@ -18092,10 +18105,14 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
              refresh. Wait for the register (a moment at most), and if the answer is still empty, ask once more. */
           var self=this, args=arguments, gc=gm?gm[1]:null;
           var ready=function(){ return new Promise(function(res){ var t0=Date.now(); (function poll(){ if((W.PLAT&&W.PLAT.pool&&(W.PLAT.clubs||[]).length) || Date.now()-t0>30000) return res(); setTimeout(poll,200); })(); }); };
+          W.__nsqLastPairReq={club:club, gc:gc, at:Date.now(), checked:false};
           var pairs=function(){ return ready().then(function(){ return pairRowsFor(club, gc); }).then(function(rows){
               if(rows && rows.length) return rows;
-              return new Promise(function(res){ setTimeout(res,900); }).then(function(){ return pairRowsFor(club, gc); }); }); };
-          return Promise.all([_sg.apply(self,args), pairs()]).then(function(r){
+              return new Promise(function(res){ setTimeout(res,900); }).then(function(){ MEMO={}; return pairRowsFor(club, gc); }); }); };   /* the second ask is fresh */
+          W.__nsqPairBusy++; var _done=function(){ W.__nsqPairBusy=Math.max(0,W.__nsqPairBusy-1); };
+          return Promise.all([_sg.apply(self,args), pairs().catch(function(){ return null; })]).then(function(r){ _done();
+            W.__nsqPairEmptyAt=(Array.isArray(r[1]) && !r[1].length)?Date.now():0;           /* q085: a successful, empty answer for the PAIRS */
+            if(r[1]===null) r[1]=[];
             var base=Array.isArray(r[0])?r[0]:[], have={}; base.forEach(function(x){ if(x&&x.name) have[x.name]=1; });
             return base.concat(r[1].filter(function(x){ return !have[x.name]; }));
           });
@@ -18659,7 +18676,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     W.nsqPairKey=function(a,b){ return [String(a||"").trim(), String(b||"").trim()].sort(function(x,y){ return x.localeCompare(y); }).join(" & "); };
     W.nsqPairTrack=function(){
       var P=Number(W.PLAT&&W.PLAT.pool||0); if(!P) return Promise.resolve({});
-      if(TRACK.pool===P && TRACK.map && Date.now()-TRACK.at<20000) return Promise.resolve(TRACK.map);
+      if(TRACK.pool===P && TRACK.map && Date.now()-TRACK.at<60000) return Promise.resolve(TRACK.map);
       if(TRACK.busy) return TRACK.busy;
       TRACK.busy=restAll("plat_matches?pool_id=eq."+P+"&discipline=eq.squash&select=id,match_date,t1p1,t1p2,t2p1,t2p2,rating_delta,t1_rating_at,t2_rating_at&order=match_date.asc,id.asc").then(function(ms){
         var map={};
@@ -18749,10 +18766,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(!(W.PLAT && W.PLAT.pool && (W.PLAT.clubs||[]).length)) return;                       /* not ready yet */
       var box=document.getElementById("ladderContent"); if(!box) return;
       if(box.querySelector("tbody tr") || /loading/i.test(box.textContent||"") || box.querySelector("#nsqNoPairs")) return;   /* filled, loading, or already said */
-      if(Date.now()-LAD.at<2500) return;                                                     /* give the first answer time */
+      var _emptyNow=W.__nsqPairEmptyAt && Date.now()-W.__nsqPairEmptyAt<10000;                 /* q085: the read came back empty — say so at once */
+      if(!_emptyNow && Date.now()-LAD.at<2500) return;                                       /* give the first answer time */
+      if(_emptyNow) LAD.tries=1, LAD.redo=0;
       /* q079: an EMPTY table is a real answer when a club has no pairs yet — retry ONCE (the old empty-first-answer glitch),
          then stop and say so. (It reloaded up to four times: the hourglass and the page opening and closing.) */
-      if(LAD.tries<1){ if(Date.now()-LAD.redo<3500) return; LAD.redo=Date.now(); LAD.tries=1; W.loadLadder.apply(null, LAD.args); return; }
+      if(LAD.tries<1){ if(Date.now()-LAD.redo<3500) return; LAD.redo=Date.now(); LAD.tries=1; MEMO={}; if(typeof TRACK!=="undefined") TRACK.at=0; W.loadLadder.apply(null, LAD.args); return; }   /* a retry asks afresh */
       if(Date.now()-LAD.redo<3000) return;
       var cat=String((LAD.args&&LAD.args[1])||"pairs");
       var isPairs=/pair|mixed|all sorts|universal/i.test(cat+" "+String((LAD.args&&LAD.args[0])||""));
@@ -19122,6 +19141,54 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         Array.prototype.forEach.call(lad.querySelectorAll("button"),function(b){ var t=(b.textContent||"").trim(), oc=b.getAttribute("onclick")||"";
           if(/activate|seed|reset|remove|delete/i.test(t+" "+oc) || t==="\u00d7" || t==="×") b.style.display="none"; }); }
     }catch(e){} }, 500);
+    /* q085: READ ONCE, USE MANY. Each pair table asked for the same things from scratch (every player, every match, the pairs,
+       the pre-created pairs, the memberships) — the hourglass and a blank table while it waited. The same request inside a
+       minute is answered from memory (a write — a saved match, a new pair — clears it). */
+    var MEMO={};
+    function memo(url, fn){ var h=MEMO[url]; if(h && Date.now()-h.t<60000) return h.p;
+      var p=fn().then(function(r){ return r; }, function(e){ delete MEMO[url]; throw e; }); MEMO[url]={t:Date.now(), p:p}; return p; }
+    W.nsqMemoClear=function(){ MEMO={}; };
+    (function(){ var f0=W.fetch; W.fetch=function(u,i){ try{ if(String((i&&i.method)||"GET").toUpperCase()!=="GET"){ MEMO={}; if(typeof TRACK!=="undefined") TRACK.at=0; } }catch(e){}   /* a write clears the memory */
+      return f0.apply(this, arguments); }; })();
+    var restM=function(path){ return memo("r:"+path, function(){ return rest(path); }); };
+    var restAllM=function(path){ return memo("a:"+path, function(){ return restAll(path); }); };
+    /* while a pair table is being prepared: "Loading pairs…", never a blank table */
+    W.__nsqPairBusy=0;
+    setInterval(function(){ try{ var box=document.getElementById("ladderContent"), scr=document.getElementById("ladderScreen");
+      if(!box || !scr || !scr.classList.contains("active")) return;
+      if(W.__nsqPairBusy>0 && !box.querySelector("tbody tr") && !box.querySelector("#nsqPairWait") && !box.querySelector("#nsqNoPairs"))
+        box.innerHTML='<div id="nsqPairWait" style="margin:22px 14px;text-align:center;color:#6f5f52;font-size:14px">Loading pairs\u2026</div>';
+    }catch(e){} }, 200);
+    /* q085: an empty pair table is checked ONCE more, quietly, two seconds later (fresh from the server, nothing redrawn) — if
+       pairs do exist after all (the old empty-first-answer glitch), the table is loaded again and fills; if not, nothing moves. */
+    setInterval(function(){ try{
+      var q=W.__nsqLastPairReq, box=document.getElementById("ladderContent"), scr=document.getElementById("ladderScreen");
+      if(!q || q.checked || !box || !scr || !scr.classList.contains("active") || !box.querySelector("#nsqNoPairs")) return;
+      if(Date.now()-q.at<2000) return; q.checked=true;
+      MEMO={}; if(typeof TRACK!=="undefined") TRACK.at=0;
+      pairRowsFor(q.club, q.gc).then(function(rows){ if(rows && rows.length && LAD.args){ LAD.tries=1; LAD.at=Date.now(); W.loadLadder.apply(null, LAD.args); } }).catch(function(){});
+    }catch(e){} }, 500);
+    /* q085: "OPEN THE APP HERE EVERY TIME" — a switch on a PROVINCE's and a CLUB's dashboard. Remembered on this phone; one
+       home at a time; the app's FIRST page of a visit goes there (the national page you go back to yourself is never redirected). */
+    function homeKey(){ return "nsq_home_"+Number(W.PLAT.pool||0); }
+    W.nsqHomeToggle=function(on){ try{ var cid=Number(W.PLAT.cid||0);
+      if(on){ localStorage.setItem(homeKey(), JSON.stringify({club:cid, name:(W.PLAT.clubs||[]).filter(function(c){ return +c.id===cid; }).map(function(c){ return c.name; })[0]||""})); }
+      else { var h=JSON.parse(localStorage.getItem(homeKey())||"null"); if(h && +h.club===cid) localStorage.removeItem(homeKey()); }
+      var el=document.getElementById("nsqHomeRow"); if(el) el.remove(); }catch(e){} };
+    setInterval(function(){ try{
+      var cid=Number(W.PLAT.cid||0), lv=cid?levelOf(cid):""; if(lv!=="province" && lv!=="club") return;
+      if(new URLSearchParams(location.search).get("go")) return;
+      var nh=document.getElementById("nh"); if(!nh || nh.querySelector("#nsqHomeRow")) return;
+      var band=nh.querySelector(".band"); if(!band) return;
+      var h=null; try{ h=JSON.parse(localStorage.getItem(homeKey())||"null"); }catch(e){}
+      var on=!!(h && +h.club===cid);
+      var row=document.createElement("div"); row.id="nsqHomeRow"; row.setAttribute("data-plat-keep","1");
+      row.style.cssText="display:flex;align-items:center;gap:10px;margin:10px 14px 0;padding:9px 12px;border:1px solid #eadfd5;border-radius:12px;background:#fff;font-size:13.5px;color:#3a2e25";
+      row.innerHTML='<span style="font-size:16px">\u{1F3E0}</span><span style="flex:1">Open the app here every time'+((h&&!on&&h.name)?'<span style="display:block;font-size:11.5px;color:#8a7c70">now: '+e(h.name)+'</span>':'')+'</span>'
+        +'<button onclick="window.nsqHomeToggle('+(on?0:1)+')" aria-label="'+(on?"Off":"On")+'" style="flex:0 0 44px;height:24px;border-radius:99px;border:0;position:relative;background:'+(on?"#D35400":"#ddd5cc")+'">'
+        +'<span style="position:absolute;top:3px;left:'+(on?"23px":"3px")+';width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)"></span></button>';
+      band.parentNode.insertBefore(row, band.nextSibling);
+    }catch(e){} }, 600);
     /* a place as people say it: a division reads "Rovers \u00b7 Div A" */
     W.nsqPlace=function(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return "";
       var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
