@@ -3585,7 +3585,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q083";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q084";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -10238,6 +10238,18 @@ async function clRemove(id, label){
   }
   function nhWhen(){ return (NHWIN<=7)?"this week":("last "+NHWIN+" days"); }
   /* n111: all=true returns everyone who moved, not just the three biggest */
+  /* Nat-Squash q084: on a DIVISION's page — is this pair / person this division's own? (from the page's members) */
+  W.__nsqDivOwn=function(){ var cs=W.PLAT.clubs||[], me=cs.find(function(c){ return +c.id===+W.PLAT.cid; }), pa=me&&me.parent_id?cs.find(function(c){ return +c.id===+me.parent_id; }):null;
+    if(!(pa&&pa.parent_id)) return null;
+    var ppl=(NEW&&NEW.data&&NEW.data.people)||[], mem={}, dv={};
+    ppl.forEach(function(pp){ if(!pp.full_name) return; var nm=String(pp.full_name).trim(), b=cs.find(function(c){ return +c.id===+pp.club_id; }), bp=b&&b.parent_id?cs.find(function(c){ return +c.id===+b.parent_id; }):null;
+      if(+pp.club_id===+W.PLAT.cid) mem[nm]=1;
+      if(bp && bp.parent_id){ var cur=dv[nm]; if(!cur || (typeof W.nsqDivCmp==="function" && W.nsqDivCmp(b,cur)<0)) dv[nm]=b; } });
+    return { person:function(n){ return !!mem[String(n||"").trim()]; },
+             pair:function(n){ var h=String(n||"").split(" & "); if(h.length<2) return !!mem[String(n||"").trim()];
+               var a=dv[h[0].trim()], b=dv[h[1].trim()], pd=(a&&b)?((typeof W.nsqDivCmp==="function" && W.nsqDivCmp(a,b)<=0)?a:b):(a||b);
+               return pd?(+pd.id===+W.PLAT.cid):false; } };
+  };
   function nhMovers(ms,all){
     var sum={}, board={};
     nhWindow(ms);
@@ -10541,7 +10553,8 @@ async function clRemove(id, label){
     return 'showScreen(\'laddersScreen\')';
   }
   function nhMoversBrk(d,ink,scope){
-    var mv=nhMovers(d.matches); if(!mv.length) return "";
+    var _own=(typeof W.__nsqDivOwn==="function")?W.__nsqDivOwn():null;
+    var mv=_own?nhMovers(d.matches,true).filter(function(x){ return _own.person(x.name); }).slice(0,3).map(function(x){ x.club=W.PLAT.cid; return x; }):nhMovers(d.matches); if(!mv.length) return "";   /* Nat-Squash: tagged with THIS division */
     return '<div class="brk"><h2 style="display:flex;align-items:center;gap:8px">Movers '+nhWhen()+' '+nhTag()+'</h2><div class="rows">'
       + mv.map(function(m){
           /* the disc wears the colour of the board where the move happened — never the page's colour */
@@ -10573,7 +10586,8 @@ async function clRemove(id, label){
         a.move+=x[1]; a.won+=x[2]; a.played+=x[2]+x[3];
       });
     });
-    var hot=Object.keys(acc).map(function(k){ var a=acc[k]; a.move=Math.round(a.move); a.pct=a.played?Math.round(100*a.won/a.played):0; return a; })
+    var _ownF=(typeof W.__nsqDivOwn==="function")?W.__nsqDivOwn():null;
+    var hot=Object.keys(acc).filter(function(k){ return !_ownF || _ownF.pair(k); }).map(function(k){ var a=acc[k]; a.move=Math.round(a.move); a.pct=a.played?Math.round(100*a.won/a.played):0; return a; })
       .filter(function(a){ return a.move>0; })
       .sort(function(a,b){ return b.move-a.move||b.pct-a.pct; }).slice(0,2);
     if(!hot.length) return "";
@@ -10727,7 +10741,8 @@ async function clRemove(id, label){
         var _sum={}, _bd={}; nhWindow(ms);
         ms.forEach(function(m){ if(ago(m.match_date)>NHWIN) return; var dd=(m.rating_delta!=null)?+m.rating_delta:0; if(!dd) return;
           [[m.t1p1,dd],[m.t2p1,-dd]].forEach(function(p){ if(!p[0] || String(p[0]).indexOf(" & ")<0) return; var k=String(p[0]).trim(); _sum[k]=(_sum[k]||0)+p[1]; if(_bd[k]==null) _bd[k]=m.club_id; }); });
-        all=Object.keys(_sum).map(function(n){ return {name:n, move:_sum[n], club:_bd[n]}; }); } }catch(_e){}
+        var _ownC=(typeof W.__nsqDivOwn==="function")?W.__nsqDivOwn():null;
+        all=Object.keys(_sum).filter(function(n){ return !_ownC || _ownC.pair(n); }).map(function(n){ return {name:n, move:_sum[n], club:(_ownC?W.PLAT.cid:_bd[n])}; }); } }catch(_e){}
     var up=all.filter(function(x){ return x.move>0; }).sort(function(a,b){ return b.move-a.move; })[0] || null;
     var dn=all.filter(function(x){ return x.move<0; }).sort(function(a,b){ return a.move-b.move; })[0] || null;
     var ppl=(NEW.data&&NEW.data.people)||[];
