@@ -3584,7 +3584,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q074";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q075";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -18021,22 +18021,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
             pq=pq.replace(/club_id=(eq\.\d+|in\.\([\d,]+\))/, "club_id=in.("+_here+")");   /* in.(n): the platform does not widen this form */
             return _sg.call(this, pq);
           }
-          /* q073: a PROVINCE or the GLOBAL LEDGER — one ladder, 1 to N: the CLUB ladders in that area combined, each pair once,
-             ordered by rating (positions from different clubs cannot be compared), the club shown beside the pair */
-          var _cs=W.PLAT.clubs||[], _clubs=_cs.filter(function(c){ var lv=levelOf(+c.id); if(lv!=="club") return false;
-            return _lv==="national" || +c.parent_id===+_here; }).map(function(c){ return +c.id; });
-          if(!_clubs.length) return Promise.resolve([]);
-          pq=pq.replace(/club_id=(eq\.\d+|in\.\([\d,]+\))/, "club_id=in.("+_clubs.join(",")+")");
-          return Promise.all([_sg.call(this, pq), restAll("plat_squash_v_pool_individuals?pool_id=eq."+Number(W.PLAT.pool||0)+"&select=full_name,current_rating,seed_rating&order=full_name.asc")]).then(function(rr){
-            var rows=Array.isArray(rr[0])?rr[0]:[], now={}; (Array.isArray(rr[1])?rr[1]:[]).forEach(function(x){ now[String(x.full_name).trim()]=(x.current_rating!=null?x.current_rating:x.seed_rating); });
-            var seen={}, out=[];
-            rows.forEach(function(r){ var k=W.nsqPairKey(r.p1,r.p2); if(seen[k]) return; seen[k]=1;
-              var a=now[String(r.p1).trim()], b=now[String(r.p2).trim()]; var rt=(a!=null&&b!=null)?(Math.max(a,b)*0.6+Math.min(a,b)*0.4):0;
-              var cl=_cs.filter(function(c){ return +c.id===+r.club_id; })[0];
-              out.push(Object.assign({}, r, {_rt:rt, _club:cl?cl.name:""})); });
-            out.sort(function(x,y){ return y._rt-x._rt; }); out.forEach(function(r,i){ r.position=i+1; });
-            W.__nsqLadClub={}; out.forEach(function(r){ W.__nsqLadClub[r.p1+" / "+r.p2]=r._club; });
-            return out; });
+          /* q075: a PROVINCE has its own ladder (fed by its clubs); the GLOBAL LEDGER reads the NATIONAL ladder ("National events") */
+          var _b=(_lv==="national")?W.nsqNatBoard():_here; if(!_b) return Promise.resolve([]);
+          pq=pq.replace(/club_id=(eq\.\d+|in\.\([\d,]+\))/, "club_id=in.("+_b+")");
+          return _sg.call(this, pq);
         }
         if(pq.indexOf("player_results?select=name,current_rating,gender,initial_rating")===0){
           var cm=pq.match(/club_id=eq\.(\d+)/), gm=pq.match(/gender=eq\.([MLX])/);
@@ -18518,6 +18506,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       card.innerHTML='<h2>National \u00b7 '+e(regName)+'</h2>'
         +r("\u2699","Global Ledger","every province, club and member \u2014 the national code",'href="'+String(gl.getAttribute("href")||"").replace(/&from=\d+/,"")+'&back='+encodeURIComponent("?pool="+Number(W.PLAT.pool||0))+'"')   /* leaving it returns HERE */
         +r("\u25a4","Masters divisions","the master list of divisions, the gap and the transition zone",'href="javascript:void(0)" onclick="window.nsqOpen(0);return false"')
+        +(W.nsqNatBoard()?r("\u21c5","National Ladder Match","a challenge on the National ladder \u2014 pairs from any club; shared clubs and provinces move too",'href="'+(location.pathname.split("/").pop()||"nat3-squash.html")+'?club='+W.nsqNatBoard()+'&go=entry&lm=1"'):"")
         +r("\ud83c\udfc6","National tournaments","the register\u2019s own tournaments, shown on every door",'href="javascript:void(0)" onclick="window.nsqNationalTour();return false"')
         +(gr?r("\u2630","Global records","every member and pair across the register, with where they come from",'href="'+gr.getAttribute("href")+'"'):"");
       /* after the province cards */
@@ -18909,6 +18898,90 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       box.innerHTML='<h2>'+e((me&&me.name)||"")+' player and pairing stats</h2><div style="padding:4px 12px 2px;font-size:12.5px;color:#7a6658">All the clubs in '+e((me&&me.name)||"the province")+' together.</div>';
       row.parentNode.insertBefore(box,row); box.appendChild(row); row.style.padding="8px 10px 12px";
     }catch(e){} }, 700);
+    /* ---- LADDERS: CLUB → PROVINCE → NATIONAL (q075, Andre) ----
+       Joining and activation cascade up in the database (nsq_ladders.sql). Here: the National board, the province door's
+       "KZN Ladder Match", the national page's "National Ladder Match", the rule that both pairs' clubs must be active, the
+       result going to every ladder the two pairs share, and the free-challenge note. */
+    W.nsqNatBoard=function(){ var c=(W.PLAT.clubs||[]).filter(function(x){ return /^national events$/i.test(String(x.name).trim()); })[0]; return c?+c.id:0; };
+    function lvlOf(id){ if(+id===W.nsqNatBoard()) return "national"; return levelOf(+id); }
+    function where(names){   /* a pair's division, club and province — asked of the database (players' division memberships) */
+      var cs=W.PLAT.clubs||[], P=Number(W.PLAT.pool||0), nm=names.filter(Boolean).map(function(n){ return String(n).trim(); });
+      if(!nm.length) return Promise.resolve({div:0,club:0,prov:0});
+      var q=nm.map(function(n){ return '"'+n.replace(/"/g,'')+'"'; }).join(",");
+      return rest("plat_individuals?pool_id=eq."+P+"&full_name=in.("+encodeURIComponent(q)+")&select=id,full_name").then(function(ppl){
+        var ids=(ppl||[]).map(function(x){ return x.id; }); if(!ids.length) return [];
+        return rest("plat_memberships?individual_id=in.("+ids.join(",")+")&select=individual_id,club_id"); }).then(function(ms){
+        var divs=[]; (ms||[]).forEach(function(m){ var b=cs.filter(function(c){ return +c.id===+m.club_id; })[0]; if(b && levelOf(+b.id)==="division") divs.push(b); });
+        var d=divs.slice().sort(function(a,b){ return W.nsqDivCmp(a,b); })[0]||null;
+        var clubs=divs.map(function(x){ return +x.parent_id; }), club=(clubs.length&&clubs.every(function(c){ return c===clubs[0]; }))?clubs[0]:0;
+        var cl=cs.filter(function(c){ return +c.id===club; })[0];
+        /* both players in the same division → that division; otherwise the pair has no single division */
+        var sameDiv=divs.length>=2 && divs.every(function(x){ return +x.id===+divs[0].id; });
+        return {div:sameDiv?+divs[0].id:(divs.length===1?+divs[0].id:0), club:club, prov:cl?+cl.parent_id:0}; }).catch(function(){ return {div:0,club:0,prov:0}; });
+    }
+    function sendResult(board, cat, winner, loser){
+      return W.fetch(B+"/functions/v1/plat_ladder_squash",{method:"POST",headers:H(),body:JSON.stringify({action:"apply_ladder_result",club_id:board,category:cat,winner:winner,loser:loser})}).catch(function(){});
+    }
+    /* the result goes to every ladder the two pairs share (below the one it was played on) */
+    (function(){ var f0=W.fetch; W.fetch=function(u,i){ var url=String(u&&u.url?u.url:u), body=null;
+      try{ if(/\/functions\/v1\/ladder(\?|$)/.test(url) && i && i.body){ body=JSON.parse(i.body); if(body.action!=="apply_ladder_result") body=null; } }catch(e){ body=null; }
+      var p=f0.apply(this,arguments);
+      if(body && body.winner && body.loser && body.winner.p2){
+        var played=Number(W.PLAT.cid||0), lv=lvlOf(played), cat=body.category;
+        p.then(function(){ Promise.all([where([body.winner.p1,body.winner.p2]), where([body.loser.p1,body.loser.p2])]).then(function(w){
+          var a=w[0], b=w[1], go=[];
+          if(lv==="national"){ if(a.prov&&a.prov===b.prov) go.push(a.prov); if(a.club&&a.club===b.club) go.push(a.club); if(a.div&&a.div===b.div) go.push(a.div); }
+          else if(lv==="province"){ if(a.club&&a.club===b.club) go.push(a.club); if(a.div&&a.div===b.div) go.push(a.div); }
+          else if(lv==="club"){ if(a.div&&a.div===b.div) go.push(a.div); }
+          else if(lv==="division"){ var me=(W.PLAT.clubs||[]).filter(function(c){ return +c.id===played; })[0]; if(me&&me.parent_id) go.push(+me.parent_id); }
+          go.filter(function(x){ return x && x!==played; }).forEach(function(bd){ sendResult(bd, cat, body.winner, body.loser); });
+        }); }).catch(function(){});
+      }
+      return p; }; })();
+    /* a KZN / National ladder match: both pairs' clubs must have activated that ladder */
+    (function(){ var ds=W.doSubmit; if(typeof ds!=="function") return;
+      W.doSubmit=function(btn){ var self=this, args=arguments;
+        try{ var cid=Number(W.PLAT.cid||0), lv=lvlOf(cid), ed={}; try{ ed=(typeof entryData!=="undefined")?entryData:(W.entryData||{}); }catch(_x){ ed=W.entryData||{}; }
+          if((lv==="province"||lv==="national") && String(ed.event||"")==="Ladder Match" && ed.format!=="singles"){
+            var cat=ed.type, err=document.getElementById("err2")||document.getElementById("err3");
+            return Promise.all([where([ed.t1p1,ed.t1p2]), where([ed.t2p1,ed.t2p2])]).then(function(w){
+              var clubs=[w[0].club,w[1].club];
+              return Promise.all(clubs.map(function(c){ return c?rest("plat_squash_club_ladder_state?club_id=eq."+c+"&category=eq."+encodeURIComponent(cat)+"&select=activated").then(function(r){ return !!(r&&r[0]&&r[0].activated); }).catch(function(){ return false; }):Promise.resolve(false); })).then(function(ok){
+                var bad=clubs.filter(function(c,i){ return !ok[i]; }).map(function(c){ var x=(W.PLAT.clubs||[]).filter(function(y){ return +y.id===+c; })[0]; return x?x.name:"a pair\u2019s club"; });
+                if(bad.length){ var msg="This "+(lv==="national"?"National":"province")+" ladder match can only be played once both clubs have activated their "+cat+" ladder. Not yet: "+bad.join(", ")+".";
+                  if(err){ err.innerHTML=msg; err.style.display="block"; } W.alert(msg); return; }
+                return ds.apply(self,args); }); });
+          } }catch(e){}
+        return ds.apply(self,args); }; })();
+    /* the province door: + Enter your match score → a club match, or a KZN ladder match; ?lm=1 opens the sheet as a Ladder Match */
+    (function(){ var _dp2=W.doorPick; if(typeof _dp2!=="function") return;
+      W.doorPick=function(what){
+        var cid=Number(W.PLAT.cid||0);
+        if(what==="score" && levelOf(cid)==="province"){
+          var me=(W.PLAT.clubs||[]).filter(function(c){ return +c.id===cid; })[0], nm=(me&&me.name)||"Province";
+          cssOnce(); W.nsqClose(); var o=document.createElement("div"); o.id="nsq"; document.body.appendChild(o);
+          o.innerHTML='<div class="hd"><button class="x" onclick="window.nsqClose()">Back</button><h1>Enter a score</h1><div>'+e(nm)+'</div></div>'
+            +'<div class="card"><h2>A match at a club</h2><div class="in"><div style="font-size:13px;color:#7a6658">Social or club ladder matches \u2014 choose the club.</div><button class="btn" onclick="window.nsqClose();window.__nsqDp(\'score\')">Choose the club</button></div></div>'
+            +'<div class="card"><h2>'+e(nm)+' Ladder Match</h2><div class="in"><div style="font-size:13px;color:#7a6658">A challenge on the '+e(nm)+' ladder \u2014 pairs from any of its clubs. Same-club pairs also move their club ladder.</div><button class="btn" onclick="window.nsqClose();window.nhNav(\''+(location.pathname.split("/").pop()||"nat3-squash.html")+'?club='+cid+'&go=entry&lm=1\')">Enter a '+e(nm)+' ladder match</button></div></div>';
+          return;
+        }
+        return _dp2.apply(this, arguments); };
+      W.__nsqDp=_dp2; })();
+    setInterval(function(){ try{
+      if(new URLSearchParams(location.search).get("lm")!=="1") return;
+      var ev=document.getElementById("matchEvent"); if(!ev || ev.dataset.nsqLm) return;
+      if(![].some.call(ev.options,function(o){ return o.value==="Ladder Match"; })) return;
+      ev.value="Ladder Match"; ev.dataset.nsqLm="1"; if(typeof ev.onchange==="function") ev.onchange();
+    }catch(e){} }, 500);
+    /* every ladder: the free-challenge note */
+    setInterval(function(){ try{
+      var scr=document.querySelector(".screen.active"); if(!scr || !/ladder/i.test(scr.id||"") || scr.querySelector("#nsqFreeNote")) return;
+      var tbl=scr.querySelector("table"); if(!tbl) return;
+      var n=document.createElement("div"); n.id="nsqFreeNote";
+      n.style.cssText="margin:8px 12px;padding:9px 12px;border-radius:10px;background:#fff7e6;border:1px solid #f1d8a8;font-size:12.5px;color:#5b4636";
+      n.innerHTML="<b>New on the ladder?</b> Pairs added after the ladder is activated start at the bottom \u2014 one free challenge to set your position.";
+      tbl.parentNode.insertBefore(n, tbl);
+    }catch(e){} }, 800);
     /* a place as people say it: a division reads "Rovers \u00b7 Div A" */
     W.nsqPlace=function(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return "";
       var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
