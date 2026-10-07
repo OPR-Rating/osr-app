@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q095";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q097";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -16557,7 +16557,7 @@ W.nhOpenPair=function(name){
       var sel=document.querySelector("#platEntryClub select"); if(!sel) return;
       /* n237: the question is what the DROPDOWN says, not which board the page sits on — a member can put it back
          to the placeholder, and then nothing should proceed either. */
-      var onRegion = !(parseInt(sel.value,10) > 0);
+      var onRegion = !(parseInt(sel.value,10) > 0) && (new URLSearchParams(location.search).get("lm")!=="1");   /* Nat-Squash: a KZN / National ladder match needs no group */
       var btn=[].slice.call(document.querySelectorAll("#entryContent button, #entryScreen button"))
                 .filter(function(b){ return /Next:/.test(b.textContent||""); })[0];
       var note=document.getElementById("nhGrpNote");
@@ -18975,9 +18975,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
        were fixed orange and a general rule turned dark colours grey) and the table header — from the board they were opened
        from (?nat= or the board); the Global Ledger stays charcoal. */
     setInterval(function(){ try{
-      var on=["laddersScreen","ladderScreen","clubLadderScreen"].some(function(id){ var e=document.getElementById(id); return e&&e.classList.contains("active"); });
+      var _qn=new URLSearchParams(location.search);
+      var on=["laddersScreen","ladderScreen","clubLadderScreen"].some(function(id){ var e=document.getElementById(id); return e&&e.classList.contains("active"); })
+             || (!!Number(_qn.get("nat")||0) && !!document.querySelector(".screen.active .header"))   /* q096: EVERY screen reached through a club's ledger (score entry too) */
+             || (_qn.get("go")==="entry" && levelOf(W.nsqLadderBoard())==="club");                    /* q097: a club door's score sheet (on its first division) */
       var st=document.getElementById("nsqLadCol"); if(!on){ if(st) st.textContent=""; return; }
-      var q=new URLSearchParams(location.search), here=Number(q.get("nat")||W.PLAT.nat||W.PLAT.cid||0), cs=W.PLAT.clubs||[];
+      var q=new URLSearchParams(location.search), here=(q.get("go")==="entry")?W.nsqLadderBoard():Number(q.get("nat")||W.PLAT.nat||W.PLAT.cid||0), cs=W.PLAT.clubs||[];   /* q097 */
       var b=(W.__nsqWide||!here)?null:cs.filter(function(c){ return +c.id===here; })[0];
       var C=(b&&b.colour)||"#2f2f2f";
       var rgb=function(h){ h=String(h).replace("#",""); if(h.length===3) h=h.split("").map(function(x){ return x+x; }).join(""); var n=parseInt(h,16); return [(n>>16)&255,(n>>8)&255,n&255]; };
@@ -19067,12 +19070,28 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           var me=(W.PLAT.clubs||[]).filter(function(c){ return +c.id===cid; })[0], nm=(me&&me.name)||"Province";
           cssOnce(); W.nsqClose(); var o=document.createElement("div"); o.id="nsq"; document.body.appendChild(o);
           o.innerHTML='<div class="hd"><button class="x" onclick="window.nsqClose()">Back</button><h1>Enter a score</h1><div>'+e(nm)+'</div></div>'
-            +'<div class="card"><h2>A match at a club</h2><div class="in"><div style="font-size:13px;color:#7a6658">Social or club ladder matches \u2014 choose the club.</div><button class="btn" onclick="window.nsqClose();window.__nsqDp(\'score\')">Choose the club</button></div></div>'
+            +'<div class="card"><h2>A match at a club</h2><div class="in"><div style="font-size:13px;color:#7a6658">Social or club ladder matches \u2014 choose the club. The division is decided by the players\u2019 ratings.</div>'
+            +(W.PLAT.clubs||[]).filter(function(c){ return +c.parent_id===cid; }).sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); })
+               .map(function(c){ return '<button class="btn" style="margin-top:8px;background:#fff;color:#7E3200;border:1.5px solid #D35400" onclick="window.nsqClose();window.nsqClubScore('+c.id+')">'+e(c.name)+'</button>'; }).join("")
+            +'</div></div>'
             +'<div class="card"><h2>'+e(nm)+' Ladder Match</h2><div class="in"><div style="font-size:13px;color:#7a6658">A challenge on the '+e(nm)+' ladder \u2014 pairs from any of its clubs. Same-club pairs also move their club ladder.</div><button class="btn" onclick="window.nsqClose();window.nhNav(\''+(location.pathname.split("/").pop()||"nat3-squash.html")+'?club='+cid+'&go=entry&lm=1\')">Enter a '+e(nm)+' ladder match</button></div></div>';
           return;
         }
         return _dp2.apply(this, arguments); };
       W.__nsqDp=_dp2; })();
+    /* q096: a club's score sheet — the same as the club door's: on its first division, the division decided at the save */
+    W.nsqClubScore=function(club){ var cs=W.PLAT.clubs||[], ds=cs.filter(function(c){ return +c.parent_id===+club; }).sort(function(a,b){ return W.nsqDivCmp(a,b); });
+      var pg=(location.pathname.split("/").pop()||"nat3-squash.html");
+      if(ds.length) W.nhNav(pg+"?club="+ds[0].id+"&go=entry&back="+encodeURIComponent("?club="+club)); else W.nhNav(pg+"?club="+club); };
+    /* q096: on a PROVINCE there is no "Select group" score page — any score entry on a province that is not its ladder match
+       (the bottom bar's "Enter a score", say) shows the choice instead: the province's ladder match, or a match at a club */
+    setInterval(function(){ try{
+      var q=new URLSearchParams(location.search), cid=Number(W.PLAT.cid||0);
+      var _g=q.get("go"); if(!((_g==="entry" && q.get("lm")!=="1") || _g==="pick") || !cid || levelOf(cid)!=="province") return;   /* the score sheet or the old "pick a group" page */
+      if(document.getElementById("nsq")) return;
+      W.doorPick("score");
+      var o=document.getElementById("nsq"); if(o){ var x=o.querySelector(".x"); if(x) x.setAttribute("onclick","window.nsqClose();window.nhNav('"+(location.pathname.split("/").pop()||"nat3-squash.html")+"?club="+cid+"')"); }
+    }catch(e){} }, 300);
     setInterval(function(){ try{
       if(new URLSearchParams(location.search).get("lm")!=="1") return;
       var ev=document.getElementById("matchEvent"); if(!ev || ev.dataset.nsqLm) return;
@@ -19249,7 +19268,8 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       W.__grpChosen=true;
       Array.prototype.forEach.call(document.querySelectorAll("#entryScreen select"),function(sel){ if([].some.call(sel.options,function(o){ return /Select group/.test(o.textContent||""); })){ var bx=sel.closest("div"); if(bx) bx.style.display="none"; } });
       var note=document.getElementById("grpGateNote"); if(note) note.remove();
-      Array.prototype.forEach.call(document.querySelectorAll("#entryContent .btn-primary, #entryScreen .btn-primary"),function(bn){ if(/Next/i.test(bn.textContent||"")){ bn.disabled=false; bn.style.opacity=""; bn.title=""; } });
+      Array.prototype.forEach.call(document.querySelectorAll("#entryContent button, #entryScreen button"),function(bn){ if(/Next/i.test(bn.textContent||"")){ bn.disabled=false; bn.style.opacity=""; bn.style.pointerEvents=""; bn.title=""; } });   /* q096: taps too */
+      var n2=document.getElementById("nhGrpNote"); if(n2) n2.style.display="none";
     }catch(e){} }, 300);
     /* q091: the LADDER TEAMS are chosen with the standard picker (search + list) — never a long dropdown */
     setInterval(function(){ try{
