@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q094";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q095";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -15382,7 +15382,8 @@ W.nhOpenPair=function(name){
     try{
       var gate=function(){
         var sel=box.querySelector("select");
-        var chosen = !!(W.__grpChosen) || (sel && String(sel.value)!=="0");
+        var _lmq=new URLSearchParams(location.search), _lmOn=(_lmq.get("lm")==="1");          /* Nat-Squash: a KZN / National ladder match needs no group */
+        var chosen = _lmOn || !!(W.__grpChosen) || (sel && String(sel.value)!=="0");
         var nxt=[].slice.call(document.querySelectorAll("#entryContent .btn-primary, #entryScreen .btn-primary"))
                   .filter(function(b){ return /Next/i.test(b.textContent||""); })[0];
         if(nxt){
@@ -18986,6 +18987,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         +"#ladderNoteBox>div:first-child{background:rgba("+c.join(",")+",.14) !important;border-color:rgba("+c.join(",")+",.35) !important}"
         +"#ladderNoteBox>div:nth-child(2){background:rgba("+c.join(",")+",.06) !important;border-color:rgba("+c.join(",")+",.25) !important}"
         +"#ladderContent thead tr, #ladderContent thead th{background:"+C+" !important;color:#fff !important}"
+        +(b?(".screen.active .header{background:linear-gradient(135deg,"+C+",rgb("+Math.round(c[0]*.45)+","+Math.round(c[1]*.45)+","+Math.round(c[2]*.45)+")) !important}"):"")   /* q095: the page header in the club's colour (not the ledger's black) */
         +"#ladderContent tbody td:nth-child(2), #ladderContent tbody td:nth-child(3), #ladderContent tbody td:nth-child(4){color:#1f1a2b !important}"
         +"#ladderContent tbody td:nth-child(2) a, #ladderContent tbody td:nth-child(2) span:not(.nsqPlace){color:#1f1a2b !important}";
       if(!st){ st=document.createElement("style"); st.id="nsqLadCol"; document.head.appendChild(st); }
