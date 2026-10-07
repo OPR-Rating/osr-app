@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q086";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q089";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17890,9 +17890,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var nameEl=Array.prototype.filter.call(x.b.querySelectorAll("span,b,div"),function(e){ return e.children.length===0 && (e.textContent||"").trim()===String(x.p.full_name).trim(); })[0];
         /* the small board tag under the name (where they last played) goes — the division tag replaces it */
         Array.prototype.forEach.call(x.b.querySelectorAll("span"),function(e){ if(e!==nameEl && e.children.length===0 && /^(Div [A-Z]|Premier)$/.test((e.textContent||"").trim())) e.style.display="none"; });
-        if(nameEl && d){ var t=document.createElement("span"); t.className="nsqDivTag"; t.textContent=d.name;
-          t.style.cssText="display:inline-block;margin-left:8px;font-size:11px;font-weight:800;color:#fff;background:"+(d.colour||"#7E3200")+";border-radius:999px;padding:1px 8px;vertical-align:middle";
-          nameEl.parentNode.insertBefore(t, nameEl.nextSibling); }
+        var t=null;   /* q089: the division pill sits with the other pills (below) */
         /* under the name only what the page does not already say: the Global Ledger → club · province; a province → the club */
         var placeTxt="";
         if(d){ var cs3=W.PLAT.clubs||[], dd=cs3.filter(function(c){ return +c.id===+d.id; })[0]||d;   /* the full board record (with its parent) */
@@ -17906,15 +17904,22 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var rk=Array.prototype.filter.call(x.b.querySelectorAll("span,b"),function(e){ return e.children.length===0 && /^\(\d+\)$/.test((e.textContent||"").trim()); });
         var seed=(x.p.seed_rating!=null?x.p.seed_rating:(x.p.pool_seed!=null?x.p.pool_seed:x.p.seed));
         if(rk.length){ var sp=rk[rk.length-1]; sp.textContent=(seed!=null?Math.round(seed):"\u2013"); sp.title="Seed (starting rating)"; sp.classList.add("nsqSeed"); }
+        /* q089: the row's pills — the SAME size, Div first: Div · Rating · Level · Move · Seed */
+        var pills=Array.prototype.filter.call(x.b.querySelectorAll("span"),function(e2){ return e2.children.length===0 && /^[-+(]?\d/.test((e2.textContent||"").trim()) && !e2.closest(".nsqPlaceLine"); });
+        pills.forEach(function(pp){ pp.style.display="inline-block"; pp.style.minWidth="46px"; pp.style.boxSizing="border-box"; pp.style.textAlign="center"; pp.style.marginLeft="4px"; pp.style.padding="3px 7px"; pp.style.fontSize="12px"; pp.style.fontWeight="800"; pp.style.lineHeight="16px"; pp.style.borderRadius="999px"; });
+        if(d && pills.length && !x.b.querySelector(".nsqDivPill2")){ var dp=document.createElement("span"); dp.className="nsqDivPill2"; dp.textContent=d.name;
+          dp.style.cssText="display:inline-block;min-width:46px;box-sizing:border-box;text-align:center;margin-left:4px;padding:3px 7px;border-radius:999px;font-size:12px;font-weight:800;line-height:16px;color:#fff;background:"+(((W.PLAT.clubs||[]).filter(function(c){ return +c.id===+d.id; })[0]||d).colour||"#7E3200");
+          pills[0].parentNode.insertBefore(dp, pills[0]); }
       }catch(e){}
     }
     function colHeads(x){
       /* the column names, aligned to the first row's own pills */
-      var lab='<span style="flex:1;min-width:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#7a6658">Name \u00b7 Division</span>';
+      var lab='<span style="flex:1;min-width:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#7a6658">Name</span>';
       try{
         var pills=x?Array.prototype.filter.call(x.b.querySelectorAll("span"),function(e){ return e.children.length===0 && /^[-+(]?\d/.test((e.textContent||"").trim()) && e.offsetWidth>20 && !e.closest(".nsqPlaceLine"); }):[];
-        var names=["Rating","Level","Move","Seed"];
-        if(pills.length>=4){ pills=pills.slice(-4); return lab+pills.map(function(pp,i){ return '<span style="flex:none;width:'+pp.offsetWidth+'px;margin-left:'+(i?4:0)+'px;text-align:center;font-size:10.5px;font-weight:800;color:#7a6658;text-transform:uppercase">'+names[i]+'</span>'; }).join("")+'<span style="flex:none;width:6px"></span>'; }
+        var names=["Div","Rating","Level","Move","Seed"];
+        var dpx=x?x.b.querySelector(".nsqDivPill2"):null; if(dpx) pills=[dpx].concat(pills.filter(function(pp){ return pp!==dpx; }));
+        if(pills.length>=5){ pills=pills.slice(-5); return lab+pills.map(function(pp,i){ return '<span style="flex:none;width:'+pp.offsetWidth+'px;margin-left:'+(i?4:0)+'px;text-align:center;font-size:10.5px;font-weight:800;color:#7a6658;text-transform:uppercase">'+names[i]+'</span>'; }).join("")+'<span style="flex:none;width:6px"></span>'; }
       }catch(e){}
       return lab+'<span style="font-size:10.5px;font-weight:800;color:#7a6658;text-transform:uppercase">Rating \u00b7 Level \u00b7 Move \u00b7 Seed</span>';
     }
@@ -18071,13 +18076,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         /* q085: the ladder's ACTIVATED record is one board's too — read exactly the board you stand on (it was read across the
            club and all its divisions, so a division's "not activated" could be shown after the club activated) */
         if(pq.indexOf("club_ladder_state?")===0){
-          var _sq=new URLSearchParams(location.search), _sh=Number(_sq.get("nat")||W.PLAT.nat||W.PLAT.cid||0);
-          var _sb=(W.__nsqWide||!_sh)?W.nsqNatBoard():_sh;
+          var _sb=W.nsqLadderBoard();                                                        /* q088 */
           if(_sb>0) pq=pq.replace(/club_id=(eq\.\d+|in\.\([\d,]+\))/, "club_id=in.("+_sb+")");
           return _sg.call(this, pq);
         }
         if(pq.indexOf("club_ladder?")===0){
-          var _lq=new URLSearchParams(location.search), _here=Number(_lq.get("nat")||W.PLAT.nat||W.PLAT.cid||0);
+          var _lq=new URLSearchParams(location.search), _here=(_lq.get("go")==="entry")?W.nsqLadderBoard():Number(_lq.get("nat")||W.PLAT.nat||W.PLAT.cid||0);   /* q088 */
           var _lv=(W.__nsqWide||!_here)?"national":levelOf(_here);
           if(_lv==="club" || _lv==="division"){
             pq=pq.replace(/club_id=(eq\.\d+|in\.\([\d,]+\))/, "club_id=in.("+_here+")");   /* in.(n): the platform does not widen this form */
@@ -18737,16 +18741,17 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           var dv=cs.filter(function(c){ return +c.id===+x.div; })[0], cl=dv?cs.filter(function(c){ return +c.id===+dv.parent_id; })[0]:null, pv=cl?cs.filter(function(c){ return +c.id===+cl.parent_id; })[0]:null;
           var pill=function(t,col){ return t?'<span style="font-size:11px;font-weight:800;color:#fff;background:'+col+';border-radius:999px;padding:2px 8px;white-space:nowrap">'+e(t)+'</span>':""; };
           var lvI=(W.__nsqWide||!sc.ids)?"national":levelOf(Number(new URLSearchParams(location.search).get("nat")||W.PLAT.cid||0));   /* q074 */
-          var placeP=(lvI==="national")?(pill(pv&&pv.name,"#7E3200")+pill(cl&&cl.name,(cl&&cl.colour)||"#D35400")):(lvI==="province")?pill(cl&&cl.name,(cl&&cl.colour)||"#D35400"):"";
-          var divP=(lvI!=="division" && dv)?'<span style="display:inline-block;margin-right:5px;background:'+(dv.colour||"#7E3200")+';color:#fff;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:800">'+e(dv.name)+'</span>':"";
+          var placeT=(lvI==="national")?[cl&&cl.name, pv&&pv.name].filter(Boolean).join(" \u00b7 "):(lvI==="province")?((cl&&cl.name)||""):"";   /* q089: text, as in the pair tables */
+          var divP=(lvI!=="division" && dv)?W.nsqPill(e(dv.name), dv.colour||"#7E3200", "#fff"):"";
           var href=pg+"?club="+(x.div||W.PLAT.cid||0)+"&go=me&who="+encodeURIComponent(x.p.full_name);
           var lady=isLady(x.p.gender);
           h+='<a class="nsqIndRow" data-n="'+e(String(x.p.full_name).toLowerCase())+'" href="'+href+'" onclick="window.nsqClose();return window.nhNav?(window.nhNav(this.getAttribute(\'href\')),false):true" style="display:flex;align-items:center;gap:10px;padding:10px 13px;border-top:1px solid #f0ecf6;text-decoration:none;color:inherit">'
             +'<b style="flex:none;width:34px;text-align:center;color:#7a6658">'+(k+1)+'</b>'
-            +'<span style="flex:1;min-width:0"><b style="display:block;font-size:15px;color:#1f1a2b">'+e(x.p.full_name)+'</b>'+(placeP?'<span style="display:flex;gap:5px;flex-wrap:wrap;margin-top:3px">'+placeP+'</span>':'')+'</span>'
-            +'<span style="flex:none;text-align:right">'+divP+'<b style="display:inline-block;background:'+(lady?"#fde7f1":"#e7eefb")+';color:'+(lady?"#a01a5a":"#1d4ea0")+';border-radius:999px;padding:3px 10px;font-size:13px">'+Math.round(x.r)+'</b>'
-            +'<span style="display:inline-block;margin-left:5px;background:#f1ece6;color:#5b4636;border-radius:999px;padding:3px 9px;font-size:13px;font-weight:800">'+(x.r/200).toFixed(1)+'</span>'
-            +'<span style="display:inline-block;margin-left:5px;min-width:34px;text-align:center;background:'+(x.mv>0?"#e3f4e6":x.mv<0?"#fbe4e1":"#eeeeee")+';color:'+(x.mv>0?"#1e8449":x.mv<0?"#c0392b":"#666")+';border-radius:999px;padding:3px 9px;font-size:13px;font-weight:800">'+(x.mv>0?"+":"")+x.mv+'</span></span></a>';
+            +'<span style="flex:1;min-width:0"><b style="display:block;font-size:15px;color:#1f1a2b">'+e(x.p.full_name)+'</b>'+(placeT?'<span style="display:block;font-size:11.5px;font-weight:700;color:#4a4256;margin-top:1px">'+e(placeT)+'</span>':'')+'</span>'
+            +'<span style="flex:none;white-space:nowrap">'+divP
+            +W.nsqPill(String(Math.round(x.r)), lady?"#fde7f1":"#e7eefb", lady?"#a01a5a":"#1d4ea0")
+            +W.nsqPill((x.r/200).toFixed(1), "#f1ece6", "#5b4636")
+            +W.nsqPill((x.mv>0?"+":"")+x.mv, x.mv>0?"#e3f4e6":x.mv<0?"#fbe4e1":"#eeeeee", x.mv>0?"#1e8449":x.mv<0?"#c0392b":"#666")+'</span></a>';
         });
         if(!rows.length) h+='<div class="in" style="color:#7a6658">Nobody here yet.</div>';
         o.innerHTML=h+'</div><div style="height:40px"></div>';
@@ -18998,14 +19003,14 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         return {div:sameDiv?+divs[0].id:(divs.length===1?+divs[0].id:0), club:club, prov:cl?+cl.parent_id:0}; }).catch(function(){ return {div:0,club:0,prov:0}; });
     }
     function sendResult(board, cat, winner, loser){
-      return W.fetch(B+"/functions/v1/plat_ladder_squash",{method:"POST",headers:H(),body:JSON.stringify({action:"apply_ladder_result",club_id:board,category:cat,winner:winner,loser:loser})}).catch(function(){});
+      return W.fetch(B+"/functions/v1/plat_ladder_squash",{method:"POST",headers:H(),body:JSON.stringify({action:"apply_ladder_result",club_id:board,category:cat,winner:winner,loser:loser,_nsqCascade:true})}).catch(function(){});
     }
     /* the result goes to every ladder the two pairs share (below the one it was played on) */
     (function(){ var f0=W.fetch; W.fetch=function(u,i){ var url=String(u&&u.url?u.url:u), body=null;
-      try{ if(/\/functions\/v1\/ladder(\?|$)/.test(url) && i && i.body){ body=JSON.parse(i.body); if(body.action!=="apply_ladder_result") body=null; } }catch(e){ body=null; }
+      try{ if(/\/functions\/v1\/(ladder|plat_ladder_squash)(\?|$)/.test(url) && i && i.body){ body=JSON.parse(i.body); if(body.action!=="apply_ladder_result" || body._nsqCascade) body=null; } }catch(e){ body=null; }   /* q088: not our own follow-ups */
       var p=f0.apply(this,arguments);
       if(body && body.winner && body.loser && body.winner.p2){
-        var played=Number(W.PLAT.cid||0), lv=lvlOf(played), cat=body.category;
+        var played=W.nsqLadderBoard(), lv=lvlOf(played), cat=body.category;               /* q088: the ladder it was played on */
         p.then(function(){ Promise.all([where([body.winner.p1,body.winner.p2]), where([body.loser.p1,body.loser.p2])]).then(function(w){
           var a=w[0], b=w[1], go=[];
           if(lv==="national"){ if(a.prov&&a.prov===b.prov) go.push(a.prov); if(a.club&&a.club===b.club) go.push(a.club); if(a.div&&a.div===b.div) go.push(a.div); }
@@ -19179,15 +19184,15 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var cid=Number(W.PLAT.cid||0), lv=cid?levelOf(cid):""; if(lv!=="province" && lv!=="club") return;
       if(new URLSearchParams(location.search).get("go")) return;
       var nh=document.getElementById("nh"); if(!nh || nh.querySelector("#nsqHomeRow")) return;
-      var band=nh.querySelector(".band"); if(!band) return;
       var h=null; try{ h=JSON.parse(localStorage.getItem(homeKey())||"null"); }catch(e){}
       var on=!!(h && +h.club===cid);
       var row=document.createElement("div"); row.id="nsqHomeRow"; row.setAttribute("data-plat-keep","1");
-      row.style.cssText="display:flex;align-items:center;gap:10px;margin:10px 14px 0;padding:9px 12px;border:1px solid #eadfd5;border-radius:12px;background:#fff;font-size:13.5px;color:#3a2e25";
+      row.style.cssText="display:flex;align-items:center;gap:10px;margin:18px 14px 8px;padding:9px 12px;border:1px solid #eadfd5;border-radius:12px;background:#fff;font-size:13.5px;color:#3a2e25";   /* q087: at the foot of the dashboard */
       row.innerHTML='<span style="font-size:16px">\u{1F3E0}</span><span style="flex:1">Open the app here every time'+((h&&!on&&h.name)?'<span style="display:block;font-size:11.5px;color:#8a7c70">now: '+e(h.name)+'</span>':'')+'</span>'
         +'<button onclick="window.nsqHomeToggle('+(on?0:1)+')" aria-label="'+(on?"Off":"On")+'" style="flex:0 0 44px;height:24px;border-radius:99px;border:0;position:relative;background:'+(on?"#D35400":"#ddd5cc")+'">'
         +'<span style="position:absolute;top:3px;left:'+(on?"23px":"3px")+';width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25)"></span></button>';
-      band.parentNode.insertBefore(row, band.nextSibling);
+      /* q087: at the FOOT of the dashboard — never near the banner and its buttons (it sat behind them) */
+      var foot=nh.querySelector(".nhVer, .nhFoot, #nhFoot"); if(foot && foot.parentNode===nh) nh.insertBefore(row, foot); else nh.appendChild(row);
     }catch(e){} }, 600);
     /* q086: THE LADDER PAGE'S ACTIONS NAME THE LADDER ON SCREEN. Activate (seed_ladder), join, remove, reset sent club_id =
        the board the app STARTED on (CLUB_ID); the platform corrects that only on a door, not through a ledger — so DOUBLES IPT's
@@ -19196,11 +19201,23 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     (function(){ var f0=W.fetch; W.fetch=function(u,i){
       try{ var url=String(u&&u.url?u.url:u);
         if(/\/functions\/v1\/ladder(\?|$)/.test(url) && i && i.body){ var b=JSON.parse(i.body);
-          if(b && /^(seed_ladder|join_ladder|remove_ladder_entry|reset_ladder)$/.test(String(b.action||""))){
-            var q=new URLSearchParams(location.search), here=Number(q.get("nat")||W.PLAT.nat||W.PLAT.cid||0);
-            var bd=(W.__nsqWide||!here)?W.nsqNatBoard():here;
-            if(bd>0){ b.club_id=bd; i=Object.assign({}, i, {body:JSON.stringify(b)}); arguments[1]=i; } } } }catch(e){}
+          if(b && /^(seed_ladder|join_ladder|remove_ladder_entry|reset_ladder|apply_ladder_result)$/.test(String(b.action||""))){
+            var bd=W.nsqLadderBoard();                                                        /* q088 */
+            if(bd>0){ b.club_id=bd; i=Object.assign({}, i, {body:JSON.stringify(b)}); arguments[1]=i;
+              arguments[0]=url.replace("/functions/v1/ladder","/functions/v1/plat_ladder_squash"); } } } }catch(e){}   /* by its full name — never rewritten */
       return f0.apply(this, arguments); }; })();
+    /* q088: WHICH LADDER. The club door's score sheet opens on the club's first division (so a normal match's division is decided
+       at the save) — but a LADDER match from the club's door is a CLUB ladder match: the picker, the "activated" check and the
+       result use the CLUB's ladder ("No one is on the Mixed ladder yet" was Premier's empty ladder). Elsewhere: the board shown. */
+    W.nsqLadderBoard=function(){ try{
+      var q=new URLSearchParams(location.search), cid=Number(W.PLAT.cid||0), here=Number(q.get("nat")||W.PLAT.nat||cid||0);
+      if(q.get("go")==="entry"){ var bq=new URLSearchParams(String(q.get("back")||"").replace(/^\?/,"")), from=Number(bq.get("club")||0);
+        var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===cid; })[0];
+        if(from && me && +me.parent_id===from && levelOf(from)==="club") return from; }
+      if(W.__nsqWide || !here) return W.nsqNatBoard();
+      return here; }catch(e){ return Number(W.PLAT.cid||0); } };
+    /* q089: ONE PILL STYLE for every individual table — Div · Rating · Level · Move (· Seed), the same size, in one row */
+    W.nsqPill=function(text, bg, fg){ return '<span class="nsqP" style="display:inline-block;min-width:46px;box-sizing:border-box;text-align:center;margin-left:4px;padding:3px 7px;border-radius:999px;font-size:12px;font-weight:800;line-height:16px;background:'+bg+';color:'+fg+'">'+text+'</span>'; };
     /* a place as people say it: a division reads "Rovers \u00b7 Div A" */
     W.nsqPlace=function(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return "";
       var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
