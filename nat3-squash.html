@@ -3585,7 +3585,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q080";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q082";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17852,7 +17852,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         }
       }catch(e){}
     }
-    function flatRow(x, wide){
+    function flatRow(x, wide, lvR){
       try{
         if(!x.p || x.b.dataset.nsqFlat) return; x.b.dataset.nsqFlat="1";
         var d=REC.divOf&&REC.divOf[x.p.id];
@@ -17862,8 +17862,16 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         if(nameEl && d){ var t=document.createElement("span"); t.className="nsqDivTag"; t.textContent=d.name;
           t.style.cssText="display:inline-block;margin-left:8px;font-size:11px;font-weight:800;color:#fff;background:"+(d.colour||"#7E3200")+";border-radius:999px;padding:1px 8px;vertical-align:middle";
           nameEl.parentNode.insertBefore(t, nameEl.nextSibling); }
-        if(wide && REC.placeOf && REC.placeOf[x.p.id] && nameEl && !x.b.querySelector(".nsqPlaceLine")){ var ln=document.createElement("span"); ln.className="nsqPlaceLine";
-          ln.style.cssText="display:block;font-size:11.5px;font-weight:600;color:#8a8196;margin-top:1px"; ln.textContent=REC.placeOf[x.p.id]; (t||nameEl).parentNode.appendChild(ln); }
+        /* under the name only what the page does not already say: the Global Ledger → club · province; a province → the club */
+        var placeTxt="";
+        if(d){ var cs3=W.PLAT.clubs||[], dd=cs3.filter(function(c){ return +c.id===+d.id; })[0]||d;   /* the full board record (with its parent) */
+          var cl3=cs3.filter(function(c){ return +c.id===+dd.parent_id; })[0], pv3=cl3?cs3.filter(function(c){ return +c.id===+cl3.parent_id; })[0]:null;
+          if(wide) placeTxt=[cl3&&cl3.name, pv3&&pv3.name].filter(Boolean).join(" \u00b7 "); else if(lvR==="province") placeTxt=cl3?cl3.name:""; }
+        if(!placeTxt && wide && REC.placeOf && REC.placeOf[x.p.id]) placeTxt=REC.placeOf[x.p.id];
+        /* a province merges its clubs' divisions by name — the club comes from the person's "Club · Province" */
+        if(!placeTxt && lvR==="province" && REC.placeOf && REC.placeOf[x.p.id]) placeTxt=String(REC.placeOf[x.p.id]).split(" \u00b7 ")[0];
+        if(placeTxt && nameEl && !x.b.querySelector(".nsqPlaceLine")){ var ln=document.createElement("span"); ln.className="nsqPlaceLine";
+          ln.style.cssText="display:block;font-size:11.5px;font-weight:700;color:#4a4256;margin-top:1px"; ln.textContent=placeTxt; (t||nameEl).parentNode.appendChild(ln); }
         var rk=Array.prototype.filter.call(x.b.querySelectorAll("span,b"),function(e){ return e.children.length===0 && /^\(\d+\)$/.test((e.textContent||"").trim()); });
         var seed=(x.p.seed_rating!=null?x.p.seed_rating:(x.p.pool_seed!=null?x.p.pool_seed:x.p.seed));
         if(rk.length){ var sp=rk[rk.length-1]; sp.textContent=(seed!=null?Math.round(seed):"\u2013"); sp.title="Seed (starting rating)"; sp.classList.add("nsqSeed"); }
@@ -17911,7 +17919,8 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(true){
         Array.prototype.forEach.call(box.querySelectorAll(".nsqRecHead"),function(h){ h.remove(); });
         var rowsF=btns.map(function(b){ return {b:b,p:people[nameOf(b)]}; }).sort(function(a,b2){ return String(a.p&&a.p.full_name||nameOf(a.b)).localeCompare(String(b2.p&&b2.p.full_name||nameOf(b2.b))); });
-        rowsF.forEach(function(x){ box.appendChild(x.b); flatRow(x, wide); });
+        var lvR=wide?"national":levelOf(+club);                                        /* q082: a province's list names the club */
+        rowsF.forEach(function(x){ box.appendChild(x.b); flatRow(x, wide, lvR); });
         var bar=document.getElementById("nsqRecPills");
         if(!bar){ bar=document.createElement("div"); bar.id="nsqRecPills"; bar.setAttribute("data-plat-keep","1"); box.parentNode.insertBefore(bar, box); }
         bar.style.cssText="display:flex;align-items:center;gap:8px;padding:6px 14px 6px 16px;background:#fff;border-bottom:1px solid #eee";
