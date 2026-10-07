@@ -3584,7 +3584,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q070";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q072";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -10549,7 +10549,7 @@ async function clRemove(id, label){
       /* n97: on the door this opened plat's profile list scoped to the region's own board — empty, "no individuals
          registered". It goes to the records' profiles page for this scope instead. */
       +'</div><button class="more" onclick="'+(scope==="club"
-          ? ("window.nhNav('"+PAGE+"?club="+(W.PLAT.parentId||W.PLAT.cid)+"&go=records&view=profiles&back="+encodeURIComponent("?club="+(W.PLAT.parentId||W.PLAT.cid))+"')")
+          ? ("window.nhNav('"+PAGE+"?club="+(W.PLAT.parentId||W.PLAT.cid)+"&go=records&view=profiles&back="+encodeURIComponent("?club="+W.PLAT.cid)+"')")   /* Nat-Squash: back to this page */
           : "window.nhGo('profiles')")+'">See player profiles here \u2192</button></div>';
   }
   function nhFormBrk(d,ink,scope){
@@ -10588,7 +10588,7 @@ async function clRemove(id, label){
       var d=(m.rating_delta!=null)?+m.rating_delta:0; if(!d) return;
       var side=0;
       [[m.t1p1,1],[m.t1p2,1],[m.t2p1,-1],[m.t2p2,-1]].forEach(function(p){
-        if(!p[0]) return; String(p[0]).split(" & ").forEach(function(x){ if(x.trim()===name) side=p[1]; });
+        if(!p[0]) return; if(String(name).indexOf(" & ")>=0){ if(String(p[0]).trim()===name) side=p[1]; } else String(p[0]).split(" & ").forEach(function(x){ if(x.trim()===name) side=p[1]; });   /* Nat-Squash: a pair by its whole name */
       });
       if(!side) return; run+=d*side; pts.push(run);
     });
@@ -10644,6 +10644,8 @@ async function clRemove(id, label){
     var seedOf=null;
     (people||[]).forEach(function(p){ if(p && p.full_name===mv.name){ if(p.pool_seed!=null) seedOf=Math.round(p.pool_seed);
       else if(seedOf==null && p.seed_rating!=null) seedOf=Math.round(p.seed_rating); } });
+    if(seedOf==null && String(mv.name).indexOf(" & ")>=0){ var _hs=String(mv.name).split(" & ").map(function(n){ var q=(people||[]).filter(function(x){ return x&&x.full_name===n.trim(); })[0]; return q?(q.pool_seed!=null?q.pool_seed:q.seed_rating):null; });
+      if(_hs[0]!=null && _hs[1]!=null) seedOf=Math.round(Math.max(_hs[0],_hs[1])*0.6+Math.min(_hs[0],_hs[1])*0.4); }   /* Nat-Squash: a pair's seed */
     /* n119: A WEEKLY CHART DRAWS THE WEEK. n107 started this line at the registration rating and pinned its end to
        today's, with a whole board's history in between — so a player who climbed this week could be drawn falling
        (Brian: +38, drawn 1300 → 1147) and the reverse (Kerry). It now uses only the window's matches — the same ones
@@ -10663,6 +10665,9 @@ async function clRemove(id, label){
       /* n68: shown as real ratings, with the numbers on it */
       var ind=(NEW.data&&NEW.data.people||[]).filter(function(x){ return x.full_name===mv.name; })[0];
       var cur=ind?Math.round(ind.current_rating||ind.seed_rating||0):null;
+      if(cur==null && String(mv.name).indexOf(" & ")>=0){ var _hv=String(mv.name).split(" & "), _pp=(NEW.data&&NEW.data.people)||[];   /* Nat-Squash: a pair = 60/40 */
+        var _r=_hv.map(function(n){ var q=_pp.filter(function(x){ return x.full_name===n.trim(); })[0]; return q?Number(q.current_rating||q.seed_rating||0):null; });
+        if(_r[0]!=null && _r[1]!=null) cur=Math.round(Math.max(_r[0],_r[1])*0.6+Math.min(_r[0],_r[1])*0.4); }
       /* n107: the seed on record — this page's own people carry it — so "started" is the player's seed */
       var series=nhAsRatings(pts,cur).map(function(v){ return Math.round(v); });
       body=nhChart(series, col, cur?("now "+cur):null, series.length?series[0]:null, "from")
@@ -10711,6 +10716,12 @@ async function clRemove(id, label){
        top three by size — so where the three biggest moves of the week were all climbs (Eswatini, with more
        players), there was no faller left to chart, though plenty fell. Each now comes from everyone who moved. */
     var ms=d.matches||[], all=nhMovers(ms,true);
+    try{ var _cs=W.PLAT.clubs||[], _me=_cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0], _par=_me&&_me.parent_id?_cs.filter(function(c){ return +c.id===+_me.parent_id; })[0]:null;
+      if(_par && _par.parent_id){                                   /* Nat-Squash: a DIVISION — climb and fall by PAIRS */
+        var _sum={}, _bd={}; nhWindow(ms);
+        ms.forEach(function(m){ if(ago(m.match_date)>NHWIN) return; var dd=(m.rating_delta!=null)?+m.rating_delta:0; if(!dd) return;
+          [[m.t1p1,dd],[m.t2p1,-dd]].forEach(function(p){ if(!p[0] || String(p[0]).indexOf(" & ")<0) return; var k=String(p[0]).trim(); _sum[k]=(_sum[k]||0)+p[1]; if(_bd[k]==null) _bd[k]=m.club_id; }); });
+        all=Object.keys(_sum).map(function(n){ return {name:n, move:_sum[n], club:_bd[n]}; }); } }catch(_e){}
     var up=all.filter(function(x){ return x.move>0; }).sort(function(a,b){ return b.move-a.move; })[0] || null;
     var dn=all.filter(function(x){ return x.move<0; }).sort(function(a,b){ return a.move-b.move; })[0] || null;
     var ppl=(NEW.data&&NEW.data.people)||[];
@@ -11302,7 +11313,7 @@ async function clRemove(id, label){
           ? kids.map(function(g){ return pill(g.name, "its own control room \u2014 members, pairs, matches", clubPal(g.id)[0],
               "window.nhNav('"+PAGE+"?club="+g.id+"&go=admin&from="+C+"')"); }).join("")
           : pill(nhGeneralName(), "the first group \u2014 rename or add more in the ledger", clubPal(C)[0],
-              "window.nhNav('"+PAGE+"?club="+C+"&board=1&go=admin&from="+C+"')"))
+              "window.nhNav('"+PAGE+"?club="+C+"&board=1&go=admin&from="+(W.PLAT.cid||C)+"')"))   /* Nat-Squash: back to this page */
       +'</div></div>';
     /* n97: ALL ADMIN IN ONE PLACE. The Global Ledger's room is offered here, in charcoal; it takes the register
        or master code and a region code is refused at the door, so offering it costs nothing. */
@@ -13212,7 +13223,7 @@ W.mePair=function(name,col){
     if(sc.view==="ladders")  return recLadders(sc,w);
     if(sc.view==="clubs" && sc.wide) return recClubs(sc,w);
     w.innerHTML = recBand(sc, sc.wide?"Every region, every group, every member \u2014 one rating each":"Members, profiles and the ladders",
-                          PAGE+"?club="+sc.C, W.PLAT.name||"back")
+                          sc.wide?(PAGE+"?pool="+Number(W.PLAT.pool||0)):(PAGE+"?club="+sc.C), sc.wide?"National":(W.PLAT.name||"back"))   /* Nat-Squash */
       /* n122: the register's shape — every region and its groups — on the Global records only */
       + (sc.wide ? recPill(sc,"List all clubs", "Every region, and the groups within it", sc.base+"&view=clubs") : "")
       + recPill(sc,"List all members", sc.wide?"Everyone in the register, with their group":"Everyone here, with their group", sc.base+"&view=members")
@@ -17832,6 +17843,33 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         }
       }catch(e){}
     }
+    function flatRow(x, wide){
+      try{
+        if(!x.p || x.b.dataset.nsqFlat) return; x.b.dataset.nsqFlat="1";
+        var d=REC.divOf&&REC.divOf[x.p.id];
+        var nameEl=Array.prototype.filter.call(x.b.querySelectorAll("span,b,div"),function(e){ return e.children.length===0 && (e.textContent||"").trim()===String(x.p.full_name).trim(); })[0];
+        /* the small board tag under the name (where they last played) goes — the division tag replaces it */
+        Array.prototype.forEach.call(x.b.querySelectorAll("span"),function(e){ if(e!==nameEl && e.children.length===0 && /^(Div [A-Z]|Premier)$/.test((e.textContent||"").trim())) e.style.display="none"; });
+        if(nameEl && d){ var t=document.createElement("span"); t.className="nsqDivTag"; t.textContent=d.name;
+          t.style.cssText="display:inline-block;margin-left:8px;font-size:11px;font-weight:800;color:#fff;background:"+(d.colour||"#7E3200")+";border-radius:999px;padding:1px 8px;vertical-align:middle";
+          nameEl.parentNode.insertBefore(t, nameEl.nextSibling); }
+        if(wide && REC.placeOf && REC.placeOf[x.p.id] && nameEl && !x.b.querySelector(".nsqPlaceLine")){ var ln=document.createElement("span"); ln.className="nsqPlaceLine";
+          ln.style.cssText="display:block;font-size:11.5px;font-weight:600;color:#8a8196;margin-top:1px"; ln.textContent=REC.placeOf[x.p.id]; (t||nameEl).parentNode.appendChild(ln); }
+        var rk=Array.prototype.filter.call(x.b.querySelectorAll("span,b"),function(e){ return e.children.length===0 && /^\(\d+\)$/.test((e.textContent||"").trim()); });
+        var seed=(x.p.seed_rating!=null?x.p.seed_rating:(x.p.pool_seed!=null?x.p.pool_seed:x.p.seed));
+        if(rk.length){ var sp=rk[rk.length-1]; sp.textContent=(seed!=null?Math.round(seed):"\u2013"); sp.title="Seed (starting rating)"; sp.classList.add("nsqSeed"); }
+      }catch(e){}
+    }
+    function colHeads(x){
+      /* the column names, aligned to the first row's own pills */
+      var lab='<span style="flex:1;min-width:0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#7a6658">Name \u00b7 Division</span>';
+      try{
+        var pills=x?Array.prototype.filter.call(x.b.querySelectorAll("span"),function(e){ return e.children.length===0 && /^[-+(]?\d/.test((e.textContent||"").trim()) && e.offsetWidth>20 && !e.closest(".nsqPlaceLine"); }):[];
+        var names=["Rating","Level","Move","Seed"];
+        if(pills.length>=4){ pills=pills.slice(-4); return lab+pills.map(function(pp,i){ return '<span style="flex:none;width:'+pp.offsetWidth+'px;margin-left:'+(i?4:0)+'px;text-align:center;font-size:10.5px;font-weight:800;color:#7a6658;text-transform:uppercase">'+names[i]+'</span>'; }).join("")+'<span style="flex:none;width:6px"></span>'; }
+      }catch(e){}
+      return lab+'<span style="font-size:10.5px;font-weight:800;color:#7a6658;text-transform:uppercase">Rating \u00b7 Level \u00b7 Move \u00b7 Seed</span>';
+    }
     function recLoad(club){
       var cs=W.PLAT.clubs||[], isDiv=function(c){ var par=c.parent_id?cs.filter(function(x){ return +x.id===+c.parent_id; })[0]:null; return !!(par&&par.parent_id); };
       var me=cs.filter(function(c){ return +c.id===+club; })[0], isProv=!!(me && !me.parent_id);
@@ -17859,6 +17897,19 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(!btns.length || box.getAttribute("data-nsq-grouped")===String(btns.length)) return;
       var people={}; (W.__recPeople||[]).forEach(function(p){ people[p.full_name]=p; });
       var nameOf=function(b){ var m=(b.getAttribute("onclick")||"").match(/nhOpenProfile\('((?:[^'\\]|\\.)*)'\)/); return m?m[1].replace(/\\'/g,"'"):""; };
+      /* q071 (Andre): MEMBER PROFILES = ONE A–Z LIST — no division groups, no Men / Ladies (the divisions are in every other
+         table). Each row: name · division · rating · level · move · seed; the column names frozen with the search box. */
+      if(true){
+        Array.prototype.forEach.call(box.querySelectorAll(".nsqRecHead"),function(h){ h.remove(); });
+        var rowsF=btns.map(function(b){ return {b:b,p:people[nameOf(b)]}; }).sort(function(a,b2){ return String(a.p&&a.p.full_name||nameOf(a.b)).localeCompare(String(b2.p&&b2.p.full_name||nameOf(b2.b))); });
+        rowsF.forEach(function(x){ box.appendChild(x.b); flatRow(x, wide); });
+        var bar=document.getElementById("nsqRecPills");
+        if(!bar){ bar=document.createElement("div"); bar.id="nsqRecPills"; bar.setAttribute("data-plat-keep","1"); box.parentNode.insertBefore(bar, box); }
+        bar.style.cssText="display:flex;align-items:center;gap:8px;padding:6px 14px 6px 16px;background:#fff;border-bottom:1px solid #eee";
+        bar.innerHTML=colHeads(rowsF[0]);
+        var cnt=box.parentNode.querySelector(".nsqRecCount"); 
+        box.setAttribute("data-nsq-grouped", String(btns.length)); return;
+      }
       var groups={}, none=[];
       btns.forEach(function(b){ var p=people[nameOf(b)], d=p?REC.divOf[p.id]:null; if(d) (groups[d.id]=groups[d.id]||[]).push({b:b,p:p}); else none.push({b:b,p:p}); });
       var byRating=function(x,y){ return ((y.p&&y.p.current_rating)||0)-((x.p&&x.p.current_rating)||0); };
@@ -18779,10 +18830,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         if(el.children.length || el.dataset.nsqRng) return;
         var t=(el.textContent||"").trim(); if(!labels[t.toLowerCase()]) return;
         if(el.closest("#nsqRecPills, #nsqLadPills, .nsqRecHead, button.nsqPill, #nsq, .nhOpenList, #recMembers, #recNames")) return;   /* pills, headings, match and member tags stay as they are */
+        if(el.closest(".brk") && !el.closest("#doorGroupsPick")) return;                               /* not on the tags inside charts and brackets */
         var r=W.nsqRange(t); if(!r) return; el.dataset.nsqRng="1";
         var sp=document.createElement("span"); sp.className="nsqRng"; sp.textContent=r;
-        sp.style.cssText="display:block;font-size:11.5px;font-weight:700;opacity:.8;letter-spacing:0;text-transform:none;margin-top:1px";
-        if(el.tagName==="H1"){ sp.style.fontSize="14px"; }
+        sp.style.cssText="display:inline;margin-left:10px;font-size:12px;font-weight:700;opacity:.8;letter-spacing:0;text-transform:none";   /* q071: beside the name */
+        if(el.tagName==="H1"){ sp.style.cssText="display:block;font-size:14px;font-weight:700;opacity:.85;margin-top:2px"; }
         el.appendChild(sp);
       });
       /* a division page's title ("DIVISION · Div B"): the range under it */
