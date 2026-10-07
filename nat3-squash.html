@@ -615,6 +615,7 @@
        message — they live in club.html's admin until plat_admin_padel is cloned
    ============================================================================ */
 (function(){
+  try{ var _qq=new URLSearchParams(location.search); if(window.NEWAPP && _qq.get("club")==="0" && _qq.get("nat") && !_qq.get("go")){ location.replace(location.pathname+"?club="+_qq.get("nat")); return; } }catch(_e){}   /* Nat-Squash: a ledger with no task = its door */
   var FAR="https://farlrjnaeojmypzbplmz.supabase.co";
   var PLAT="https://djmbnvikrdgnomjhtkgf.supabase.co";
   var ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbWJudmlrcmRnbm9tamh0a2dmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzOTE0MzEsImV4cCI6MjEwMDk2NzQzMX0.vR8xlVFjV6jXW-pAclGjM74HqmWSKVpsacFjM-dCIJI";
@@ -3584,7 +3585,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q075";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q076";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -16725,7 +16726,8 @@ W.nhOpenPair=function(name){
     /* n344: "?club=0&pool=P" with nothing asked of it IS the register page — go to its own address, never the parent's
        old ledger home ("Club Overview"). */
     try{ var _u=String(url||""), _i=_u.indexOf("?"); if(_i>=0){ var _q=new URLSearchParams(_u.slice(_i+1));
-      if(_q.get("club")==="0" && _q.get("pool") && !_q.get("go") && !_q.get("nat")) url=_u.slice(0,_i)+"?pool="+_q.get("pool"); } }catch(e){}
+      if(_q.get("club")==="0" && _q.get("pool") && !_q.get("go") && !_q.get("nat")) url=_u.slice(0,_i)+"?pool="+_q.get("pool");
+      else if(_q.get("club")==="0" && _q.get("nat") && !_q.get("go")) url=_u.slice(0,_i)+"?club="+_q.get("nat"); } }catch(e){}   /* Nat-Squash: a ledger with no task = its door */
     var p=null, shape=null;
     try{ p=nhParseUrl(url); shape=nhShape(p.q); }catch(e){ shape=null; }
     /* n345: A BOARD-LESS START CANNOT BE RE-POINTED. The parent's own screens (member lists, ladders, its colours) are
