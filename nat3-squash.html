@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q091";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q094";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17903,9 +17903,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           ln.style.cssText="display:block;font-size:11.5px;font-weight:700;color:#4a4256;margin-top:1px"; ln.textContent=placeTxt; (t||nameEl).parentNode.appendChild(ln); }
         var rk=Array.prototype.filter.call(x.b.querySelectorAll("span,b"),function(e){ return e.children.length===0 && /^\(\d+\)$/.test((e.textContent||"").trim()); });
         var seed=(x.p.seed_rating!=null?x.p.seed_rating:(x.p.pool_seed!=null?x.p.pool_seed:x.p.seed));
-        if(rk.length){ var sp=rk[rk.length-1]; sp.textContent=(seed!=null?Math.round(seed):"\u2013"); sp.title="Seed (starting rating)"; sp.classList.add("nsqSeed"); }
+        if(rk.length){ rk[rk.length-1].style.display="none"; }                              /* q093: no Seed — Div · Rating · Level · Move */
         /* q089: the row's pills — the SAME size, Div first: Div · Rating · Level · Move · Seed */
-        var pills=Array.prototype.filter.call(x.b.querySelectorAll("span"),function(e2){ return e2.children.length===0 && /^[-+(]?\d/.test((e2.textContent||"").trim()) && !e2.closest(".nsqPlaceLine"); });
+        var pills=Array.prototype.filter.call(x.b.querySelectorAll("span"),function(e2){ return e2.children.length===0 && e2.style.display!=="none" && /^[-+(]?\d/.test((e2.textContent||"").trim()) && !e2.closest(".nsqPlaceLine"); });
         if(d && pills.length && !x.b.querySelector(".nsqDivPill2")){ var dp=document.createElement("span"); dp.className="nsqDivPill2"+(pills[0].className?(" "+pills[0].className):""); dp.textContent=d.name;
           dp.setAttribute("style", pills[0].getAttribute("style")||"");                     /* q090: the rating pill's own size */
           dp.style.background=(((W.PLAT.clubs||[]).filter(function(c){ return +c.id===+d.id; })[0]||d).colour||"#7E3200"); dp.style.color="#fff";
@@ -17914,12 +17914,17 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       }catch(e){}
     }
     function alignHeads(x){ try{
+      /* q092: the headings live in their OWN box (position:relative), so nothing that restyles the row can move them away */
       var bar=document.getElementById("nsqRecPills"); if(!bar || !x) return;
-      var pills=[x.b.querySelector(".nsqDivPill2")].concat(Array.prototype.filter.call(x.b.querySelectorAll("span"),function(e){ return e.children.length===0 && /^[-+(]?\d/.test((e.textContent||"").trim()) && !e.closest(".nsqPlaceLine"); })).filter(Boolean).slice(-5);
-      var names=["Div","Rating","Level","Move","Seed"].slice(-pills.length), br=bar.getBoundingClientRect(); if(!pills.length || !br.width) return;
-      bar.style.position="relative"; bar.style.minHeight="26px";
-      bar.innerHTML='<span style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#7a6658">Name</span>'
-        +pills.map(function(pp,i){ var r=pp.getBoundingClientRect(); return '<span style="position:absolute;top:50%;transform:translateY(-50%);left:'+Math.round(r.left-br.left)+'px;width:'+Math.round(r.width)+'px;text-align:center;font-size:9.5px;font-weight:800;letter-spacing:.04em;color:#7a6658;text-transform:uppercase">'+names[i]+'</span>'; }).join("");
+      var pills=[x.b.querySelector(".nsqDivPill2")].concat(Array.prototype.filter.call(x.b.querySelectorAll("span"),function(e){ return e.children.length===0 && e.style.display!=="none" && /^[-+(]?\d/.test((e.textContent||"").trim()) && !e.closest(".nsqPlaceLine"); })).filter(Boolean).slice(-4);
+      if(!pills.length) return;
+      var names=["Div","Rating","Level","Move"].slice(-pills.length);                   /* q093: no Seed */
+      var box=bar.querySelector(".nsqHeadBox");
+      if(!box){ bar.innerHTML='<div class="nsqHeadBox" style="position:relative;width:100%;height:20px"></div>'; box=bar.querySelector(".nsqHeadBox"); }
+      var br=box.getBoundingClientRect(); if(!br.width) return;
+      var html='<span style="position:absolute;left:0;top:3px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#7a6658">Name</span>';
+      pills.forEach(function(pp,i){ var r=pp.getBoundingClientRect(); html+='<span style="position:absolute;top:4px;left:'+Math.round(r.left-br.left)+'px;width:'+Math.round(r.width)+'px;text-align:center;font-size:9.5px;font-weight:800;letter-spacing:.03em;color:#7a6658;text-transform:uppercase">'+names[i]+'</span>'; });
+      if(box.innerHTML!==html) box.innerHTML=html;
     }catch(e){} }
     setInterval(function(){ try{ var q=new URLSearchParams(location.search); if(q.get("view")!=="profiles") return; var f=document.querySelector("#recNames > button"); if(f) alignHeads({b:f}); }catch(e){} }, 1500);   /* stays aligned on resize */
     function colHeads(x){
@@ -18746,7 +18751,13 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           .filter(function(x){ return x.r!=null; }).sort(function(a,b){ return b.r-a.r || String(a.p.full_name).localeCompare(String(b.p.full_name)); });
         var pg=(location.pathname.split("/").pop()||"nat3-squash.html");
         var h='<div class="hd"><button class="x" onclick="window.nsqClose()">Back</button><div style="font-size:11px;letter-spacing:.14em;font-weight:800;opacity:.85">INDIVIDUAL RATINGS</div><h1>'+e(title)+'</h1><div style="font-size:13px;opacity:.9">'+rows.length+' ranked by rating \u2014 tap a name for the profile</div></div>'
-          +'<div class="card"><div class="in" style="padding:8px 10px"><input id="nsqIndFind" placeholder="Find a name\u2026" oninput="window.nsqIndFilter()" style="margin:0"></div>';
+          +'<div class="card"><div class="in" style="padding:8px 10px"><input id="nsqIndFind" placeholder="Find a name\u2026" oninput="window.nsqIndFilter()" style="margin:0"></div>'
+          /* q094: the column names, over the pills (the pills have fixed widths, so the names line up exactly) */
+          +(function(){ var lvH=(W.__nsqWide||!sc.ids)?"national":levelOf(Number(new URLSearchParams(location.search).get("nat")||W.PLAT.cid||0));
+              var hd=function(t,w){ return '<span style="display:inline-block;box-sizing:border-box;width:'+w+'px;margin-left:4px;text-align:center;font-size:9.5px;font-weight:800;letter-spacing:.03em;color:#7a6658;text-transform:uppercase">'+t+'</span>'; };
+              return '<div style="display:flex;align-items:center;gap:10px;padding:6px 13px;border-top:1px solid #f0ecf6">'
+                +'<span style="flex:none;width:34px"></span><span style="flex:1;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#7a6658">Name</span>'
+                +'<span style="flex:none;white-space:nowrap">'+(lvH!=="division"?hd("Div",46):"")+hd("Rating",46)+hd("Level",34)+hd("Move",40)+'</span></div>'; })();
         rows.forEach(function(x,k){
           var dv=cs.filter(function(c){ return +c.id===+x.div; })[0], cl=dv?cs.filter(function(c){ return +c.id===+dv.parent_id; })[0]:null, pv=cl?cs.filter(function(c){ return +c.id===+cl.parent_id; })[0]:null;
           var pill=function(t,col){ return t?'<span style="font-size:11px;font-weight:800;color:#fff;background:'+col+';border-radius:999px;padding:2px 8px;white-space:nowrap">'+e(t)+'</span>':""; };
