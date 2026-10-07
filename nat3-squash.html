@@ -3584,7 +3584,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q072";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q073";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -10510,7 +10510,11 @@ async function clRemove(id, label){
     W.__nhStage=false;
     try{ if(W.__nhWatchAttach) W.__nhWatchAttach(); }catch(e){}   /* n319 */
   }
-  function nhBoardName(id){ var c=(W.PLAT.clubs||[]).find(function(x){ return Number(x.id)===Number(id); }); return c?c.name:""; }
+  function nhBoardName(id){ var cs=W.PLAT.clubs||[], c=cs.find(function(x){ return Number(x.id)===Number(id); }); if(!c) return "";
+    try{ var me=cs.find(function(x){ return Number(x.id)===Number(W.PLAT.cid); }), wide=(!me || !me.parent_id);   /* Nat-Squash: a province or the national page */
+      var par=c.parent_id?cs.find(function(x){ return Number(x.id)===Number(c.parent_id); }):null;
+      if(wide && par && par.parent_id) return par.name+" \u00b7 "+c.name; }catch(e){}
+    return c.name; }
   function nhInk(hex){
     /* n187: THE INTERFACE WORKS IN A READABLE INK. --nhc drives headings, links, numbers and pills, so a pale club
        colour has to be darkened until it reads on white; --nhraw keeps the club's true colour for anything that is
@@ -10875,7 +10879,7 @@ async function clRemove(id, label){
     W.__nhRowN=(W.__nhRowN||0)+1;
     var id="m"+W.__nhRowN+"_"+(m.id||0);
     var pillHTML=(scope!=="one"&&bd)?('<span style="display:inline-block;background:'+col+';color:#fff;border-radius:99px;'
-      +'padding:2px 9px;font-size:10px;font-weight:800;margin-right:6px;vertical-align:middle">'+esc(bd.name)+'</span>'):'';
+      +'padding:2px 9px;font-size:10px;font-weight:800;margin-right:6px;vertical-align:middle">'+esc(nhBoardName(bd.id)||bd.name)+'</span>'):'';
     /* n340: EACH RESULT IN ITS OWN CARD, AS OPR SHOWS IT (Andre): the card stays; it is the box AROUND the list that goes
        (see nhOpenList), so a result never reads as a box inside a box */
     return '<div style="border:1px solid #e3ddea;border-radius:12px;padding:8px 6px;margin:7px 0;background:#fff;box-shadow:0 1px 2px rgba(26,16,48,.04)">'
@@ -12620,7 +12624,7 @@ W.mePair=function(name,col){
       +'<div style="flex:1;min-width:0;text-align:right">'
       +'<div style="font-size:16px;font-weight:800;letter-spacing:-.2px">'+esc(score)+'</div>'
       +'<div style="font-size:11.5px;color:#5f5770;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
-      +(bd?('<span style="color:'+col+';font-weight:700">'+esc(bd.name)+'</span> \u00b7 '):'')+esc(when)+'</div></div>'
+      +(bd?('<span style="color:'+col+';font-weight:700">'+esc(nhBoardName(bd.id)||bd.name)+'</span> \u00b7 '):'')+esc(when)+'</div></div>'
       +'<button onclick="window.nhWhoPlayed()" style="background:none;border:none;cursor:pointer;color:'+col+';font-size:15px;padding:0 0 0 4px">'
       +nhExp("nhWhoT",col)+'</button>'
       +'</div>'
@@ -13678,7 +13682,9 @@ W.nhOpenPair=function(name){
     var scopeLine=function(){
       var isGlobal=(Number(W.PLAT.cid)===0 && !W.PLAT.nat);
       if(isGlobal) return "ALL CLUBS \u00b7 Ratings and ladder standings";
-      if(W.PLAT.nat) return "REGION \u00b7 "+(nhBoardName(W.PLAT.nat)||"")+" \u2014 Ratings and ladder standings";
+      if(W.PLAT.nat){ var _cs=W.PLAT.clubs||[], _me=_cs.find(function(x){ return +x.id===+W.PLAT.nat; }), _p=_me&&_me.parent_id?_cs.find(function(x){ return +x.id===+_me.parent_id; }):null;
+        var _lv=!(_me&&_me.parent_id)?"PROVINCE":(_p&&_p.parent_id)?"DIVISION":"CLUB";                 /* Nat-Squash */
+        return _lv+" \u00b7 "+((_me&&_me.name)||"")+" \u2014 Ratings and ladder standings"; }
       var isGroup=(W.PLAT.parentId && W.PLAT.cid && Number(W.PLAT.parentId)!==Number(W.PLAT.cid));
       return (isGroup?"GROUP \u00b7 ":"")+(W.PLAT.name||"")+" \u2014 Ratings and ladder standings";
     };
@@ -18010,8 +18016,27 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
            names exactly the board you stand on: the club (its ledger, ?nat=) or the division. */
         if(pq.indexOf("club_ladder?")===0){
           var _lq=new URLSearchParams(location.search), _here=Number(_lq.get("nat")||W.PLAT.nat||W.PLAT.cid||0);
-          if(_here>0) pq=pq.replace(/club_id=(eq\.\d+|in\.\([\d,]+\))/, "club_id=in.("+_here+")");   /* in.(n): the platform does not widen this form */
-          return _sg.call(this, pq);
+          var _lv=(W.__nsqWide||!_here)?"national":levelOf(_here);
+          if(_lv==="club" || _lv==="division"){
+            pq=pq.replace(/club_id=(eq\.\d+|in\.\([\d,]+\))/, "club_id=in.("+_here+")");   /* in.(n): the platform does not widen this form */
+            return _sg.call(this, pq);
+          }
+          /* q073: a PROVINCE or the GLOBAL LEDGER — one ladder, 1 to N: the CLUB ladders in that area combined, each pair once,
+             ordered by rating (positions from different clubs cannot be compared), the club shown beside the pair */
+          var _cs=W.PLAT.clubs||[], _clubs=_cs.filter(function(c){ var lv=levelOf(+c.id); if(lv!=="club") return false;
+            return _lv==="national" || +c.parent_id===+_here; }).map(function(c){ return +c.id; });
+          if(!_clubs.length) return Promise.resolve([]);
+          pq=pq.replace(/club_id=(eq\.\d+|in\.\([\d,]+\))/, "club_id=in.("+_clubs.join(",")+")");
+          return Promise.all([_sg.call(this, pq), restAll("plat_squash_v_pool_individuals?pool_id=eq."+Number(W.PLAT.pool||0)+"&select=full_name,current_rating,seed_rating&order=full_name.asc")]).then(function(rr){
+            var rows=Array.isArray(rr[0])?rr[0]:[], now={}; (Array.isArray(rr[1])?rr[1]:[]).forEach(function(x){ now[String(x.full_name).trim()]=(x.current_rating!=null?x.current_rating:x.seed_rating); });
+            var seen={}, out=[];
+            rows.forEach(function(r){ var k=W.nsqPairKey(r.p1,r.p2); if(seen[k]) return; seen[k]=1;
+              var a=now[String(r.p1).trim()], b=now[String(r.p2).trim()]; var rt=(a!=null&&b!=null)?(Math.max(a,b)*0.6+Math.min(a,b)*0.4):0;
+              var cl=_cs.filter(function(c){ return +c.id===+r.club_id; })[0];
+              out.push(Object.assign({}, r, {_rt:rt, _club:cl?cl.name:""})); });
+            out.sort(function(x,y){ return y._rt-x._rt; }); out.forEach(function(r,i){ r.position=i+1; });
+            W.__nsqLadClub={}; out.forEach(function(r){ W.__nsqLadClub[r.p1+" / "+r.p2]=r._club; });
+            return out; });
         }
         if(pq.indexOf("player_results?select=name,current_rating,gender,initial_rating")===0){
           var cm=pq.match(/club_id=eq\.(\d+)/), gm=pq.match(/gender=eq\.([MLX])/);
@@ -18845,6 +18870,53 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       Array.prototype.forEach.call(document.querySelectorAll(".nsqRecHead[id^='nsqRecDiv_']"),function(h){
         if(h.dataset.nsqRng) return; var parts=(h.textContent||"").split(" \u00b7 "); if(parts.length!==2) return;
         var r2=W.nsqRange(parts[0]); if(!r2) return; h.textContent=parts[0]+" \u00b7 "+r2+" \u00b7 "+parts[1]; h.dataset.nsqRng="1"; });
+    }catch(e){} }, 700);
+    /* q073: the combined province / national ladder — the club beside each pair; and every ladder named for its place */
+    setInterval(function(){ try{
+      var cl=W.__nsqLadClub||{}, scr=document.querySelector(".screen.active"); if(!scr) return;
+      Array.prototype.forEach.call(scr.querySelectorAll("td,span,div,b"),function(el){
+        if(el.children.length || el.dataset.nsqLc) return; var t=(el.textContent||"").trim(); if(!cl[t]) return;
+        el.dataset.nsqLc="1"; var s=document.createElement("span"); s.textContent=cl[t];
+        s.style.cssText="display:inline-block;margin-left:8px;font-size:11px;font-weight:800;color:#fff;background:#7E3200;border-radius:999px;padding:1px 8px;vertical-align:middle"; el.appendChild(s); });
+      /* the ladder's name: National / KZN / Rovers / Div A Ladder */
+      var q=new URLSearchParams(location.search), here=Number(q.get("nat")||W.PLAT.nat||W.PLAT.cid||0), cs=W.PLAT.clubs||[];
+      var nm=(W.__nsqWide||!here)?"National":(cs.filter(function(c){ return +c.id===here; })[0]||{}).name;
+      if(!nm) return; var lab=nm+" Ladder";
+      Array.prototype.forEach.call(document.querySelectorAll("button, h1, h2, h3, span"),function(el){
+        if(el.children.length>2) return; var t=(el.textContent||"");
+        if(/Good\s*[’']ol\s*Club\s*Ladder/i.test(t) && el.dataset.nsqLn!==lab){
+          var w=document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null), n2; while((n2=w.nextNode())){ if(/Good\s*[’']ol\s*Club\s*Ladder/i.test(n2.nodeValue)) n2.nodeValue=n2.nodeValue.replace(/Good\s*[’']ol\s*Club\s*Ladder/i, lab); }
+          el.dataset.nsqLn=lab; } });
+    }catch(e){} }, 600);
+    /* q073: THE RATINGS PAGES WEAR THE BOARD'S OWN COLOUR — the buttons, the "How a Rating is Calculated" panel (its tints
+       were fixed orange and a general rule turned dark colours grey) and the table header — from the board they were opened
+       from (?nat= or the board); the Global Ledger stays charcoal. */
+    setInterval(function(){ try{
+      var on=["laddersScreen","ladderScreen","clubLadderScreen"].some(function(id){ var e=document.getElementById(id); return e&&e.classList.contains("active"); });
+      var st=document.getElementById("nsqLadCol"); if(!on){ if(st) st.textContent=""; return; }
+      var q=new URLSearchParams(location.search), here=Number(q.get("nat")||W.PLAT.nat||W.PLAT.cid||0), cs=W.PLAT.clubs||[];
+      var b=(W.__nsqWide||!here)?null:cs.filter(function(c){ return +c.id===here; })[0];
+      var C=(b&&b.colour)||"#2f2f2f";
+      var rgb=function(h){ h=String(h).replace("#",""); if(h.length===3) h=h.split("").map(function(x){ return x+x; }).join(""); var n=parseInt(h,16); return [(n>>16)&255,(n>>8)&255,n&255]; };
+      var c=rgb(C), lum=(0.299*c[0]+0.587*c[1]+0.114*c[2])/255, INK=lum>0.62?"rgb("+Math.round(c[0]*.55)+","+Math.round(c[1]*.55)+","+Math.round(c[2]*.55)+")":C;
+      var css="#laddersScreen .menu-btn{border-color:"+C+" !important;color:"+INK+" !important}"
+        +"#ladderNoteBox{border-left-color:"+C+" !important}"
+        +"#ladderNoteBox>div:first-child{background:rgba("+c.join(",")+",.14) !important;border-color:rgba("+c.join(",")+",.35) !important}"
+        +"#ladderNoteBox>div:nth-child(2){background:rgba("+c.join(",")+",.06) !important;border-color:rgba("+c.join(",")+",.25) !important}"
+        +"#ladderContent thead tr, #ladderContent thead th{background:"+C+" !important;color:#fff !important}";
+      if(!st){ st=document.createElement("style"); st.id="nsqLadCol"; document.head.appendChild(st); }
+      if(st.textContent!==css) st.textContent=css;
+    }catch(e){} }, 400);
+    /* q073: a PROVINCE's door — the action buttons sit in a bracket that says what they are: "KZN player and pairing stats" */
+    setInterval(function(){ try{
+      var cid=Number(W.PLAT.cid||0); if(!cid || levelOf(cid)!=="province" || new URLSearchParams(location.search).get("go")) return;
+      var nh=document.getElementById("nh"); if(!nh || nh.querySelector("#nsqProvStats")) return;
+      var btn=Array.prototype.filter.call(nh.querySelectorAll("button"),function(x){ return /Ratings\s*·\s*Ladders\s*·\s*Profiles/.test(x.innerText||""); })[0]; if(!btn) return;
+      var row=btn.parentNode; if(!row || row===nh) return;
+      var me=(W.PLAT.clubs||[]).filter(function(c){ return +c.id===cid; })[0];
+      var box=document.createElement("div"); box.id="nsqProvStats"; box.className="brk"; box.setAttribute("data-plat-keep","1");
+      box.innerHTML='<h2>'+e((me&&me.name)||"")+' player and pairing stats</h2><div style="padding:4px 12px 2px;font-size:12.5px;color:#7a6658">All the clubs in '+e((me&&me.name)||"the province")+' together.</div>';
+      row.parentNode.insertBefore(box,row); box.appendChild(row); row.style.padding="8px 10px 12px";
     }catch(e){} }, 700);
     /* a place as people say it: a division reads "Rovers \u00b7 Div A" */
     W.nsqPlace=function(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return "";
