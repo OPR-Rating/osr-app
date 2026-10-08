@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q101";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q104";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -10713,7 +10713,7 @@ async function clRemove(id, label){
          centred on the row, the same place every time — never wrapped into the name */
       +'<span class="nm" style="flex:1;min-width:0"><b style="font-size:15.5px">'+esc(mv.name)+'</b><span>'+esc(mv.club?nhBoardName(mv.club):"")+'</span></span>'
       +(seedOf!=null?'<span style="flex:none;align-self:center;white-space:nowrap;padding:3px 9px;border-radius:999px;font-size:11px;line-height:1.2;font-weight:800;letter-spacing:.02em;color:#fff;background:'+col+'">Initial '+seedOf+'</span>':'')
-      +'<span class="val" style="flex:none"><b class="'+(up?"up":"dn")+'" style="font-size:18px">'+(up?"\u25b2 +":"\u25bc ")+Math.round(mv.move)+'</b><span>this week</span></span></div>'
+      +'<span class="val" style="flex:none"><b class="'+(up?"up":"dn")+'" style="font-size:18px">'+(up?"\u25b2 +":"\u25bc ")+Math.round(mv.move)+'</b><span>'+nhWhen()+'</span></span></div>'
       +body+'</div></div>';
   }
   var NH_LINE_SEQ=0;
@@ -18601,7 +18601,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     setInterval(function(){ try{
       var h=natHost(); if(!h || Number(W.PLAT.cid||0)!==+h.id) return;
       var go=new URLSearchParams(location.search).get("go")||"";
-      if(go==="admin" || go==="entry" || go==="ledger") return;                     /* its tournament admin / a tournament sheet */
+      if(go==="admin" || go==="entry" || go==="ledger" || go==="tournaments" || go==="tsheet") return;   /* its tournament admin, a tournament sheet — and (q104) its tournaments' own pages: the draw, standings, entering a team */
       var pg=(location.pathname.split("/").pop()||"nat3-squash.html"), P=Number(W.PLAT.pool||0);
       if(typeof W.nhNav==="function") W.nhNav(pg+"?pool="+P, {replace:true}); else location.replace(pg+"?pool="+P);
     }catch(e){} }, 400);
@@ -18642,7 +18642,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     setInterval(function(){ try{
       var h=natHost(); if(!h || +W.PLAT.cid!==+h.id) return;
       var q=new URLSearchParams(location.search), go=q.get("go")||"";
-      if(go==="admin" || go==="entry") return;
+      if(go==="admin" || go==="entry" || go==="ledger" || go==="tournaments" || go==="tsheet") return;   /* q104: and its tournaments' own pages */
       var pg=(location.pathname.split("/").pop()||"nat3-squash.html");
       if(typeof W.nhNav==="function") W.nhNav(pg+"?pool="+Number(W.PLAT.pool||0), {replace:true}); else location.replace(pg+"?pool="+Number(W.PLAT.pool||0));
     }catch(e){} }, 300);
@@ -19354,6 +19354,47 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         }catch(e){} }, 150); }); }
         return r; };
       w.__keep=true; W.renderStep1=w; }; arm(); })();
+    /* q103 (Andre): the score sheet's dropdowns — Event, Match type, Games played — open the SAME picker as Select player
+       (the sliding sheet), not the phone's plain list. Each <select> stays on the page, hidden: a pick sets it and fires its
+       change, so everything that listens to it works as before. A locked select shows greyed and does not open. */
+    (function(){
+      var IDS=["matchEvent","matchType","setsPlayed"];
+      var arm=function(){
+        if(typeof W.openPlayerModal==="function" && !W.openPlayerModal.__nsqSel){ var op=W.openPlayerModal; var wp=function(){ var sb=document.getElementById("playerModalSearch"); if(sb) sb.style.display=""; return op.apply(this,arguments); }; wp.__nsqSel=true; wp.__slot=op.__slot; W.openPlayerModal=wp; }
+        if(typeof W.openNamePicker!=="function" || W.openNamePicker.__nsqSel) return;
+        var o=W.openNamePicker; var w=function(){ var sb=document.getElementById("playerModalSearch"); if(sb) sb.style.display=""; return o.apply(this,arguments); };
+        w.__nsqSel=true; W.openNamePicker=w; };
+      var labelOf=function(sel){ var p=sel.parentNode, l=p?p.querySelector("label"):null; return l?l.textContent.trim():"Choose"; };
+      var draw=function(sel,btn){
+        var o=sel.options[sel.selectedIndex], has=!!(o && o.value!==""), t=o?o.text:"";
+        var key=t+"|"+has+"|"+sel.disabled; if(btn.dataset.k===key) return; btn.dataset.k=key;
+        btn.className="player-display nsqSelBtn"+(has?" selected":"");
+        btn.innerHTML='<span>'+e(t||"Tap to select…")+'</span><span class="arrow">▼</span>';
+        btn.style.opacity=sel.disabled?".6":""; btn.style.cursor=sel.disabled?"default":"pointer";
+        if(sel.disabled) btn.style.background="#f5f2f9"; else btn.style.background="";
+      };
+      setInterval(function(){ try{
+        var pm=document.getElementById("playerModal"), sb3=document.getElementById("playerModalSearch");
+        if(pm && sb3 && sb3.style.display==="none" && getComputedStyle(pm).display==="none") sb3.style.display="";   /* closed without a pick */
+        var scr=document.getElementById("entryScreen"); if(!scr || !scr.classList.contains("active")) return;
+        arm();
+        IDS.forEach(function(id){
+          var sel=document.getElementById(id); if(!sel || sel.tagName!=="SELECT") return;
+          var btn=sel.nextElementSibling && sel.nextElementSibling.classList.contains("nsqSelBtn") ? sel.nextElementSibling : null;
+          if(!btn){ btn=document.createElement("div"); btn.className="player-display nsqSelBtn"; btn.setAttribute("role","button");
+            btn.onclick=function(){ if(sel.disabled) return;
+              var opts=[].filter.call(sel.options,function(x){ return x.value!=="" && !x.disabled; });
+              W.openNamePicker(labelOf(sel), opts.map(function(x){ return x.text; }), function(lab){
+                var x=opts.filter(function(y){ return y.text===lab; })[0]; if(!x) return;
+                var sb2=document.getElementById("playerModalSearch"); if(sb2) sb2.style.display="";
+                sel.value=x.value; sel.dispatchEvent(new Event("change",{bubbles:true})); draw(sel,btn); });
+              var sb=document.getElementById("playerModalSearch"); if(sb){ sb.style.display="none"; sb.blur(); }   /* a short list: no keyboard */
+            };
+            sel.parentNode.insertBefore(btn, sel.nextSibling); sel.style.display="none"; }
+          btn.classList.add("nsqSelBtn"); draw(sel,btn);
+        });
+      }catch(err){} }, 300);
+    })();
     /* a place as people say it: a division reads "Rovers \u00b7 Div A" */
     W.nsqPlace=function(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return "";
       var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
