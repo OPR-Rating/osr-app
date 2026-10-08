@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q098";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q101";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -16400,6 +16400,9 @@ W.nhOpenPair=function(name){
     };
     arm();
   })();
+  /* Nat-Squash q099: remember which slot the picker is filling (the Mixed rule needs the partner) */
+  (function(){ var arm=function(){ if(typeof W.openPlayerModal!=="function") return setTimeout(arm,300); if(W.openPlayerModal.__slot) return;
+    var o=W.openPlayerModal; var w=function(fieldId){ W.__nsSlot=fieldId; return o.apply(this, arguments); }; w.__slot=true; W.openPlayerModal=w; }; arm(); })();
   /* hand the parent its roster in the chosen scope */
   /* n217: MEN and LADIES are declared with `let`, so they are private to the parent's script — assigning
      window.MEN never reached them, which is why Region and Global still showed the group. getPlayerList() is the
@@ -16425,6 +16428,10 @@ W.nhOpenPair=function(name){
         men.sort(); ladies.sort();
         if(type==="Men's") return men;
         if(type==="Ladies") return ladies;
+        if(type==="Mixed" && W.__nsSlot){                                                  /* Nat-Squash: one man + one lady */
+          var _pid={t1p1:"t1p2",t1p2:"t1p1",t2p1:"t2p2",t2p2:"t2p1"}[W.__nsSlot], _pe=_pid?document.getElementById(_pid+"_val"):null, _pn=_pe?String(_pe.value||"").trim():"";
+          if(_pn){ if(men.indexOf(_pn)>=0) return ladies; if(ladies.indexOf(_pn)>=0) return men; }
+        }
         return men.concat(ladies).sort();
       };
       wrapped.__ns=true; W.getPlayerList=wrapped;
@@ -16454,6 +16461,7 @@ W.nhOpenPair=function(name){
   };
   function nsRow(team){
     var col=inkSafe(W.PLAT.colour||"#D35400");
+    try{ var _lb2=(typeof W.nsqLadderBoard==="function")?W.nsqLadderBoard():0; if(_lb2 && +_lb2!==+W.PLAT.cid){ var _c2=(W.PLAT.clubs||[]).find(function(c){ return +c.id===+_lb2; }); if(_c2 && _c2.colour) col=inkSafe(_c2.colour); } }catch(_e){}   /* Nat-Squash: the club's colour */
     /* n222: the middle pill says WHICH region, so a member knows what they are widening to. Long names are
        shortened to fit three pills on a phone. */
     var regionName=(function(){
@@ -16614,9 +16622,13 @@ W.nhOpenPair=function(name){
     /* n308: re-run on every board change (nhParentSync). A board in the product purple, or the ledger, takes the tint
        AWAY — it used to return early and leave the previous group's colour on the sheet. */
     var col=W.PLAT.cid ? inkSafe(W.PLAT.colour||clubPal(W.PLAT.cid)[0]) : "#D35400";
+    var _clubTint=false;
+    try{ var _lb=(typeof W.nsqLadderBoard==="function")?W.nsqLadderBoard():0;                       /* Nat-Squash: a club door's sheet */
+      if(_lb && _lb!==Number(W.PLAT.cid) && new URLSearchParams(location.search).get("go")==="entry"){ col=inkSafe(clubPal(_lb)[0]); _clubTint=true; } }catch(e){}
     if(String(col||"").toLowerCase()==="#D35400"){ var gone=document.getElementById("platEntryTint"); if(gone) gone.remove(); return; }
     /* n207: the readable ink, for the same reason as the court card — these are buttons with white words on them */
     var rgb=sessRgb(), deep=darken(col,0.42), mid=darken(col,0.25);
+    if(_clubTint){ try{ var _h=String(col).replace("#",""); if(_h.length===3) _h=_h.split("").map(function(x){ return x+x; }).join(""); var _n=parseInt(_h,16); rgb=((_n>>16)&255)+","+((_n>>8)&255)+","+(_n&255); }catch(e){} }
     nsMount(); nsWatch();
     var st=document.getElementById("platEntryTint")||document.createElement("style"); st.id="platEntryTint";
     st.textContent=
@@ -17592,64 +17604,81 @@ W.nhOpenPair=function(name){
       + '<span style="flex:1;font-size:14px;line-height:1.55;color:#332b44"><b>'+title+'</b><br>'+text+'</span></div>';
   }
 
-  function guide(){
+  function guide(){                                                       /* Nat-Squash q100: Masters doubles */
     return ''
-    + '<div style="background:#f4f0fa;border-left:4px solid var(--nhc,#D35400);border-radius:8px;padding:12px 14px;margin:0 0 14px">'
+    + '<div style="background:#fbf3ec;border-left:4px solid var(--nhc,#D35400);border-radius:8px;padding:12px 14px;margin:0 0 14px">'
     + '<b style="color:var(--nhc,#D35400)">One rating, wherever you play.</b><br>'
-    + '<span style="font-size:13.5px;line-height:1.55">Your rating follows you between groups, clubs and regions. '
-    + 'Play a Tuesday night at one group and a tournament at another — it is all the same rating.</span></div>'
+    + '<span style="font-size:13.5px;line-height:1.55">You have one rating for the whole country. It follows you from division to division '
+    + 'and from club to club — a club night, a ladder challenge or a national tournament all move the same rating.</span></div>'
 
-    + h('The three rungs')
-    + p('<b>A group</b> is where you play: Tuesday Ladies, the Wednesday social, a club night. '
-      + '<b>A region</b> holds several groups and keeps the records for all of them. '
-      + '<b>The register</b> is everyone, across every region. You will normally live on your group\u2019s page, '
-      + 'and step up to the region when you want ladders and records.')
+    + h('How it is built')
+    + p('<b>National</b> (Masters Squash) is everyone in the country, one rating each. <b>Provinces</b> — KZN, Easterns, Northerns … '
+      + '— hold their clubs. <b>Clubs</b> are where you belong and play. Inside every club are its <b>divisions</b>: Premier, Div A, Div B and down.')
+    + p('<b>Divisions are set by National</b>, by rating, and are the same in every club. You never choose one: you are placed in the division '
+      + 'your rating falls in, and a club’s division appears by itself when its first player arrives. As your rating moves you move with it — '
+      + 'up only once you are 10 points past the line, down only once you are 10 below it, so nobody flips back and forth.')
+    + p('A <b>pair</b> belongs to the division of its <b>higher</b> player. Men and ladies are on <b>one scale</b>.')
 
     + h('Entering a score')
-    + step(1,'Tap <b>+ Enter your match score</b>','On the region\u2019s door or your group\u2019s page. It is the blue square at the top.')
-    + step(2,'Say what the match was','The event, the date, whether it was Men\u2019s, Ladies, Mixed or All Sorts, and how many games you played.')
-    + step(3,'Pick the four players','Tap each slot and choose the name. If a name is missing, see <b>Select name from</b> below.')
-    + step(4,'Put in the score','Games in the games boxes and points in the points boxes. A single set won 16\u20138 is <b>1\u20130 in games</b> and <b>16\u20138 in points</b> \u2014 never 16\u20138 in the games boxes.')
-    + step(5,'Save','Ratings move the moment it is saved, for all four players.')
+    + step(1,'Tap <b>+ Enter your match score</b>','On your club’s front page. (On a province’s page, choose your club first — or the province’s ladder match.)')
+    + step(2,'Say what the match was','The event (<b>Social</b>, <b>Ladder Match</b> or a tournament), the date, Men’s / Ladies / Mixed / All Sorts, and how many games were played.')
+    + step(3,'Pick the four players','Tap each slot and choose the name. In a <b>Mixed</b> match, once player 1 is chosen, the partner list shows only the other gender. '
+      + 'For a <b>Ladder Match</b> you pick the two ladder <b>teams</b> instead.')
+    + step(4,'Put in the score, game by game','Each game is played to <b>11 points</b> (win by two at 10–all). Enter the points of every game — for example '
+      + '<b>11–7, 9–11, 11–5, 11–8</b> — and the app counts the games: that match is <b>3–1</b>. A match is usually best of five, first to three games.')
+    + step(5,'Save','The division is worked out from the players’ ratings, and all four ratings move the moment it is saved.')
 
-    + h('Select name from: Group \u00b7 Region \u00b7 Global')
-    + p('Each team card has a row of three. <b>Group</b> shows the people at this group, and is where you start. '
-      + '<b>Region</b> widens it to everybody in the region, including a member who has just joined and not played yet. '
-      + '<b>Global</b> is the whole register \u2014 use it for a visitor from another club.')
-    + p('Each team has its own row, so you can pick a visitor on one side and your own group on the other.')
+    + h('Select name from')
+    + p('Each team has its own row of three: <b>Group</b> (the division the sheet is on), <b>your club</b> — everyone at the club, '
+      + 'including a member who has not played yet — and <b>All clubs</b>, the whole national register, for a player from another club.')
 
     + h('How your rating moves')
-    + p('Before the match, the two pairs\u2019 ratings say how it should go. Afterwards, the result is compared with that. '
-      + 'Beat what was expected and you go up; fall short and you go down \u2014 <b>even if you won</b>. '
-      + 'A close loss to a much stronger pair can move you up.')
-    + p('The move is worked out from <b>games first and points second</b>, and every game counts: a five-game match moves '
-      + 'a rating more than a short one. A narrow win by a strong favourite earns very little, which is what stops '
-      + 'ratings drifting upward at the top of a club.')
-    + p('A pair\u2019s rating is <b>60% the stronger player and 40% the other</b>, so a new pairing is fairly rated from '
-      + 'its first ball, and both partners move by the same amount.')
+    + p('Before the match, the two pairs’ ratings say how it should go. <b>The winners go up and the losers go down</b> — a loss is a loss. '
+      + 'How far depends on how surprising the result was and on the margin: beat a stronger pair and you gain more; lose to a much stronger pair and it costs little.')
+    + p('The move is worked out from <b>games first and points second</b>, and every game counts — a five-game match moves a rating more than a short one.')
+    + p('A pair’s rating is <b>60% the stronger player and 40% the other</b>, so a new pairing is fairly rated from its first rally, and both partners move by the same amount. '
+      + 'Your <b>Level</b> is your rating divided by 200 (1700 is Level 8.5).')
+
+    + h('The ladders — on court, not on paper')
+    + p('The ratings are “on paper”: who <i>should</i> win. The <b>ladder</b> is “on court”: who <i>did</i> win. Only <b>Ladder Matches</b> move a ladder.')
+    + p('Each club has a ladder per category (Men’s, Ladies, Mixed, All Sorts), and each division has its own. A pair joins by choice, or as a pair created in Club admin. '
+      + 'When the club <b>activates</b> a ladder it is ordered once by rating; after that pairs move only on results — beat a pair above you and you take their place. '
+      + 'A pair added after activation starts at the bottom, with one free challenge to set its position.')
+    + p('Club ladders feed the <b>province</b> ladder (e.g. KZN) and the <b>National</b> ladder, which switch on when a club activates. You can challenge a pair from another club '
+      + 'on the province or National ladder, once both clubs have activated theirs. <b>One match moves every ladder the two pairs share</b>: two pairs from the same club playing '
+      + 'on the KZN ladder move the KZN ladder and their club’s ladder too — so you can be 5th at your club, 3rd in KZN and 1st nationally.')
 
     + h('Your own page')
-    + p('<b>My page</b> is reached from the button at the top right of any door. It holds your rating, your level and '
-      + 'your rank, your form, your partnerships, and every match you have played. '
-      + '<b>Move by group</b> shows where your rating has come from, group by group.')
-    + p('You can set your picture there, and choose to have OSR open on your page \u2014 or on your group \u2014 whenever you start it.')
+    + p('<b>My page</b> (top right of every front page) holds your rating, level, rank, form, partnerships and every match you have played. '
+      + 'At the foot of your club’s or province’s front page, <b>Open the app here every time</b> makes that page the one your phone opens on.')
 
-    + h('Ratings, ladders and profiles')
-    + p('From a region\u2019s door: <b>Ratings \u00b7 Ladders \u00b7 Profiles</b>. Ladders are by category \u2014 Men\u2019s pairs, Ladies pairs, '
-      + 'Mixed \u2014 and show every pair in order. <b>Member profiles</b> lists everyone who has played, with the group '
-      + 'they played at beside their name.')
+    + h('Ratings · Ladders · Profiles')
+    + p('Every table follows where you open it: a division shows its own players and pairs, a club the whole club, a province all its clubs, and National everyone. '
+      + 'Each row shows the <b>division</b>, <b>rating</b>, <b>level</b> and <b>move</b>; under the name you see the club (and province) when the page covers more than one.')
 
-    + h('Tournaments and court cards')
-    + p('A <b>tournament</b> belongs to a group and keeps its own rounds, standings and results. '
-      + 'A <b>court card</b> is for a club night: set the courts and who is on them, and the scores come back to the card.')
-    + p('<b>Enter tournament results through the tournament itself</b>, not through Enter a score, so they attach to the '
-      + 'right round.')
+    + h('Tournaments')
+    + p('Club tournaments are created and run in <b>Club admin</b>; national tournaments by National. Enter tournament results through the tournament itself, '
+      + 'or choose the tournament as the event, so the result lands in the right round.')
 
     + h('If something looks wrong')
-    + p('Tell your group\u2019s administrator. A match can be corrected or removed, and every rating is worked out again '
-      + 'from the matches \u2014 so a mistake is always fixable and nothing is lost by fixing it.')
+    + p('Tell your club’s administrator. Each club has one admin, covering all its divisions: a match can be corrected or removed, and every rating is worked out again '
+      + 'from the matches — so a mistake is always fixable and nothing is lost by fixing it.')
 
     + '<div style="height:24px"></div>';
+  }
+  /* Nat-Squash q100: the About tab — what OSR is, for Masters doubles (the IP statement, version and admin link stay) */
+  function nsqAbout(){
+    var s=function(t,b){ return '<div class="about-section"><h3>'+t+'</h3>'+b+'</div>'; }, q=function(x){ return '<p>'+x+'</p>'; };
+    return s('What Is OSR?', q('Open Squash Ratings (OSR) is an independent, transparent rating system for <b>Masters doubles squash</b> — national, provincial and club. '
+        + 'Every player has one rating for the whole country, and every pairing is rated from its two players.')
+        + q('OSR is open by design. Every formula, every weighting and every threshold can be explained to any player, administrator or partner. There are no black boxes.'))
+      + s('National · Province · Club · Division', q('National holds every player. Provinces hold their clubs; clubs hold their divisions. '
+        + 'Divisions are set nationally by rating, and players are placed in them automatically — nobody chooses a division.'))
+      + s('How Ratings Work', q('Every match updates the four players’ ratings. The winners go up and the losers go down; how far depends on how surprising the result was '
+        + 'and how convincing — games first, points second, every game counting. Games are played to 11 points.'))
+      + s('Match Types', '<div><span class="about-badge">Men’s</span> <span class="about-badge">Ladies</span> <span class="about-badge">Mixed</span> <span class="about-badge">All Sorts</span></div>'
+        + '<p style="margin-top:8px;">Any doubles combination. A pair’s rating is 60% its stronger player and 40% the other; men and ladies are on one scale.</p>')
+      + s('Your Level', q('Your Level is your rating divided by 200 — 1700 is Level 8.5. One simple number for your standard.'));
   }
 
   W.htShow = function(which){
@@ -17690,6 +17719,13 @@ W.nhOpenPair=function(name){
       paneG.id = 'htPaneHow';
       paneG.style.display = 'none';
       paneG.innerHTML = guide();
+      try{   /* Nat-Squash q100: the About tab's text above the IP statement is Masters' own */
+        var _ip = [].filter.call(paneA.querySelectorAll('.about-section'),function(x){ return /Intellectual Property/i.test((x.querySelector('h3')||{}).textContent||''); })[0];
+        [].slice.call(paneA.querySelectorAll('.about-section')).forEach(function(x){ if(_ip && (x.compareDocumentPosition(_ip) & 4)) x.remove(); });
+        var _box=document.createElement('div'); _box.innerHTML=nsqAbout();
+        while(_box.firstChild) paneA.insertBefore(_box.firstChild, _ip||paneA.firstChild);
+        var _hp=hero?hero.querySelector('p'):null; if(_hp) _hp.textContent='Masters doubles — national, provincial and club';
+      }catch(_e){}
 
       body.appendChild(tabs);
       body.appendChild(paneA);
@@ -19292,8 +19328,32 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var leaves=Array.prototype.filter.call(lad.querySelectorAll("*"),function(x){ return x.children.length===0 && (x.textContent||"").trim(); });
       if(leaves.length>=2){ leaves[0].textContent="Ladder match"; leaves[1].textContent=nm+" Ladder"; for(var i=2;i<leaves.length;i++){ if(/^\d+$/.test(leaves[i].textContent.trim())||/match/i.test(leaves[i].textContent)) leaves[i].textContent=""; } }
       else lad.textContent=nm+" Ladder match";
-      card.parentNode.appendChild(lad);                                                 /* in the same grid as the club brackets */
+      /* q101 (Andre): the clubs ABOVE a line, the ladder BELOW it — a clear distinction between a club match and a ladder match */
+      var grid=card.parentNode, line=document.createElement("div"); line.id="nsqLadLine";
+      line.style.cssText="display:flex;align-items:center;gap:10px;margin:16px 14px 12px;color:#7a6658;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase";
+      line.innerHTML='<span style="flex:1;height:2px;background:'+bg+';opacity:.55;border-radius:2px"></span><span>'+e(nm)+' ladder</span><span style="flex:1;height:2px;background:'+bg+';opacity:.55;border-radius:2px"></span>';
+      var lg=grid.cloneNode(false); lg.id="nsqLadGrid"; lg.appendChild(lad); lad.style.gridColumn="1 / -1";
+      grid.parentNode.insertBefore(line, grid.nextSibling); grid.parentNode.insertBefore(lg, line.nextSibling);
     }catch(e){} }, 500);
+    /* q099: BACK KEEPS PAGE 1. The sheet's Back (renderStep1) started page 1 from scratch — match type, games and players
+       wiped, so going back and forth left the sheet working from different choices than the member thought. Back now
+       restores event, date, format, match type and games; players are chosen again on page 2 (the Mixed rule fresh). */
+    (function(){ var arm=function(){ if(typeof W.renderStep1!=="function") return setTimeout(arm,300); if(W.renderStep1.__keep) return;
+      var o=W.renderStep1;
+      var w=function(){
+        var keep=null;
+        try{ var g=function(id){ var e=document.getElementById(id); return e?e.value:""; };
+          if(document.getElementById("t1p1_val") || document.getElementById("ladderT1")){            /* coming BACK from page 2 */
+            var ed=(typeof entryData!=="undefined")?entryData:(W.entryData||{});
+            keep={event:ed.event||"", date:ed.date||"", format:ed.format||"doubles", type:ed.type||"", sets:String(ed.sets||"")}; } }catch(e){ keep=null; }
+        var r=o.apply(this, arguments);
+        if(keep){ Promise.resolve(r).then(function(){ setTimeout(function(){ try{
+          var set=function(id,v){ var e=document.getElementById(id); if(!e || v==null || v==="") return; if(e.tagName==="SELECT" && ![].some.call(e.options,function(x){ return x.value===v; })) return; e.value=v; e.dispatchEvent(new Event("change",{bubbles:true})); };
+          set("matchFormat", keep.format); set("matchEvent", keep.event); set("matchDate", keep.date);
+          setTimeout(function(){ set("matchType", keep.type); set("setsPlayed", keep.sets); }, 400);       /* the event narrows the types first */
+        }catch(e){} }, 150); }); }
+        return r; };
+      w.__keep=true; W.renderStep1=w; }; arm(); })();
     /* a place as people say it: a division reads "Rovers \u00b7 Div A" */
     W.nsqPlace=function(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return "";
       var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
