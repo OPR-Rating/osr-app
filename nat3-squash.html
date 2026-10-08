@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q111";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q112";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -19056,7 +19056,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var me=(W.PLAT.clubs||[]).filter(function(c){ return +c.id===cid; })[0];
       var box=document.createElement("div"); box.id="nsqProvStats"; box.className="brk"; box.setAttribute("data-plat-keep","1");
       box.innerHTML='<h2>'+e((me&&me.name)||"")+' player and pairing stats</h2><div style="padding:4px 12px 2px;font-size:12.5px;color:#7a6658">All the clubs in '+e((me&&me.name)||"the province")+' together.</div>';
-      row.parentNode.insertBefore(box,row); box.appendChild(row); row.style.padding="8px 10px 12px";
+      row.parentNode.insertBefore(box,row);
+      if(row.id==="nhJump"){ box.style.marginBottom="0"; box.style.borderBottomLeftRadius="0"; box.style.borderBottomRightRadius="0"; }   /* q112: the jump strip stays OUTSIDE the box, so it can freeze at the top */
+      else { box.appendChild(row); row.style.padding="8px 10px 12px"; }
     }catch(e){} }, 700);
     /* ---- LADDERS: CLUB → PROVINCE → NATIONAL (q075, Andre) ----
        Joining and activation cascade up in the database (nsq_ladders.sql). Here: the National board, the province door's
