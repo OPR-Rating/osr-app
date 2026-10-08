@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q107";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q109";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -9594,7 +9594,7 @@ async function clRemove(id, label){
         h/=6;
       }
       var L=Math.min(l, 0.38);                    /* the cap — OSR purple (0.359) is left exactly as it is */
-      if(sat<0.25 && l>0.5) sat=Math.min(0.45, sat+0.12);   /* a pale grey would go flat; give it a little back */
+      if(mx!==mn && sat<0.25 && l>0.5) sat=Math.min(0.45, sat+0.12);   /* Nat-Squash q109: a true grey has no hue — it stays grey */
       var hue=function(p,q,t){ if(t<0)t+=1; if(t>1)t-=1; if(t<1/6) return p+(q-p)*6*t; if(t<1/2) return q; if(t<2/3) return p+(q-p)*(2/3-t)*6; return p; };
       var q=(L<0.5)?(L*(1+sat)):(L+sat-L*sat), pp=2*L-q;
       var hx=function(v){ var x=Math.round(Math.max(0,Math.min(1,v))*255).toString(16); return x.length<2?("0"+x):x; };
@@ -12816,7 +12816,7 @@ W.mePair=function(name,col){
         +'<div class="sub">'+totalR+' region'+(totalR===1?"":"s")+' \u00b7 '+totalG+' group'+(totalG===1?"":"s")+' \u00b7 '+totalM+' matches on record</div>'
         +'<div class="pulse">'
         +'<a href="'+PAGE+'?club='+(regions[0]?regions[0].id:0)+'&go=records&all=1">Global records</a>'
-        +'<a href="'+PAGE+'?club=0&pool='+P+'&go=admin&from='+(regions[0]?regions[0].id:0)+'">Global Ledger admin</a>'
+        +'<a href="'+PAGE+'?club=0&pool='+P+'&go=admin&back='+encodeURIComponent('?pool='+P)+'">Global Ledger admin</a>'
         +'</div></div>';
       h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;padding:12px">';
       (function(){ var cs=W.PLAT.clubs||[];                                    /* Nat-Squash: a club counts its divisions */
@@ -15165,6 +15165,18 @@ W.nhOpenPair=function(name){
        that the admin route never carried, which is why leaving kept landing you on the ledger again. */
     var frm=((typeof nhFrom==="function")?nhFrom():0) || Number(W.PLAT.nat||0) || Number(W.PLAT.parentId||0)
             || (Number(W.PLAT.cid||0)>0?Number(W.PLAT.cid):0);
+    /* Nat-Squash q108: back the way you came — the trail first; then the national page (Global Ledger) or the board's door */
+    if(W.NEWAPP){
+      try{ var m0=document.createElement("style"); m0.textContent="body>*{visibility:hidden!important}"; document.head.appendChild(m0);
+        setTimeout(function(){ try{ m0.remove(); }catch(e){} }, 2500); }catch(e){}
+      var _bq=""; try{ _bq=new URLSearchParams(location.search).get("back")||""; }catch(e){}
+      if(_bq){ W.nhNav(PAGE+_bq,{replace:true}); return; }
+      if(W.__nhTrail && W.__nhTrail.length>1){
+        var _prev=W.__nhTrail[W.__nhTrail.length-2]||{};
+        if(!/[?&]club=0(&|$)/.test(String(_prev.search||"")) || /[?&]go=/.test(String(_prev.search||""))){ W.nhBackPath(); return; } }
+      var _n=Number(W.PLAT.nat||0)||nhFrom();
+      W.nhNav(_n?(PAGE+"?club="+_n):(PAGE+"?pool="+W.PLAT.pool),{replace:true}); return;
+    }
     if(W.NEWAPP && frm){
       /* n90: hide everything before leaving, so the ledger's landing page cannot show on the way out */
       try{ var m=document.createElement("style"); m.textContent="body>*{visibility:hidden!important}"; document.head.appendChild(m); }catch(e){}
@@ -15471,7 +15483,7 @@ W.nhOpenPair=function(name){
     var host=document.querySelector("#homeScreen .home-content"); if(!host) return;
     var box=document.createElement("div"); box.id="platNatToggle"; box.dataset.platKeep="1";
     box.style.cssText="text-align:center;margin:34px auto 18px;max-width:1000px;padding-top:4px";   /* n6: clear of the header */
-    try{ if(W.PLAT.nat){ sessionStorage.setItem("nat_last_club_"+W.PLAT.pool, String(W.PLAT.nat)+"|"+(W.PLAT.natName||"")); } }catch(e){}
+    try{ sessionStorage.removeItem("nat_last_club_"+W.PLAT.pool); }catch(e){}   /* Nat-Squash q108: no 'last club' memory */
     var isNat=!W.PLAT.nat;
     var btn=function(label,active,href){ return '<button onclick="window.nhNav(\''+nhSafeHref(href)+'\')" style="display:inline-block;margin:0 4px;background:'+(active?"#1a1a1a":"transparent")+';color:'+(active?"#fff":"#1a1a1a")+';border:1.5px solid #1a1a1a;border-radius:99px;padding:8px 18px;font-size:13px;font-weight:800;cursor:pointer">'+esc(label)+'</button>'; };
     // n3: two buttons only — this club, or every club. Naming the other clubs here would show Monday who
@@ -19452,6 +19464,20 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         body.insertBefore(n, body.firstElementChild);
       }catch(e){} }, 600);
     })();
+    /* q108: THE OLD LEDGER LANDING ("REGION LEDGER · Current Ratings and Ladders · Overall Profile · Recent Matches") NEVER
+       SHOWS. Any route that ends on a ledger address with nothing asked of it goes back the way it came: ?back= first, then the
+       trail, then the board's door (a club / province ledger) or the national page (the Global Ledger). */
+    setInterval(function(){ try{
+      var q=new URLSearchParams(location.search); if(q.get("club")!=="0" || q.get("go")==="admin") return;
+      var hs=document.getElementById("homeScreen"); if(!hs || !hs.classList.contains("active")) return;
+      var tx=hs.innerText||""; if(!(/Overall Profile/.test(tx) && /Current Ratings and/.test(tx))) return;   /* it IS the old landing, whatever the address says */
+      try{ var hold=document.getElementById("nsqOldHold")||document.createElement("style"); hold.id="nsqOldHold"; hold.textContent="#homeScreen{visibility:hidden!important}"; document.head.appendChild(hold);
+        setTimeout(function(){ try{ hold.remove(); }catch(e){} }, 1500); }catch(e){}
+      if(W.__nsqLeaving && Date.now()-W.__nsqLeaving<3000) return; W.__nsqLeaving=Date.now();
+      var pg=(location.pathname.split("/").pop()||"nat3-squash.html"), bq=q.get("back")||"", nat=Number(q.get("nat")||0);
+      if(bq && !/[?&]club=0(&|$)/.test(bq)){ W.nhNav(pg+bq,{replace:true}); return; }
+      W.nhNav(nat?(pg+"?club="+nat):(pg+"?pool="+Number(W.PLAT.pool||0)),{replace:true});
+    }catch(e){} }, 200);
     /* a place as people say it: a division reads "Rovers \u00b7 Div A" */
     W.nsqPlace=function(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return "";
       var par=me.parent_id?cs.filter(function(c){ return +c.id===+me.parent_id; })[0]:null;
