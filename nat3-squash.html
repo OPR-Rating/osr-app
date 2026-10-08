@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q110";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q111";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -10427,7 +10427,7 @@ async function clRemove(id, label){
      +"#nh .row+.row{border-top:1px solid #efeaf5}"
      +"#nh .av{width:34px;height:34px;border-radius:50%;flex:0 0 34px;display:grid;place-items:center;box-sizing:border-box;font-size:12.5px;font-weight:800}"
      +"#nh .nm{flex:1;min-width:0}#nh .nm b{display:block;font-size:15.5px;color:#241d33}#nh .nm span{display:block;font-size:12.5px;color:#5f5770;margin-top:2px}"
-     +"#nh .val{text-align:right}#nh .val b{display:block;font-size:16px;font-weight:800}#nh .val span{display:block;font-size:11.5px;color:#5f5770}"
+     +"#nh .val{text-align:right}#nh .val b{display:block;font-size:16px;font-weight:800}#meMatches .val b{font-size:14px}#nh .val span{display:block;font-size:11.5px;color:#5f5770}"
      +"#nh .up{color:#1f8a4c}#nh .dn{color:#c0392b}"
      +"#nh .more{display:block;width:100%;text-align:center;padding:10px;border:none;border-top:1px solid #efeaf5;background:#fcfbfd;font:inherit;font-size:12.5px;font-weight:800;color:var(--nhc,#D35400);cursor:pointer}"
      +"#nh .doit{display:flex;gap:9px;padding:12px 12px 2px;overflow-x:auto;scrollbar-width:none}#nh .doit::-webkit-scrollbar{display:none}"
@@ -12482,7 +12482,7 @@ W.mePair=function(name,col){
                     if(!iAmT1) d=-d;
                     d=Math.round(d*10)/10;
                     var c=(d<0)?"#c0392b":((d>0)?"#1e8449":"#6b6585");
-                    return ' \u00b7 <b style="color:'+c+';font-variant-numeric:tabular-nums">Move '+(d>0?"+":"")+d.toFixed(1)+'</b>';
+                    return ' \u00b7 <b style="display:inline;font-size:inherit;color:'+c+';font-variant-numeric:tabular-nums">Move '+(d>0?"+":"")+d.toFixed(1)+'</b>';   /* Nat-Squash q111: the line's own size */
                   })()
                 + '</span></span>'
                 +'<span class="val"><b class="'+(myS>thS?"up":"dn")+'">'+myS+'\u2013'+thS+'</b>'
@@ -12754,6 +12754,15 @@ W.mePair=function(name,col){
       +'<h1>'+esc(sc.title)+'</h1>'
       +'<div class="sub">'+esc(recTitle(sc, sub))+'</div>'
       +'<div class="pulse"><a href="'+backHref+'" onclick="return window.nhBack(this.href)">\u2039 '+esc(backLabel)+'</a></div></div>';
+  }
+  /* Nat-Squash q111: the compact header (as on Ratings and ladders): back arrow · page title · the place */
+  function recBandSlim(sc, title, backHref){
+    recBand(sc, title, backHref, "Records");                     /* the same colour and skin work as the tall band */
+    var ov=recBackOverride(); if(ov) backHref=ov;
+    return '<div class="band nsqSlim" style="background:linear-gradient(135deg,'+sc.col+','+sc.deep+');display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:70px;box-sizing:border-box">'
+      +'<a href="'+backHref+'" onclick="return window.nhBack(this.href)" aria-label="Back" style="flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.16);border:1.5px solid rgba(255,255,255,.45);color:#fff;text-decoration:none;font-size:20px;font-weight:700;line-height:1">\u2190</a>'
+      +'<h1 style="margin:0;flex:1;min-width:0;font-size:21px;line-height:1.15;color:#fff">'+esc(title)+'</h1>'
+      +'<span style="flex:none;max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:rgba(255,255,255,.22);color:#fff;border:1.5px solid rgba(255,255,255,.6);border-radius:99px;padding:8px 16px;font-size:14px;font-weight:800">'+esc(sc.title)+'</span></div>';
   }
   function recPill(sc,label,sub,href){
     return '<a href="'+href+'" data-plat-keep="1" style="display:flex;width:calc(100% - 24px);align-items:center;gap:10px;box-sizing:border-box;'
@@ -13285,12 +13294,12 @@ W.mePair=function(name,col){
   }
   /* ---- members: name · group pill · rating ------------------------------------------------------------ */
   function recMembers(sc,w){
-    w.innerHTML = recBand(sc,"List all members", sc.base, "Records")
+    w.innerHTML = recBandSlim(sc,"Members", sc.base)
       + recPanel(sc, "Reading the register\u2026", "") + homeBar();
     var B=SBREST();
     Promise.all([
       fetch(B+"nat_v_member_group?pool_id=eq."+W.PLAT.pool+"&select=full_name,club_id,group_name&order=full_name.asc").then(J).catch(function(){ return []; }),
-      fetch(B+"plat_squash_v_pool_individuals?pool_id=eq."+W.PLAT.pool+"&select=full_name,current_rating,seed_rating&order=full_name.asc").then(J).catch(function(){ return []; }),
+      fetch(B+"plat_squash_v_pool_individuals?pool_id=eq."+W.PLAT.pool+"&select=full_name,gender,current_rating,seed_rating&order=full_name.asc").then(J).catch(function(){ return []; }),
       fetch(B+"plat_clubs?pool_id=eq."+W.PLAT.pool+"&select=id,name,colour").then(J).catch(function(){ return []; }),
       /* n92: the real rating per person comes from the per-board view across every board in the register;
          the pool view names people but carries no rating for those outside the region you stand in */
@@ -13333,13 +13342,13 @@ W.mePair=function(name,col){
       W.__recMembers=mine.map(function(p){ var g=G[p.full_name]||{}; var _o=(typeof W.nsqOriginOf==="function")?W.nsqOriginOf(p.full_name, perBoard):null;   /* Nat-Squash: the place */
         if(_o) return {p:p,g:Object.assign({},g,{group_name:_o.label,_sub:_o.sub,club_id:g.club_id||-1}),col:(_o.colour||"#7E3200")};
         return {p:p,g:g,col:(!g.club_id)?"#8a8196":(COL[Number(g.club_id)]||clubPal(g.club_id)[0])}; });
-      w.innerHTML = recBand(sc,"List all members", sc.base, "Records")
+      w.innerHTML = recBandSlim(sc,"Members", sc.base)
         /* n315: the search stays put while the register scrolls past (sticky under the band) */
         +'<div id="recFindWrapM" class="nhStickFind" style="position:sticky;top:0;z-index:6;margin:12px 0 0;padding:6px 12px 8px;background:#f4f1f8"><input id="recFindM" data-plat-keep="1" placeholder="Find a member" autocomplete="off" '
         +'style="width:100%;box-sizing:border-box;padding:13px 14px;border:1.5px solid '+sc.col+';border-radius:14px;font:inherit;font-size:15px;background:#fff" '
         +'oninput="window.recFilterM()"></div>'
         + recPanel(sc, esc(sc.wide?"Every registered member":("Members \u00b7 "+(W.PLAT.name||"")))+' \u00b7 <span id="recCountM">'+mine.length+'</span>',
-                   '<div id="recMembers" style="max-height:60vh;overflow-y:auto"></div>')
+                   (W.nsqMemHead?W.nsqMemHead():'')+'<div id="recMembers"></div>')   /* Nat-Squash q111: column names; the page scrolls */
         + homeBar();
       W.__recCol=sc.col; nhStickFind(); W.recFilterM();
     });
@@ -13351,7 +13360,7 @@ W.mePair=function(name,col){
       document.querySelectorAll(".nhStickFind").forEach(function(fw){ fw.style.top=(pin||0)+"px"; if(pg && pg!=="rgba(0, 0, 0, 0)") fw.style.background=pg; }); }catch(e){}
   }
   function recProfiles(sc,w){
-    w.innerHTML = recBand(sc,"Member profiles", sc.base, "Records") + recPanel(sc,"Finding who has played\u2026","") + homeBar();
+    w.innerHTML = recBandSlim(sc,"Member profiles", sc.base) + recPanel(sc,"Finding who has played\u2026","") + homeBar();
     nhFaces();   /* n182: so the rows can wear real faces the moment the map arrives */
     var B=SBREST();
     /* n92: THE REGISTER'S PROFILES CARRY THEIR STATS. The pool-wide view names everybody but does not carry a
@@ -13389,7 +13398,7 @@ W.mePair=function(name,col){
       rows=Object.keys(best).sort().map(function(n){ return best[n]; });
       rows.forEach(function(p){ p.matches=count[p.full_name]||0; p.boards=Object.keys(played[p.full_name]||{}).map(Number); });
       W.__recPeople=rows; W.__recClubs=CL; W.__recCol=sc.col;
-      w.innerHTML = recBand(sc,"Member profiles", sc.base, "Records")
+      w.innerHTML = recBandSlim(sc,"Member profiles", sc.base)
         +'<div style="margin:12px 14px 0;text-align:center;font-size:12px;color:#7a6688">Tap a name to open the profile.</div>'
         /* n315: the search stays put while a thousand names scroll past (sticky under the band) */
         +'<div id="recFindWrap" class="nhStickFind" style="position:sticky;top:0;z-index:6;margin:8px 0 0;padding:6px 12px 8px;background:#f4f1f8"><input id="recFind" data-plat-keep="1" placeholder="Search your name..." autocomplete="off" '
@@ -13450,18 +13459,7 @@ W.mePair=function(name,col){
     var box=document.getElementById("recMembers"), cnt=document.getElementById("recCountM"); if(cnt) cnt.textContent=list.length;
     if(!box) return;
     var col=W.__recCol||"#D35400";
-    box.innerHTML = list.length ? list.map(function(x){
-      var p=x.p, g=x.g, none=!g.club_id;
-      var rating=(p.current_rating!=null)?p.current_rating:((p.seed_rating!=null)?p.seed_rating:"\u2014");
-      var who=String(p.full_name).replace(/'/g,"\\'");
-      /* n97: the member list is a table and nothing more; names open on the profiles page */
-      return '<div data-plat-keep="1" style="display:flex;width:100%;box-sizing:border-box;align-items:center;gap:9px;padding:10px 13px;'
-        +'border-top:1px solid #f0ecf6;background:#fff;font:inherit;text-align:left">'
-        +'<span style="flex:1;min-width:0;font-size:13.5px;font-weight:700;color:#241d33;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(p.full_name)+((typeof g==="object"&&g&&g._sub)?'<span style="display:block;font-size:11px;font-weight:600;color:#8a8196;overflow:hidden;text-overflow:ellipsis">'+esc(g._sub)+'</span>':'')+'</span>'
-        +'<span style="flex:0 0 76px;box-sizing:border-box;text-align:center;background:'+(none?"#f1eef6":x.col)+';color:'+(none?"#5f5770":"#fff")+';border-radius:99px;padding:3px 10px;'
-        +'font-size:10.5px;font-weight:800;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(g.group_name||"still to play")+'</span>'
-        +'<span style="flex:0 0 46px;text-align:right;font-size:13px;font-weight:800;color:'+col+'">'+esc(String(rating))+'</span></div>';
-    }).join("") : '<div style="padding:14px;font-size:13px;color:#5f5770">No member by that name.</div>';
+    box.innerHTML = list.length ? list.map(function(x){ return W.nsqMemRow?W.nsqMemRow(x):""; }).join("") : '<div style="padding:14px;font-size:13px;color:#5f5770">No member by that name.</div>';
   };
   /* ---- ladders: the pairs, by kind, from the system's own results ---------------------------------------- */
   function recLadders(sc,w){
@@ -13585,7 +13583,7 @@ W.nhOpenPair=function(name){
     var B=SBREST();
     Promise.all([
       fetch(B+"nat_v_member_group?pool_id=eq."+W.PLAT.pool+"&select=full_name,club_id,group_name,pill_source&order=full_name.asc").then(J).catch(function(){ return []; }),
-      fetch(B+"plat_squash_v_pool_individuals?pool_id=eq."+W.PLAT.pool+"&select=full_name,current_rating,seed_rating&order=full_name.asc").then(J).catch(function(){ return []; }),
+      fetch(B+"plat_squash_v_pool_individuals?pool_id=eq."+W.PLAT.pool+"&select=full_name,gender,current_rating,seed_rating&order=full_name.asc").then(J).catch(function(){ return []; }),
       fetch(B+"plat_clubs?pool_id=eq."+W.PLAT.pool+"&select=id,name,colour").then(J).catch(function(){ return []; })
     ]).then(function(r){
       var pills=Array.isArray(r[0])?r[0]:[], people=Array.isArray(r[1])?r[1]:[], allClubs=Array.isArray(r[2])?r[2]:[];
@@ -19303,6 +19301,69 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       return here; }catch(e){ return Number(W.PLAT.cid||0); } };
     /* q089: ONE PILL STYLE for every individual table — Div · Rating · Level · Move (· Seed), the same size, in one row */
     W.nsqPill=function(text, bg, fg, w){ return '<span class="nsqP" style="display:inline-block;box-sizing:border-box;width:'+(w||46)+'px;text-align:center;margin-left:4px;padding:2px 0;border-radius:99px;font-size:10px;font-weight:800;background:'+bg+';color:'+fg+'">'+text+'</span>'; };   /* q091: ONE size for every table — the Records pills */
+    /* q111: THE MEMBERS LIST IN THE STANDARD TABLE — column names over the pills, the pills at the Records size:
+       Div · Rating · Level · Move (a division's own list has no Div). Under the name only what the page does not say. */
+    var memLevel=function(){ var q=new URLSearchParams(location.search); if(q.get("all")==="1") return "national"; var lv=levelOf(Number(W.PLAT.cid||0)); return lv==="division"?"club":lv; };   /* a division's Records are its club's */
+    var memHd=function(t,w){ return '<span style="display:inline-block;box-sizing:border-box;width:'+w+'px;margin-left:4px;text-align:center;font-size:9.5px;font-weight:800;letter-spacing:.03em;color:#7a6658;text-transform:uppercase">'+t+'</span>'; };
+    W.nsqMemHead=function(){ var lv=memLevel();
+      return '<div id="nsqMemHead" style="display:flex;align-items:center;gap:10px;padding:7px 13px;background:#fff;border-bottom:1px solid #f0ecf6">'
+        +'<span style="flex:1;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:#7a6658">Name</span>'
+        +'<span style="flex:none;white-space:nowrap">'+(lv!=="division"?memHd("Div",46):"")+memHd("Rating",46)+memHd("Level",34)+memHd("Move",40)+'</span></div>'; };
+    W.nsqMemRow=function(x){
+      var p=x.p||{}, g=x.g||{}, lv=memLevel(), P=W.nsqPill;
+      var r=(p.current_rating!=null)?Number(p.current_rating):((p.seed_rating!=null)?Number(p.seed_rating):null);
+      var mv=(r!=null && p.seed_rating!=null)?Math.round(r-Number(p.seed_rating)):0;
+      var lady=isLady(p.gender);
+      var sub=String(g._sub||""), parts=sub.split(" · ");
+      var place=(lv==="national")?sub:(lv==="province")?(parts[0]||""):"";
+      var dvName=g.group_name||"", none=!dvName || dvName==="still to play";
+      return '<div data-plat-keep="1" style="display:flex;align-items:center;gap:10px;padding:10px 13px;border-top:1px solid #f0ecf6;background:#fff">'
+        +'<span style="flex:1;min-width:0"><b style="display:block;font-size:15px;color:#1f1a2b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e(p.full_name)+'</b>'
+        +(place?'<span style="display:block;font-size:11.5px;font-weight:700;color:#4a4256;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e(place)+'</span>':'')+'</span>'
+        +'<span style="flex:none;white-space:nowrap">'
+        +(lv!=="division"?P(none?"—":e(dvName), none?"#f1eef6":(x.col||"#7E3200"), none?"#5f5770":"#fff", 46):"")
+        +(r!=null?P(String(Math.round(r)), lady?"#fde7f1":"#e7eefb", lady?"#a01a5a":"#1d4ea0", 46):P("—","#eeeeee","#666",46))
+        +(r!=null?P((r/200).toFixed(1), "#f1ece6", "#5b4636", 34):P("—","#f1ece6","#5b4636",34))
+        +P((mv>0?"+":"")+mv, mv>0?"#e3f4e6":mv<0?"#fbe4e1":"#eeeeee", mv>0?"#1e8449":mv<0?"#c0392b":"#666", 40)
+        +'</span></div>'; };
+    /* q111: THE PAIR TABLES IN THE SAME PILLS — Div · Rating · Level · Move at the Records size, the column names over them */
+    setInterval(function(){ try{
+      var scr=document.getElementById("ladderScreen"); if(!scr || !scr.classList.contains("active")) return;
+      var t=scr.querySelector("#ladderContent table"); if(!t || !t.tHead) return;
+      var ths=t.tHead.rows[0]?t.tHead.rows[0].cells:[]; if(ths.length!==5) return;
+      var hn=Array.prototype.map.call(ths,function(c){ return (c.getAttribute("data-nsq-h")||c.textContent||"").trim().toLowerCase(); });
+      if(hn[2].indexOf("rating")<0 || hn[3].indexOf("level")<0 || hn[4].indexOf("move")<0) return;
+      var q=new URLSearchParams(location.search), here=Number(q.get("nat")||W.PLAT.nat||W.PLAT.cid||0);
+      var lv=(W.__nsqWide||!here)?"national":levelOf(here), showDiv=(lv!=="division");
+      var ttl=((scr.querySelector(".header h1")||{}).textContent||"")+" "+String((typeof LAD!=="undefined"&&LAD.args&&LAD.args[1])||"");
+      var lady=/ladies/i.test(ttl);
+      var cellCss="text-align:center;white-space:nowrap;padding-left:2px;padding-right:2px";
+      if(!document.getElementById("nsqPairPillCss")){ var st2=document.createElement("style"); st2.id="nsqPairPillCss"; st2.textContent="#ladderContent .nsqP{box-shadow:0 0 0 1px rgba(0,0,0,.07)}"; document.head.appendChild(st2); }   /* readable on the striped rows */
+      if(ths[2].getAttribute("data-nsq-h")!=="rating"){
+        ths[2].setAttribute("data-nsq-h","rating"); ths[3].setAttribute("data-nsq-h","level"); ths[4].setAttribute("data-nsq-h","move"); }
+      var hh=(showDiv?memHd("Div",46):"")+memHd("Rating",46);
+      if(ths[2].innerHTML!==hh){ ths[2].innerHTML=hh; ths[3].innerHTML=memHd("Level",34); ths[4].innerHTML=memHd("Move",40);
+        [2,3,4].forEach(function(i){ ths[i].style.cssText+=";"+cellCss; });
+        Array.prototype.forEach.call(ths[2].querySelectorAll("span"),function(sp){ sp.style.color="inherit"; });
+        Array.prototype.forEach.call(ths[3].querySelectorAll("span"),function(sp){ sp.style.color="inherit"; });
+        Array.prototype.forEach.call(ths[4].querySelectorAll("span"),function(sp){ sp.style.color="inherit"; });
+        [0,1].forEach(function(i){ ths[i].style.cssText+=";font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800"; }); }
+      Array.prototype.forEach.call(t.tBodies[0]?t.tBodies[0].rows:[],function(tr){
+        if(tr.classList.contains("nsqDivRow") || tr.cells.length<5) return;
+        var tdR=tr.cells[2], tdL=tr.cells[3], tdM=tr.cells[4];
+        var dp=tdR.querySelector(".nsqDivPill");
+        var key=(dp?dp.textContent:"")+"|"+(tdR.textContent||"").replace(/\s+/g,"")+"|"+(tdL.textContent||"").trim()+"|"+(tdM.textContent||"").trim();
+        if(tr.getAttribute("data-nsq-std")===key) return;
+        if(dp && !dp.classList.contains("nsqP")){ var d2=document.createElement("span"); d2.innerHTML=W.nsqPill(e(dp.textContent), dp.style.background||"#7E3200", "#fff", 46); d2=d2.firstChild; d2.classList.add("nsqDivPill"); dp.parentNode.replaceChild(d2, dp); dp=d2; }
+        var rt=(String(tdR.textContent||"").match(/(\d{3,4})(?!.*\d)/)||[])[1];
+        if(rt && !tdR.querySelector(".nsqRt")){ tdR.innerHTML=(dp?dp.outerHTML:"")+W.nsqPill(rt, lady?"#fde7f1":"#e7eefb", lady?"#a01a5a":"#1d4ea0", 46).replace('class="nsqP"','class="nsqP nsqRt"'); }
+        var lvT=(tdL.textContent||"").trim(); if(lvT && !tdL.querySelector(".nsqP")) tdL.innerHTML=W.nsqPill(e(lvT), "#f1ece6", "#5b4636", 34);
+        var mvT=(tdM.textContent||"").trim(); if(mvT && !tdM.querySelector(".nsqP")){ var n=parseFloat(mvT.replace("−","-"))||0;
+          tdM.innerHTML=W.nsqPill(e(mvT), n>0?"#e3f4e6":n<0?"#fbe4e1":"#eeeeee", n>0?"#1e8449":n<0?"#c0392b":"#666", 40); tdM.style.color=""; }
+        [tdR,tdL,tdM].forEach(function(c){ c.style.cssText+=";"+cellCss; });
+        tr.setAttribute("data-nsq-std", (dp?dp.textContent:"")+"|"+(tdR.textContent||"").replace(/\s+/g,"")+"|"+(tdL.textContent||"").trim()+"|"+(tdM.textContent||"").trim());
+      });
+    }catch(e){} }, 400);
     /* q091: a KZN / National LADDER match (?lm=1 on a province or the national board) belongs to that board — no "choose the
        group" question; the sheet's group box is hidden and Next is free. */
     setInterval(function(){ try{
