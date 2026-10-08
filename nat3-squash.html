@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q109";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q110";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -12720,7 +12720,7 @@ W.mePair=function(name,col){
       return me.id; })();                                /* Nat-Squash: a club (or province) keeps its OWN records */
     var _kids=(W.PLAT.clubs||[]).filter(function(c){ return +c.parent_id===+C; }).map(function(c){ return +c.id; });
     return { wide:wide, C:C, view:(q.get("view")||"").toLowerCase(),
-             col:wide?"#2f2f2f":regCol(), deep:wide?"#141414":regDeep(regCol()),
+             col:wide?"#2f2f2f":regCol(Number(W.PLAT.cid)>0?W.PLAT.cid:null), deep:wide?"#141414":regDeep(regCol(Number(W.PLAT.cid)>0?W.PLAT.cid:null)),   /* Nat-Squash q110: this board's own colour */
              title:wide?"Global Ledger":(W.PLAT.name||"The region"),
              boards:[C].concat(_kids),   /* Nat-Squash: the club and its divisions */
              base:PAGE+"?club="+C+"&go=records"+(wide?"&all=1":"") };
@@ -13648,11 +13648,15 @@ W.nhOpenPair=function(name){
   })();
   W.nhBack=function(href){
     /* n310: the fork pages' own back chips walk the same trail as every other back — the path you came */
-    try{ if(W.__nhTrail && W.__nhTrail.length>1){ W.nhBackPath(); return false; } }catch(e){}
+    try{ if(W.__nhTrail && W.__nhTrail.length>1){
+        var _bd=function(s){ var q=new URLSearchParams(String(s||"").split("?")[1]||""); return Number(q.get("club")||0)+"|"+(Number(q.get("club")||0)===0?(q.get("go")||""):""); };
+        var _pv=W.__nhTrail[W.__nhTrail.length-2]||{};
+        if(_bd(_pv.search)===_bd(href)){ W.nhBackPath(); return false; }        /* Nat-Squash q110: the step behind IS the named place */
+        W.nhNav(href); return false; } }catch(e){}                               /* else go to the place the chip names */
     try{
       var want="?"+(String(href||"").split("?")[1]||"");
       var t=nhCrumbs();
-      if(t.length>1 && t[t.length-2]===want && history.length>1){ history.back(); return false; }
+      /* Nat-Squash q110: no history.back() — the browser's history and this list can disagree */
       /* not behind us: replace, so the page we are leaving does not linger in the trail */
       t.pop(); nhCrumbsSave(t);
       W.nhNav(href,{replace:true}); return false;
@@ -18667,7 +18671,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(!me || me.parent_id || me.name===NAT_NAME || !cs.some(function(c){ return +c.parent_id===+me.id; })) return;
       var mp=Array.prototype.filter.call(nh.querySelectorAll(".band a"),function(a){ return /My page/.test(a.textContent||""); })[0]; if(!mp) return;
       var a=document.createElement("a"); a.id="nsqUpNat"; var pg=(location.pathname.split("/").pop()||"nat3-squash.html");
-      a.href=pg+"?pool="+Number(W.PLAT.pool||0); a.onclick=function(){ return W.nhBack?W.nhBack(this.href):true; };
+      a.href=pg+"?pool="+Number(W.PLAT.pool||0); a.setAttribute("onclick","return window.nhBack?window.nhBack(this.href):true");   /* q110: an attribute, so the shell's link router leaves it to nhBack (it was handled twice) */
       a.setAttribute("style","flex:0 0 auto;display:flex;align-items:center;text-decoration:none;color:#fff;background:rgba(0,0,0,.18);border:1.5px solid rgba(255,255,255,.45);border-radius:99px;padding:7px 12px;font-weight:800;font-size:13px;margin-right:6px");
       a.textContent="\u2039 National"; mp.parentNode.insertBefore(a, mp);
     }catch(e){} }, 700);
