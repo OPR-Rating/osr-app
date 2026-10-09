@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q112";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q113";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -13647,9 +13647,14 @@ W.nhOpenPair=function(name){
   W.nhBack=function(href){
     /* n310: the fork pages' own back chips walk the same trail as every other back — the path you came */
     try{ if(W.__nhTrail && W.__nhTrail.length>1){
-        var _bd=function(s){ var q=new URLSearchParams(String(s||"").split("?")[1]||""); return Number(q.get("club")||0)+"|"+(Number(q.get("club")||0)===0?(q.get("go")||""):""); };
-        var _pv=W.__nhTrail[W.__nhTrail.length-2]||{};
-        if(_bd(_pv.search)===_bd(href)){ W.nhBackPath(); return false; }        /* Nat-Squash q110: the step behind IS the named place */
+        /* q113: THE PAGE, not just the board — a back button names one page; the trail is used only when the step behind
+           IS that page (or, on the same board, a list screen the page was opened over). Anything else goes straight to the
+           page named, so a stale step behind (a profile) can never be re-opened in a loop. */
+        var _pk=function(s){ var q=new URLSearchParams(String(s||"").split("?")[1]||""); return [Number(q.get("club")||0),q.get("go")||"",q.get("view")||"",q.get("who")||"",q.get("pair")||"",q.get("all")||"",Number(q.get("club")||0)===0?(q.get("pool")||""):""].join("|"); };
+        var _cl=function(s){ var q=new URLSearchParams(String(s||"").split("?")[1]||""); return [Number(q.get("club")||0), q.get("go")||""]; };
+        var _pv=W.__nhTrail[W.__nhTrail.length-2]||{}, _h=_cl(href), _p=_cl(_pv.search);
+        var _list=(_pv.screen && _pv.screen!=="homeScreen" && _h[0]===_p[0] && !_h[1]);
+        if(_pk(_pv.search)===_pk(href) || _list){ W.nhBackPath(); return false; }        /* Nat-Squash q110: the step behind IS the named place */
         W.nhNav(href); return false; } }catch(e){}                               /* else go to the place the chip names */
     try{
       var want="?"+(String(href||"").split("?")[1]||"");
