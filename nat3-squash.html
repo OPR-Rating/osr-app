@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q113";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q114";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -12475,7 +12475,7 @@ W.mePair=function(name,col){
                 /* n223: this member's own page, so the row says who they played WITH and what the match was
                    worth to them. The stored delta belongs to the first-named pair, so it turns over when they
                    were the second. */
-                +'<span class="nm"><b>'+esc(us)+'</b><span>v '+esc(them)+' \u00b7 '+esc(nhBoardName(m.club_id))
+                +'<span class="nm"><b>'+esc(us)+'</b><span>v '+esc(them)+' \u00b7 '+esc(nhBoardName(m.club_id))+(m.match_date?(' \u00b7 <i style="font-style:normal;white-space:nowrap">'+esc(String(m.match_date).slice(0,10))+'</i>'):'')
                 + (function(){
                     var d=(m.rating_delta!=null)?(+m.rating_delta):null;
                     if(d==null || !isFinite(d)) return "";
@@ -13652,8 +13652,10 @@ W.nhOpenPair=function(name){
            page named, so a stale step behind (a profile) can never be re-opened in a loop. */
         var _pk=function(s){ var q=new URLSearchParams(String(s||"").split("?")[1]||""); return [Number(q.get("club")||0),q.get("go")||"",q.get("view")||"",q.get("who")||"",q.get("pair")||"",q.get("all")||"",Number(q.get("club")||0)===0?(q.get("pool")||""):""].join("|"); };
         var _cl=function(s){ var q=new URLSearchParams(String(s||"").split("?")[1]||""); return [Number(q.get("club")||0), q.get("go")||""]; };
+        try{ var _gq=(new URLSearchParams(location.search).get("go")||"").toLowerCase();
+          if((_gq==="pair"||_gq==="me") && W.__nhTrail && W.__nhTrail.length>1){ W.nhBackPath(); return false; } }catch(e){}   /* n354: a pair/person "‹ back" is plain back */
         var _pv=W.__nhTrail[W.__nhTrail.length-2]||{}, _h=_cl(href), _p=_cl(_pv.search);
-        var _list=(_pv.screen && _pv.screen!=="homeScreen" && _h[0]===_p[0] && !_h[1]);
+        var _list=(_pv.screen && _pv.screen!=="homeScreen" && _h[0]===_p[0] && (!_h[1] || _h[1]===_p[1]));   /* n351: same board, same page = the way back (no pair<->ladders loop) */
         if(_pk(_pv.search)===_pk(href) || _list){ W.nhBackPath(); return false; }        /* Nat-Squash q110: the step behind IS the named place */
         W.nhNav(href); return false; } }catch(e){}                               /* else go to the place the chip names */
     try{
@@ -13743,6 +13745,69 @@ W.nhOpenPair=function(name){
     if(!W.NEWAPP) return;
     setInterval(function(){
       try{ var h=document.querySelector("#profileSearchScreen .header h1"); if(h && h.textContent!=="Group Members") h.textContent="Group Members"; }catch(e){}
+    },400);
+  })();
+  /* n357: GROUP MEMBERS WEAR THEIR PHOTOS — the same faces as Member profiles; a letter where there is no photo */
+  (function(){
+    if(!W.NEWAPP) return;
+    var asking=false;
+    setInterval(function(){
+      try{
+        var sc=document.getElementById("profileSearchScreen"); if(!sc || sc.offsetParent===null) return;
+        if(!FACES){ if(!asking){ asking=true; nhFaces().then(function(){ asking=false; },function(){ asking=false; }); } return; }
+        Array.prototype.forEach.call(sc.querySelectorAll("#playerList > li.player-item"),function(li){
+          var av=li.querySelector(".player-avatar"), nm=li.querySelector(".player-name"); if(!av || !nm) return;
+          var img=FACES[(nm.textContent||"").trim()]||"";
+          if(av.getAttribute("data-nh-face")===img) return;
+          av.setAttribute("data-nh-face",img);
+          if(av.getAttribute("data-nh-letter")==null) av.setAttribute("data-nh-letter", av.textContent||"");
+          if(img){ av.innerHTML='<img alt="" src="'+String(img).replace(/"/g,"&quot;")+'" style="display:block;width:100%;height:100%;object-fit:cover;border-radius:50%">'; av.style.overflow="hidden"; av.style.padding="0"; }
+          else { av.textContent=av.getAttribute("data-nh-letter")||""; }
+        });
+      }catch(e){}
+    },500);
+  })();
+  /* n350: COLUMN NAMES THAT STAY PUT. Group Members gets Name · Rating · Level · Move · Rank in the frozen block with
+     its search box (each name measured onto the pill beneath it); on Member profiles and List all members the names
+     freeze under the search box instead of scrolling away. */
+  (function(){
+    if(!W.NEWAPP) return;
+    var LBL=["Rating","Level","Move","Rank"];
+    var lab=function(t,l,w){ return '<span style="position:absolute;left:'+l+'px;width:'+w+'px;top:0;text-align:center;font-size:9.5px;font-weight:800;letter-spacing:.03em;color:#7a6658;text-transform:uppercase;white-space:nowrap">'+t+'</span>'; };
+    setInterval(function(){
+      try{
+        var sc=document.getElementById("profileSearchScreen");
+        if(sc && sc.offsetParent!==null){
+          var stick=sc.querySelector(".screen-content > div"), li=sc.querySelector("#playerList > li.player-item");
+          var pw=li && li.children[2], nm=li && li.querySelector(".player-name");
+          var hd=stick && stick.querySelector(".nhGmHead");
+          if(stick && li && pw && nm && pw.children.length>=4 && li.offsetWidth>0){
+            var sr=stick.getBoundingClientRect(), parts=[], nr=nm.getBoundingClientRect();
+            for(var i=0;i<4;i++){ var r=pw.children[i].getBoundingClientRect(); parts.push([Math.round(r.left-sr.left),Math.round(r.width)]); }
+            var key=JSON.stringify(parts)+"|"+Math.round(nr.left-sr.left);
+            if(!hd){ hd=document.createElement("div"); hd.className="nhGmHead"; stick.appendChild(hd); }
+            if(hd.dataset.k!==key){
+              hd.dataset.k=key;
+              hd.style.cssText="position:relative;height:22px;margin-top:6px;border-bottom:1px solid #f0ecf6";
+              var h='<span style="position:absolute;left:'+Math.round(nr.left-sr.left)+'px;top:0;font-size:9.5px;font-weight:800;letter-spacing:.03em;color:#7a6658;text-transform:uppercase">Name</span>';
+              for(var j=0;j<4;j++) h+=lab(LBL[j],parts[j][0],parts[j][1]);
+              hd.innerHTML=h;
+            }
+          }
+        }
+        var nh=document.getElementById("nh");
+        if(nh){
+          Array.prototype.forEach.call(nh.querySelectorAll(".nhColHead"),function(c){
+            var f=[document.getElementById("recFindWrap"),document.getElementById("recFindWrapM")].filter(function(x){ return x && x.offsetHeight>0; })[0];
+            if(!f) return;
+            var top=(parseFloat(getComputedStyle(f).top)||0)+f.offsetHeight;
+            /* a box with overflow:hidden between the names and the page would hold them inside it; clip keeps its
+               rounded corners and lets the names stay put against the page */
+            for(var a=c.parentElement; a && a!==nh; a=a.parentElement){ if(getComputedStyle(a).overflowY==="hidden") a.style.overflow="clip"; }
+            if(c.style.position!=="sticky" || c.style.top!==top+"px"){ c.style.position="sticky"; c.style.top=top+"px"; c.style.zIndex="3"; }
+          });
+        }
+      }catch(e){}
     },400);
   })();
   /* n113: JUMP, DON'T SWAP. One row of pills under the band — Form · Climb · Fall · Move · Recent · Card (a group) or
@@ -16800,7 +16865,8 @@ W.nhOpenPair=function(name){
        booted on the national page or the Global Ledger (no board). Leaving such a start for a real board is ONE proper
        page load onto that board; moves between boards after that stay instant. */
     try{ var _tq=new URLSearchParams(String(url).split("?")[1]||""), _tc=Number(_tq.get("club")||0);
-      if(W.NEWAPP && Number(W.PLAT&&W.PLAT.bootCid||0)===0 && _tc>0){ location.href=String(url); return; } }catch(e){}
+      var _tg=String(_tq.get("go")||"").toLowerCase();
+      if(W.NEWAPP && Number(W.PLAT&&W.PLAT.bootCid||0)===0 && _tc>0 && _tg!=="pair" && _tg!=="me"){ location.href=String(url); return; } }catch(e){}   /* n353: a pair or a person opens in-app (no reload) */
     if(!shape || !nhSamePage(p.path) || !nhOnShellPage()){
       if(opts.replace) location.replace(url); else location.href=url;
       return false;
@@ -16875,7 +16941,7 @@ W.nhOpenPair=function(name){
       else if(shape==="records"){ newRecordsPage(); }
       else if(shape==="pick"){ newPickPage(); }
       else if(shape==="pair"){ newPairPage(); }
-      else if(shape==="me"){ try{ document.documentElement.style.removeProperty("--nhc"); }catch(e){} nhHeaderSkin("#D35400", nhDeep("#D35400")); newMePage(); }   /* the claim screen has no colour of its own: the app's, as on a fresh load */
+      else if(shape==="me"){ var _whoQ=""; try{ _whoQ=new URLSearchParams(location.search).get("who")||""; }catch(e){} if(!_whoQ){ try{ document.documentElement.style.removeProperty("--nhc"); }catch(e){} nhHeaderSkin("#D35400", nhDeep("#D35400")); } newMePage(); }   /* q114: no flash on somebody's profile */   /* the claim screen has no colour of its own: the app's, as on a fresh load */
       else if(shape==="door"){ var t3="OSR \u00b7 "+(W.PLAT.name||"Club"); if(ht) ht.textContent=t3; document.title=t3; newClubDoor(); }
       else if(shape==="ledger"){
         var t2="OSR \u00b7 "+(W.PLAT.nat?(W.PLAT.natName||"Club"):(W.PLAT.poolName||"Overall"))+" \u00b7 Ledger"; if(ht) ht.textContent=t2; document.title=t2;
@@ -17119,7 +17185,73 @@ W.nhOpenPair=function(name){
     };
   })();
   /* n328: remember which ladder table is open, so a back can draw it again */
-  (function(){ var _ll=W.loadLadder; if(typeof _ll!=="function") return; W.loadLadder=function(){ W.__nhLadderArgs=Array.prototype.slice.call(arguments); return _ll.apply(this,arguments); }; })();
+  (function(){ var _ll=W.loadLadder; if(typeof _ll!=="function") return; W.loadLadder=function(){ W.__nhLadderArgs=Array.prototype.slice.call(arguments); var _r=_ll.apply(this,arguments); try{ if(_r && _r.then) _r.then(function(){ if(W.__nhPairPills) W.__nhPairPills(); }); }catch(e){} return _r;   /* n351: pills the moment the table is drawn */ }; })();
+  /* n351: KEEP THE TABLE YOU LEFT. Tapping a row keeps the drawn table (and the rows its taps read); coming back to
+     the same table shows it at once at the same scroll instead of "Loading…"; the fresh read replaces it when it lands. */
+  (function(){
+    var _lp=W.ladProfile; if(typeof _lp!=="function") return;
+    var scrollers=function(){ var out=[], e=document.getElementById("ladderContent"); while(e){ if(e.scrollTop>0) out.push([e,e.scrollTop]); e=e.parentElement; } var se=document.scrollingElement; if(se && se.scrollTop>0) out.push([se,se.scrollTop]); return out; };
+    W.ladProfile=function(i){
+      try{ if(W.__nhFreeze) W.__nhFreeze(); }catch(e){}   /* n352 */
+      try{ var c=document.getElementById("ladderContent");
+        if(c && c.querySelector("table") && W.__nhLadderArgs) W.__nhLadSnap={ key:JSON.stringify(W.__nhLadderArgs), html:c.innerHTML, rows:W._singlesRows, g:W._singlesGender, sc:scrollers() };
+      }catch(e){}
+      return _lp.apply(this,arguments);
+    };
+    /* n352: HOLD THE TABLE UNTIL THE PAGE IS READY */
+    W.__nhFreeze=function(){
+      try{
+        if(W.__nhFrozen) return;
+        var scr=document.querySelector(".screen.active"); if(!scr || scr.offsetParent===null) return;
+        var r=scr.getBoundingClientRect();
+        var orig=scr.querySelectorAll("*"), sc=[]; for(var k=0;k<orig.length;k++){ if(orig[k].scrollTop>0) sc.push([k,orig[k].scrollTop]); }
+        var cl=scr.cloneNode(true); cl.removeAttribute("id");
+        Array.prototype.forEach.call(cl.querySelectorAll("[id]"),function(e){ e.removeAttribute("id"); });
+        Array.prototype.forEach.call(cl.querySelectorAll("[onclick]"),function(e){ e.removeAttribute("onclick"); });
+        var wrap=document.createElement("div"); wrap.className="nhFreeze";
+        /* the bottom bar stays live and uncovered: the copy stops at its top edge */
+        var barTop=window.innerHeight;
+        try{ var be=document.elementFromPoint(window.innerWidth/2, window.innerHeight-6);
+          while(be && be!==document.body){ if(getComputedStyle(be).position==="fixed"){ barTop=Math.round(be.getBoundingClientRect().top); break; } be=be.parentElement; } }catch(e){}
+        wrap.style.cssText="position:fixed;left:0;top:0;right:0;height:"+barTop+"px;z-index:2147483000;overflow:hidden;background:"+getComputedStyle(document.body).backgroundColor;
+        /* the colours of THIS moment: the page underneath may repaint the app's colour while it builds */
+        var rs=getComputedStyle(document.documentElement);
+        for(var i=0;i<rs.length;i++){ var n=rs[i]; if(n.indexOf("--")===0) wrap.style.setProperty(n, rs.getPropertyValue(n)); }
+        cl.style.position="absolute"; cl.style.left=r.left+"px"; cl.style.top=r.top+"px"; cl.style.width=r.width+"px"; cl.style.margin="0";
+        wrap.appendChild(cl); document.body.appendChild(wrap);
+        /* the app hides every .screen when the new page switches on — the copy is not the app's to hide */
+        var clCls=cl.className, clSty=cl.getAttribute("style")||"";
+        try{ new MutationObserver(function(){ if(cl.className!==clCls) cl.className=clCls; if((cl.getAttribute("style")||"")!==clSty) cl.setAttribute("style",clSty); })
+               .observe(cl,{attributes:true,attributeFilter:["class","style"]}); }catch(e){}
+        var all=cl.querySelectorAll("*"); sc.forEach(function(p){ if(all[p[0]]) all[p[0]].scrollTop=p[1]; });
+        var t0=Date.now(), from=String(location.search||""), ok=0;
+        W.__nhFrozen=wrap;
+        var lift=function(){ try{ clearInterval(iv); if(wrap.parentNode) wrap.parentNode.removeChild(wrap); }catch(e){} if(W.__nhFrozen===wrap) W.__nhFrozen=null; };
+        var iv=setInterval(function(){
+          try{
+            if(Date.now()-t0>6000) return lift();                              /* never stuck */
+            var s=String(location.search||""); if(s===from) { if(Date.now()-t0>1500) lift(); return; }   /* nothing opened */
+            var q=new URLSearchParams(s), want=(q.get("pair")||q.get("who")||"").trim();
+            var nh=document.getElementById("nh"); if(!nh || nh.offsetParent===null) { if(!want) lift(); return; }
+            var h1=nh.querySelector(".band h1"), txt=(h1&&h1.textContent||"").trim();
+            if(/Reading the record/.test(nh.textContent||"")) { ok=0; return; }
+            if(want && txt.indexOf(want)<0) { ok=0; return; }
+            var e=nh, shown=true; while(e && e!==document.documentElement){ var cs=getComputedStyle(e); if(cs.display==="none"||cs.visibility!=="visible"||parseFloat(cs.opacity)<0.99){ shown=false; break; } e=e.parentElement; }
+            if(!shown){ ok=0; return; }
+            if(++ok===4){ clearInterval(iv); requestAnimationFrame(function(){ requestAnimationFrame(function(){ setTimeout(lift,60); }); }); }   /* shown, steady, painted: one clean switch */
+          }catch(e){ lift(); }
+        },40);
+      }catch(e){}
+    };
+    W.__nhLadRestore=function(){
+      var s=W.__nhLadSnap, c=document.getElementById("ladderContent");
+      if(!s || !c || s.key!==JSON.stringify(W.__nhLadderArgs||[])) return;
+      if(!c.querySelector(".loading")) return;          /* the fresh table is already there */
+      c.innerHTML=s.html; W._singlesRows=s.rows; W._singlesGender=s.g;
+      var put=function(){ (s.sc||[]).forEach(function(p){ try{ p[0].scrollTop=p[1]; }catch(e){} }); };
+      put(); setTimeout(put,0); setTimeout(put,120);
+    };
+  })();
   /* n335: A TOURNAMENT LEAVES THE PHONE (Andre, 3 Oct). Print and WhatsApp for every tournament: on the tournament
      screen (Draw & Rounds, Tournament Stats) and on the full draw sheet, a bar with 🖨 Print and 💬 WhatsApp acting on
      what the tournament is showing. Print sends just that content to the phone's printer / PDF; WhatsApp sends it as
@@ -17250,6 +17382,7 @@ W.nhOpenPair=function(name){
      and every back arrow steps back along it: the group's sheet back to the region's sheet, that back to the door;
      Men's Pairs back to the ladders menu, that back to the group's page. No rules about doors and parents. */
   W.__nhTrail=[{search:String(location.search||""),screen:"homeScreen"}];
+  try{ if(/^(ladders|ladder|profiles|tournaments|tsheet)$/i.test(new URLSearchParams(location.search).get("go")||"")) W.__nhTrail=[]; }catch(e){}   /* n353: no phantom home behind a screen you opened on */
   (function(){ var _gh=W.goHome; if(typeof _gh!=="function") return; W.goHome=function(){ var r=_gh.apply(this,arguments); try{ nhTrailPush("homeScreen"); }catch(e){} try{ nhRowsHome(); }catch(e){} return r; }; })();
   /* n319: THE BRACKET ROW COMES BACK WHERE IT WAS. The row of brackets scrolls sideways (five, four fit). The tapped
      bracket — Tournaments, the last — stays the focused element, and when the page shows again the browser scrolls the
@@ -17279,11 +17412,15 @@ W.nhOpenPair=function(name){
   }
   W.nhBackPath=function(){
     var t=W.__nhTrail; if(t.length<2){ try{ goHome(); }catch(e){} return; }
-    t.pop(); var prev=t[t.length-1];
+    var _left=t.pop();
+    try{ var _pk2=function(x){ var q=new URLSearchParams(String(x&&x.search||'').split('?')[1]||''); var g=(q.get('go')||'').toLowerCase();
+           return (g==='pair'||g==='me') ? (g+'|'+String(q.get('pair')||q.get('who')||'').trim().toLowerCase()) : ''; };
+         var _lk=_pk2(_left); if(_lk){ while(t.length>1 && _pk2(t[t.length-1])===_lk) t.pop(); } }catch(e){}   /* n355: no second copy of the page you leave */
+    var prev=t[t.length-1];
     W.__nhTrailHold=true;
     var open=function(){ try{
         if(prev.screen==="homeScreen"){ goHome(); if(prev.page==="admin" && !document.querySelector("#nh .band") ) W.nhAdminPage(); }
-        else if(prev.screen==="ladderScreen" && W.__nhLadderArgs && typeof loadLadder==="function"){ loadLadder.apply(null, W.__nhLadderArgs); }   /* n328: the TABLE you were on, not the menu */
+        else if(prev.screen==="ladderScreen" && W.__nhLadderArgs && typeof loadLadder==="function"){ loadLadder.apply(null, W.__nhLadderArgs); try{ if(W.__nhLadRestore) W.__nhLadRestore(); }catch(e){} }   /* n351: the table you left, at once */   /* n328: the TABLE you were on, not the menu */
         else W.showScreen(prev.screen);
       }catch(e){} W.__nhTrailHold=false; };
     if(prev.search!==String(location.search||"")){
