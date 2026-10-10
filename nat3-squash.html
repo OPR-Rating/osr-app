@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q118";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q120";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -9548,7 +9548,8 @@ async function clRemove(id, label){
     if(window.scrollY > 300) b.classList.add('show'); else b.classList.remove('show');
   });
 </script>
-<script>
+<script>  window.__nhLfClubWide=true;   /* q120 */
+
 /* NAT GLUE — nat-padel.html n1: the PLAT p117 glue with the CLUB RUNG (national door, club door, club ledger,
    National grid toggle, chips that climb the ladder, General Admin on nat_admin). Every change is marked NAT. */
 /* PLAT GLUE — club strip under the hero, club dropdown at ✚ Enter, hero name from the platform. */
@@ -11261,7 +11262,6 @@ async function clRemove(id, label){
          so the Ledgers button is gone from it; the records are reached from the door. */
       +'<button onclick="window.nhGo(\'profiles\')">'+ic.per+'Group members</button>'
       +'<button onclick="window.nhGo(\'card\')">'+ic.card+'Court card</button>'
-      +'<button onclick="window.nhLeapfrog()"><svg viewBox="0 0 24 24"><path d="M6 13l6-6 6 6M6 19l6-6 6 6"/></svg>Leapfrog Log</button>'   /* q118 */
       +'<button onclick="window.nhGo(\'tournaments\')">'+ic.cup+'Tournaments</button>'
       +'</div>';
   }
@@ -13855,8 +13855,8 @@ W.nhOpenPair=function(name){
   /* Records is on the door because with several groups it sits well below the fold, and it matters */
   /* n167: no "Recent" — the matches are the first thing under the groups. "Records" opens the records on their
      own page rather than scrolling to the band. */
-  var NH_JUMP_DOOR =[["Form & Move",/^\s*in form/i],["Ratings · Ladders · Profiles",null,"records"],
-                     ["Tournaments",/^\s*tournaments/i],["Up",null]];   /* n169: the bar is now "Tournaments · N running" */
+  var NH_JUMP_DOOR =[["Form & Move",/^\s*in form/i],["Ratings · Ladders · Profiles",null,"records"],["Leapfrog Log",null,"leapfrog"],
+                     ["Tournaments",/^\s*tournaments/i],["Up",null]];   /* q120: Leapfrog Log on a club's door */   /* n169: the bar is now "Tournaments · N running" */
   var NH_JUMP_GROUP=[["Climb",/^\s*biggest climb/i],["Move",/^\s*movers/i],["Recent",/^\s*recent matches/i],["Card",/^\s*card matches/i],["Up",null]];
   var NH_JUMP=NH_JUMP_GROUP;
   /* n114: AIM BELOW WHAT IS PINNED. The band is sticky and so is the strip, and the page scrolls inside #nh, not
@@ -13878,6 +13878,7 @@ W.nhOpenPair=function(name){
   }
   W.nhJumpTo=function(k){
     if(k==="__records"){ W.nhNav(PAGE+"?club="+W.PLAT.cid+"&go=records&back="+encodeURIComponent(location.search||"")); return; }
+    if(k==="__leapfrog"){ if(typeof W.nhLeapfrog==="function") W.nhLeapfrog(); return; }   /* q120 */
     if(k==="__top"){
       var s0=nhScroller();
       try{ s0.scrollTo({top:0,behavior:"smooth"}); }catch(e){ s0.scrollTop=0; }
@@ -13955,6 +13956,10 @@ W.nhOpenPair=function(name){
       var found=[];
       set.forEach(function(j, idx){
         if(!j[1] && j[2]==="records"){ found.push({k:j[0], id:"__records"}); return; }   /* n167: straight to the records */
+        if(j[2]==="leapfrog"){   /* q120: only on a CLUB's door — one whose divisions are boards (not a province, not the national page) */
+          var _me=Number(W.PLAT.cid||0), _kids=(W.PLAT.clubs||[]).filter(function(c){ return Number(c.parent_id)===_me; });
+          var _clubDoor=_kids.length && !_kids.some(function(k){ return (W.PLAT.clubs||[]).some(function(c){ return Number(c.parent_id)===Number(k.id); }); });
+          if(_clubDoor) found.push({k:j[0], id:"__leapfrog"}); return; }
         if(!j[1]){ found.push({k:j[0], id:"__top"}); return; }          /* Up: no bracket, back to the top */
         var b=brks.filter(function(x){ var h=x.classList.contains("brk")?x.firstElementChild:x; var t=(h?h.textContent:x.textContent)||""; return j[1].test(t); })[0];
         if(b){ b.id="nhj_"+idx; found.push({k:j[0], id:String(idx)}); }
@@ -20059,18 +20064,30 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var cid=0; try{ cid=Number(CLUB_ID||0); }catch(e){}
       if(CACHE.cid===cid && CACHE.at && Date.now()-CACHE.at<60000) return Promise.resolve(CACHE.rows);
       var out=[], page=function(off){
-        return Promise.resolve(sbGet("matches?select=id,match_date,match_type,t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,t1_games,t2_games&club_id=eq."+cid+"&order=match_date.asc,id.asc&limit=1000&offset="+off))
+        /* squash: opened from a CLUB's door it reads every division of that club together */
+        var ids=[cid]; if(W.__nhLfClubWide){ (W.PLAT.clubs||[]).forEach(function(c){ if(Number(c.parent_id)===cid) ids.push(Number(c.id)); }); }
+        var where=ids.length>1 ? ("club_id=in.("+ids.join(",")+")") : ("club_id=eq."+cid);
+        return Promise.resolve(sbGet("matches?select=id,match_date,match_type,t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,t1_games,t2_games&"+where+"&order=match_date.asc,id.asc&limit=1000&offset="+off))
           .then(function(r){ r=Array.isArray(r)?r:[]; out=out.concat(r); return r.length<1000?out:page(off+1000); });
       };
       return page(0).then(function(rows){ CACHE={cid:cid, at:Date.now(), rows:rows}; return rows; });
     };
     /* the replay */
-    var build=function(rows, cat){
+    /* Andre (11 Oct): the log counts matches from START, and a pair that has not played for KEEP days drops off —
+       everyone below moves up. If it plays again it comes back as a new pair (win: the loser's place; lose: the bottom). */
+    var START="2026-09-15", KEEP=60;
+    var dayN=function(d){ var t=Date.parse(String(d||"").slice(0,10)+"T00:00:00Z"); return isNaN(t)?0:Math.floor(t/86400000); };
+    var todayN=function(){ var n=new Date(); return Math.floor(Date.UTC(n.getFullYear(),n.getMonth(),n.getDate())/86400000); };
+    W.__nhLfRules={start:START, keep:KEEP};
+    var build=function(rows, cat, asOf){
       var lad=[], info={};
       var pos=function(k){ return lad.indexOf(k); };
+      var flush=function(dn){ lad=lad.filter(function(k){ var l=info[k]&&info[k].last; var keep=l && (dn-dayN(l.d))<=KEEP; if(!keep && info[k]){ info[k].w=0; info[k].l=0; } return keep; }); };
       rows.slice().sort(function(a,b){ return (a.match_date<b.match_date?-1:a.match_date>b.match_date?1:0) || ((+a.id||0)-(+b.id||0)); })
         .forEach(function(m){
           if(String(m.match_type||"")!==cat) return;
+          if(String(m.match_date||"")<START) return;
+          flush(dayN(m.match_date));
           var A=side(m.t1p1,m.t1p2), B=side(m.t2p1,m.t2p2); if(A.length<2 || B.length<2) return;
           var ka=keyOf(A), kb=keyOf(B); if(ka===kb) return;
           [[ka,m.t1p2?A.join(" & "):String(m.t1p1).trim()],[kb,m.t2p2?B.join(" & "):String(m.t2p1).trim()]].forEach(function(x){
@@ -20089,9 +20106,13 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           }
           [ka,kb].forEach(function(k){ var b=before[k], a=pos(k); info[k].last={d:m.match_date, ch:(b<0?null:b-a), isNew:b<0, won:(win===1&&k===ka)||(win===2&&k===kb)}; });
         });
-      return lad.map(function(k,i){ return {pos:i+1, key:k, i:info[k]}; });
+      flush(asOf!=null?asOf:todayN());
+      return lad.map(function(k,i){ return {pos:i+1, key:k, i:info[k], left:KEEP-((asOf!=null?asOf:todayN())-dayN(info[k].last.d))}; });
     };
     var state={cat:"Men's", q:""};
+    /* a search finds a PLAYER by the start of their name: "j" gives Jeff and James, not Peter Johnson */
+    var starts=function(pairName,q){ q=String(q||"").trim().toLowerCase(); if(!q) return true;
+      return String(pairName||"").toLowerCase().split(" & ").some(function(n){ return n.trim().indexOf(q)===0; }); };
     var draw=function(){
       var box=document.getElementById("nhTsBody"); if(!box) return;
       box.innerHTML='<div style="padding:14px;text-align:center;color:#888;font-size:13px">Working out the Leapfrog Log…</div>';
@@ -20101,17 +20122,18 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         if(!cats.length){ box.innerHTML='<div style="padding:14px;text-align:center;color:#888;font-size:13px">No matches on this board yet.</div>'; return; }
         if(!have[state.cat]) state.cat=cats[0][0];
         var L=build(rows, state.cat), q=state.q.trim().toLowerCase();
-        var h='<div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px">';
+        var h='<div id="nhTsTop" style="position:sticky;top:0;z-index:4;background:#fff;padding:6px 0 2px;margin:-6px 0 0"><div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px">';
         cats.forEach(function(c){ var a=c[0]===state.cat;
           h+='<button type="button" data-cat="'+esc(c[0])+'" style="flex:1;min-width:70px;padding:8px 6px;border-radius:9px;font:inherit;font-size:13px;font-weight:700;border:1.5px solid var(--nhc,#6c3483);'
             +(a?'background:var(--nhc,#6c3483);color:#fff':'background:#fff;color:var(--nhc,#6c3483)')+'">'+esc(c[1])+'</button>'; });
         h+='</div><input id="nhTsFind" type="search" placeholder="Find a name…" value="'+esc(state.q)+'" autocomplete="off" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #d9cfe6;border-radius:10px;font:inherit;font-size:14px;margin:0 0 8px">';
-        h+='<div style="font-size:11px;color:#888;margin:0 0 6px">'+L.length+' pairs · every '+esc(state.cat)+' match since the first one</div>';
-        h+='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="font-size:10px;color:#777;text-transform:uppercase;letter-spacing:.4px">'
-          +'<th style="text-align:right;padding:4px 6px">#</th><th style="text-align:left;padding:4px 6px">Pair</th><th style="text-align:center;padding:4px 4px">W–L</th><th style="text-align:right;padding:4px 6px">Last match</th></tr></thead><tbody>';
+        h+='<div style="font-size:11px;color:#888;margin:0 0 6px">'+L.length+' pairs · '+esc(state.cat)+' · the last 60 days (counting from 15 Sep 2026)</div>'
+          +'<div style="display:flex;font-size:10px;font-weight:700;color:#777;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid #eee;padding:0 0 4px">'
+          +'<span style="width:34px;text-align:right;padding:0 6px 0 0">#</span><span style="flex:1;padding:0 6px">Pair</span><span style="width:48px;text-align:center">W\u2013L</span><span style="width:96px;text-align:right;padding:0 6px">Last match</span></div></div>';
+        h+='<table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed"><colgroup><col style="width:34px"><col><col style="width:48px"><col style="width:96px"></colgroup><tbody>';
         var shown=0;
         L.forEach(function(r){
-          var hide=q && r.i.name.toLowerCase().indexOf(q)<0; if(!hide) shown++;
+          var hide=q && !starts(r.i.name,q); if(!hide) shown++;
           var ls=r.i.last, mv='';
           if(ls){ var tag=ls.isNew?(ls.won?'new':'new'):(ls.ch>0?('↑'+ls.ch):(ls.ch<0?('↓'+(-ls.ch)):'–'));
             var col=ls.isNew?'#8e7aa6':(ls.ch>0?'#1e8449':(ls.ch<0?'#c0392b':'#999'));
@@ -20125,7 +20147,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         box.innerHTML=h;
         Array.prototype.forEach.call(box.querySelectorAll("button[data-cat]"),function(b){ b.onclick=function(){ state.cat=b.getAttribute("data-cat"); draw(); }; });
         var f=box.querySelector("#nhTsFind"); if(f){ f.oninput=function(){ state.q=f.value; var qq=state.q.trim().toLowerCase(), n=0;
-          Array.prototype.forEach.call(box.querySelectorAll("tr[data-n]"),function(tr){ var hit=!qq || tr.getAttribute("data-n").indexOf(qq)>=0; tr.style.display=hit?"":"none"; if(hit) n++; });
+          Array.prototype.forEach.call(box.querySelectorAll("tr[data-n]"),function(tr){ var hit=!qq || starts(tr.getAttribute("data-n"),qq); tr.style.display=hit?"":"none"; if(hit) n++; });
           var none=box.querySelector("#nhTsNone"); if(none) none.style.display=n?"none":""; }; }
       }).catch(function(){ box.innerHTML='<div style="padding:14px;text-align:center;color:#c0392b;font-size:13px">Could not read the matches — try again.</div>'; });
     };
@@ -20133,7 +20155,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var HOW='<b>What the Leapfrog Log is.</b> It is built from the matches played \u2014 social, ladder or tournament, every match counts. '
       +'Your place is your leapfrog move after your last match. It is not your rank or your rating; it is a live picture of the matches played.<br><br>'
       +'<b>How it moves.</b> Beat a pair <b>above</b> you and you take its place \u2014 it and everyone between move down one. Beat a pair below you and nothing moves. '
-      +'A new pair\u2019s first match: win and it takes the loser\u2019s place; lose and it starts at the bottom. Each partnership has its own place.';
+      +'A new pair\u2019s first match: win and it takes the loser\u2019s place; lose and it starts at the bottom. Each partnership has its own place.<br><br>'
+      +'<b>The last 60 days.</b> A pair that has not played for 60 days drops off the log, and everyone below moves up. '
+      +'Play again and you come back as a new pair: win and you take the loser\u2019s place, lose and you start at the bottom. '
+      +'Matches count from 15 September 2026. To stay on the log, keep playing.';
     var ensure=function(){
       var scr=document.getElementById("nhLfScreen"); if(scr) return scr;
       var lad=document.getElementById("laddersScreen"); if(!lad || !lad.parentNode) return null;
@@ -20147,6 +20172,13 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       lad.parentNode.insertBefore(scr, lad.nextSibling);
       return scr;
     };
+    /* when the search block is pinned, a white edge above it hides rows passing behind; when it is not, nothing
+       is covered (the "How it works" button sits just above it) */
+    document.addEventListener("scroll",function(){ try{
+      var t=document.getElementById("nhTsTop"), h=document.getElementById("nhLfHowBox"), hb=h&&(h.style.display!=="none"?h:h.previousElementSibling);
+      if(!t || !hb) return; var stuck=hb.getBoundingClientRect().bottom < t.getBoundingClientRect().top-2;
+      t.style.boxShadow = stuck ? "0 -40px 0 0 #fff" : "none";
+    }catch(e){} }, true);
     W.nhLfHow=function(){ var b=document.getElementById("nhLfHowBox"), c=document.getElementById("nhLfChev"); if(!b) return; var o=b.style.display==="none"; b.style.display=o?"block":"none"; if(c) c.textContent=o?"\u25B2":"\u25BC"; };
     W.nhLeapfrog=function(){
       try{ if(!ensure()) return; showScreen("nhLfScreen"); try{ W.scrollTo(0,0); }catch(e){} draw(); }catch(e){}
