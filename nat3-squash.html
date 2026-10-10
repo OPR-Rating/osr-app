@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q114";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q115";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -13766,6 +13766,40 @@ W.nhOpenPair=function(name){
         });
       }catch(e){}
     },500);
+  })();
+  /* n358: A SEARCH BOX ON THE ADMIN MATCHES LIST */
+  (function(){
+    if(!W.NEWAPP) return;
+    var rowsOf=function(box){ return Array.prototype.filter.call(box.children,function(el){ return !!el.querySelector(".am-pick"); }); };
+    var addSearch=function(){
+      try{
+        var box=document.getElementById("adminMatches"); if(!box) return;
+        var rows=rowsOf(box); if(!rows.length || box.querySelector("#nhAmFind")) return;
+        var wrap=document.createElement("div"); wrap.id="nhAmFindWrap";
+        wrap.style.cssText="position:sticky;top:0;z-index:2;background:#fff;padding:0 0 8px";
+        wrap.innerHTML='<input id="nhAmFind" type="search" placeholder="Search a name, date or event…" autocomplete="off" '
+          +'style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #d9cfe6;border-radius:10px;font:inherit;font-size:14px">'
+          +'<div id="nhAmCount" style="font-size:11px;color:#9b80b3;margin-top:4px">'+rows.length+' matches</div>';
+        box.insertBefore(wrap, box.firstChild);
+        var inp=wrap.querySelector("input"), cnt=wrap.querySelector("#nhAmCount");
+        inp.addEventListener("input",function(){
+          var q=String(inp.value||"").trim().toLowerCase(), all=rowsOf(box), shown=0;
+          all.forEach(function(r){ var hit=!q || String(r.textContent||"").toLowerCase().indexOf(q)>=0; r.style.display=hit?"":"none"; if(hit) shown++; });
+          cnt.textContent = q ? (shown+" of "+all.length+" shown") : (all.length+" matches");
+        });
+      }catch(e){}
+    };
+    var _lm=W.adminLoadMatches;
+    if(typeof _lm==="function") W.adminLoadMatches=function(){ var r=_lm.apply(this,arguments); Promise.resolve(r).then(addSearch,addSearch); return r; };
+    /* "Select all" ticks only the matches the search shows */
+    var _pa=W.adminPickAll;
+    if(typeof _pa==="function") W.adminPickAll=function(on){
+      var box=document.getElementById("adminMatches");
+      if(on && box && box.querySelector("#nhAmFind") && String(box.querySelector("#nhAmFind").value||"").trim()){
+        rowsOf(box).forEach(function(r){ var c=r.querySelector(".am-pick"); if(c) c.checked=(r.style.display!=="none"); }); return;
+      }
+      return _pa.apply(this,arguments);
+    };
   })();
   /* n350: COLUMN NAMES THAT STAY PUT. Group Members gets Name · Rating · Level · Move · Rank in the frozen block with
      its search box (each name measured onto the pill beneath it); on Member profiles and List all members the names
