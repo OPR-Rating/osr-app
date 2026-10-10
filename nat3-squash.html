@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q117";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q118";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -11261,6 +11261,7 @@ async function clRemove(id, label){
          so the Ledgers button is gone from it; the records are reached from the door. */
       +'<button onclick="window.nhGo(\'profiles\')">'+ic.per+'Group members</button>'
       +'<button onclick="window.nhGo(\'card\')">'+ic.card+'Court card</button>'
+      +'<button onclick="window.nhLeapfrog()"><svg viewBox="0 0 24 24"><path d="M6 13l6-6 6 6M6 19l6-6 6 6"/></svg>Leapfrog Log</button>'   /* q118 */
       +'<button onclick="window.nhGo(\'tournaments\')">'+ic.cup+'Tournaments</button>'
       +'</div>';
   }
@@ -20036,7 +20037,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     };
   })();
 
-  /* CHALLENGE LADDER (Andre, 10 Oct) — "take the spot". A second ladder on Ratings and Ladders, beside the official ones
+  /* LEAPFROG LOG (Andre, 10 Oct; first called the Challenge Ladder) — "take the spot". A second ladder on Ratings and Ladders, beside the official ones
      (Pair Ratings, Universal, the Good 'ol Club Ladder — all untouched). Read only: it is worked out on the phone from the
      board's own match log, every time it is opened; nothing is written anywhere.
      Rules: every match since the first one, in date order, per category. Beat a pair ABOVE you and you take its place
@@ -20093,7 +20094,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var state={cat:"Men's", q:""};
     var draw=function(){
       var box=document.getElementById("nhTsBody"); if(!box) return;
-      box.innerHTML='<div style="padding:14px;text-align:center;color:#888;font-size:13px">Working out the ladder…</div>';
+      box.innerHTML='<div style="padding:14px;text-align:center;color:#888;font-size:13px">Working out the Leapfrog Log…</div>';
       load().then(function(rows){
         var have={}; rows.forEach(function(m){ have[m.match_type]=1; });
         var cats=CATS.filter(function(c){ return have[c[0]]; });
@@ -20128,34 +20129,30 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           var none=box.querySelector("#nhTsNone"); if(none) none.style.display=n?"none":""; }; }
       }).catch(function(){ box.innerHTML='<div style="padding:14px;text-align:center;color:#c0392b;font-size:13px">Could not read the matches — try again.</div>'; });
     };
-    W.nhTsToggle=function(){
-      var p=document.getElementById("nhTsPanel"), c=document.getElementById("nhTsChev"); if(!p) return;
-      var open=p.style.display==="none"; p.style.display=open?"block":"none"; if(c) c.textContent=open?"▲":"▼";
-      if(open) draw();
+    /* its own page, opened from the group page's row of buttons (beside Ratings & ladders, before Tournaments) */
+    var HOW='<b>What the Leapfrog Log is.</b> It is built from the matches played \u2014 social, ladder or tournament, every match counts. '
+      +'Your place is your leapfrog move after your last match. It is not your rank or your rating; it is a live picture of the matches played.<br><br>'
+      +'<b>How it moves.</b> Beat a pair <b>above</b> you and you take its place \u2014 it and everyone between move down one. Beat a pair below you and nothing moves. '
+      +'A new pair\u2019s first match: win and it takes the loser\u2019s place; lose and it starts at the bottom. Each partnership has its own place.';
+    var ensure=function(){
+      var scr=document.getElementById("nhLfScreen"); if(scr) return scr;
+      var lad=document.getElementById("laddersScreen"); if(!lad || !lad.parentNode) return null;
+      scr=document.createElement("div"); scr.className="screen hidden"; scr.id="nhLfScreen";
+      scr.innerHTML='<div class="header"><button class="back-btn" onclick="goHome()">&#8592;</button><h1>Leapfrog Log</h1></div>'
+        +'<div class="screen-content">'
+        +'<button type="button" onclick="nhLfHow()" style="width:100%;text-align:left;padding:9px 12px;border-radius:10px;border:1px solid rgba(108,52,131,.22);background:rgba(108,52,131,.06);font:inherit;font-size:13px;font-weight:700;color:#3a2348;margin:0 0 6px">'
+        +'How the Leapfrog Log works <span id="nhLfChev" style="float:right">\u25BC</span></button>'
+        +'<div id="nhLfHowBox" style="display:none;padding:10px 12px;background:rgba(108,52,131,.06);border:1px solid rgba(108,52,131,.22);border-radius:10px;margin:0 0 10px;font-size:12px;line-height:1.5;color:#3a2348">'+HOW+'</div>'
+        +'<div id="nhTsBody"></div></div>';
+      lad.parentNode.insertBefore(scr, lad.nextSibling);
+      return scr;
     };
-    var place=function(){
-      try{
-        var scr=document.getElementById("laddersScreen"); if(!scr) return;
-        var have=document.getElementById("nhTsWrap");
-        if(!on()){ if(have) have.style.display="none"; return; }
-        if(have){ have.style.display=""; return; }
-        var club=Array.prototype.filter.call(scr.querySelectorAll(".ladders-group-title"),function(t){ return /club ladder/i.test(t.textContent||""); })[0];
-        var grid=club&&club.nextElementSibling; if(!grid) return;
-        var w=document.createElement("div"); w.id="nhTsWrap";
-        w.innerHTML='<div class="ladders-group-title">Challenge Ladder</div>'
-          +'<div class="ladders-grid one-col"><button class="menu-btn" style="font-weight:700" onclick="nhTsToggle()">⬆️ Challenge Ladder — take the spot &nbsp;<span id="nhTsChev" style="font-size:12px">▼</span></button></div>'
-          +'<div id="nhTsPanel" style="display:none;margin-top:8px">'
-          +'<div style="padding:10px 12px;background:rgba(108,52,131,.06);border:1px solid rgba(108,52,131,.22);border-radius:10px;margin:0 0 10px;font-size:12px;line-height:1.5;color:#3a2348">'
-          +'<b>What this ladder is.</b> It is built only from matches played, and every move comes from the last match. '
-          +'It is <b>not</b> a rank or a rating — it is a live picture of who has beaten whom.<br><br>'
-          +'<b>How it moves.</b> Beat a pair <b>above</b> you and you take its place — it and everyone between move down one. Beat a pair below you and nothing moves. '
-          +'A new pair’s first match: win and it takes the loser’s place; lose and it starts at the bottom. Each partnership has its own place. '
-          +'The Pair Ratings and the Good ’ol Club Ladder are not affected.</div>'
-          +'<div id="nhTsBody"></div></div>';
-        grid.parentNode.insertBefore(w, grid.nextSibling);
-      }catch(e){}
+    W.nhLfHow=function(){ var b=document.getElementById("nhLfHowBox"), c=document.getElementById("nhLfChev"); if(!b) return; var o=b.style.display==="none"; b.style.display=o?"block":"none"; if(c) c.textContent=o?"\u25B2":"\u25BC"; };
+    W.nhLeapfrog=function(){
+      try{ if(!ensure()) return; showScreen("nhLfScreen"); try{ W.scrollTo(0,0); }catch(e){} draw(); }catch(e){}
     };
-    setInterval(function(){ var s=document.getElementById("laddersScreen"); if(s && s.classList.contains("active")){ place(); if(CACHE.cid!=null){ try{ if(CACHE.cid!==Number(CLUB_ID||0)){ CACHE={}; var p=document.getElementById("nhTsPanel"); if(p && p.style.display!=="none") draw(); } }catch(e){} } } }, 400);
+    /* a different board while the page is open: read that board's matches */
+    setInterval(function(){ try{ var s=document.getElementById("nhLfScreen"); if(s && s.classList.contains("active") && CACHE.cid!=null && CACHE.cid!==Number(CLUB_ID||0)){ CACHE={}; draw(); } }catch(e){} }, 600);
     W.__nhTsBuild=build;   /* for the test */
   })();
 
