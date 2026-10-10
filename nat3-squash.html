@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q116";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q117";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -20034,6 +20034,129 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       }catch(err){ try{ console.warn("q116 entries", err); }catch(e){} }
       return out;
     };
+  })();
+
+  /* CHALLENGE LADDER (Andre, 10 Oct) — "take the spot". A second ladder on Ratings and Ladders, beside the official ones
+     (Pair Ratings, Universal, the Good 'ol Club Ladder — all untouched). Read only: it is worked out on the phone from the
+     board's own match log, every time it is opened; nothing is written anywhere.
+     Rules: every match since the first one, in date order, per category. Beat a pair ABOVE you and you take its place
+     (it and everyone between move down one). Beat a pair below you: nothing moves. A pair's first match: win and it takes
+     the loser's place; lose and it goes in at the bottom. Two new pairs: both in at the bottom, the winner above.
+     Each partnership is its own entry, so a player can be on the ladder once per partner. */
+  (function(){
+    if(!W.NEWAPP) return;
+    var CATS=[["Men's","Men's"],["Ladies","Ladies'"],["Mixed","Mixed"],["All Sorts","All Sorts"]];
+    var on=function(){ try{ var c=Number(CLUB_ID||0); if(!c) return false;
+        if((W.PLAT.clubs||[]).some(function(x){ return Number(x.parent_id)===c; })) return false;   /* a group / division board only — a door has no matches of its own */
+        var L=W.__nhTsBoards; return W.__nhTsAll===true || !L || L.indexOf(c)>=0; }catch(e){ return false; } };
+    var esc=function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+    var side=function(a,b){ var n=[]; [a,b].forEach(function(v){ String(v||"").split(" & ").forEach(function(x){ x=x.trim(); if(x) n.push(x); }); }); return n; };
+    var keyOf=function(n){ return n.map(function(x){ return x.toLowerCase(); }).sort().join("|"); };
+    var fmtD=function(d){ try{ var t=new Date(String(d)+"T12:00:00"); return t.getDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][t.getMonth()]; }catch(e){ return d||""; } };
+    var CACHE={};
+    var load=function(){
+      var cid=0; try{ cid=Number(CLUB_ID||0); }catch(e){}
+      if(CACHE.cid===cid && CACHE.at && Date.now()-CACHE.at<60000) return Promise.resolve(CACHE.rows);
+      var out=[], page=function(off){
+        return Promise.resolve(sbGet("matches?select=id,match_date,match_type,t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,t1_games,t2_games&club_id=eq."+cid+"&order=match_date.asc,id.asc&limit=1000&offset="+off))
+          .then(function(r){ r=Array.isArray(r)?r:[]; out=out.concat(r); return r.length<1000?out:page(off+1000); });
+      };
+      return page(0).then(function(rows){ CACHE={cid:cid, at:Date.now(), rows:rows}; return rows; });
+    };
+    /* the replay */
+    var build=function(rows, cat){
+      var lad=[], info={};
+      var pos=function(k){ return lad.indexOf(k); };
+      rows.slice().sort(function(a,b){ return (a.match_date<b.match_date?-1:a.match_date>b.match_date?1:0) || ((+a.id||0)-(+b.id||0)); })
+        .forEach(function(m){
+          if(String(m.match_type||"")!==cat) return;
+          var A=side(m.t1p1,m.t1p2), B=side(m.t2p1,m.t2p2); if(A.length<2 || B.length<2) return;
+          var ka=keyOf(A), kb=keyOf(B); if(ka===kb) return;
+          [[ka,m.t1p2?A.join(" & "):String(m.t1p1).trim()],[kb,m.t2p2?B.join(" & "):String(m.t2p1).trim()]].forEach(function(x){
+            var i=info[x[0]]||(info[x[0]]={name:x[1],p:0,w:0,l:0,last:null}); i.name=x[1]; i.p++; });
+          var s1=+m.t1_sets||0, s2=+m.t2_sets||0, g1=+m.t1_games||0, g2=+m.t2_games||0;
+          var win=s1>s2?1:s2>s1?2:(g1>g2?1:g2>g1?2:0);
+          var before={}; before[ka]=pos(ka); before[kb]=pos(kb);
+          if(!win){ [ka,kb].forEach(function(k){ if(pos(k)<0) lad.push(k); }); }
+          else{
+            var W_=win===1?ka:kb, L_=win===1?kb:ka; info[W_].w++; info[L_].l++;
+            var pw=pos(W_), pl=pos(L_);
+            if(pw<0 && pl<0){ lad.push(W_); lad.push(L_); }
+            else if(pw<0){ lad.splice(pl,0,W_); }
+            else if(pl<0){ lad.push(L_); }
+            else if(pw>pl){ lad.splice(pw,1); lad.splice(pl,0,W_); }
+          }
+          [ka,kb].forEach(function(k){ var b=before[k], a=pos(k); info[k].last={d:m.match_date, ch:(b<0?null:b-a), isNew:b<0, won:(win===1&&k===ka)||(win===2&&k===kb)}; });
+        });
+      return lad.map(function(k,i){ return {pos:i+1, key:k, i:info[k]}; });
+    };
+    var state={cat:"Men's", q:""};
+    var draw=function(){
+      var box=document.getElementById("nhTsBody"); if(!box) return;
+      box.innerHTML='<div style="padding:14px;text-align:center;color:#888;font-size:13px">Working out the ladder…</div>';
+      load().then(function(rows){
+        var have={}; rows.forEach(function(m){ have[m.match_type]=1; });
+        var cats=CATS.filter(function(c){ return have[c[0]]; });
+        if(!cats.length){ box.innerHTML='<div style="padding:14px;text-align:center;color:#888;font-size:13px">No matches on this board yet.</div>'; return; }
+        if(!have[state.cat]) state.cat=cats[0][0];
+        var L=build(rows, state.cat), q=state.q.trim().toLowerCase();
+        var h='<div style="display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px">';
+        cats.forEach(function(c){ var a=c[0]===state.cat;
+          h+='<button type="button" data-cat="'+esc(c[0])+'" style="flex:1;min-width:70px;padding:8px 6px;border-radius:9px;font:inherit;font-size:13px;font-weight:700;border:1.5px solid var(--nhc,#6c3483);'
+            +(a?'background:var(--nhc,#6c3483);color:#fff':'background:#fff;color:var(--nhc,#6c3483)')+'">'+esc(c[1])+'</button>'; });
+        h+='</div><input id="nhTsFind" type="search" placeholder="Find a name…" value="'+esc(state.q)+'" autocomplete="off" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #d9cfe6;border-radius:10px;font:inherit;font-size:14px;margin:0 0 8px">';
+        h+='<div style="font-size:11px;color:#888;margin:0 0 6px">'+L.length+' pairs · every '+esc(state.cat)+' match since the first one</div>';
+        h+='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="font-size:10px;color:#777;text-transform:uppercase;letter-spacing:.4px">'
+          +'<th style="text-align:right;padding:4px 6px">#</th><th style="text-align:left;padding:4px 6px">Pair</th><th style="text-align:center;padding:4px 4px">W–L</th><th style="text-align:right;padding:4px 6px">Last match</th></tr></thead><tbody>';
+        var shown=0;
+        L.forEach(function(r){
+          var hide=q && r.i.name.toLowerCase().indexOf(q)<0; if(!hide) shown++;
+          var ls=r.i.last, mv='';
+          if(ls){ var tag=ls.isNew?(ls.won?'new':'new'):(ls.ch>0?('↑'+ls.ch):(ls.ch<0?('↓'+(-ls.ch)):'–'));
+            var col=ls.isNew?'#8e7aa6':(ls.ch>0?'#1e8449':(ls.ch<0?'#c0392b':'#999'));
+            mv='<span style="font-weight:800;color:'+col+'">'+tag+'</span> <span style="color:#999">'+esc(fmtD(ls.d))+'</span>'; }
+          h+='<tr data-n="'+esc(r.i.name.toLowerCase())+'" style="border-top:1px solid #eee'+(hide?';display:none':'')+'"><td style="text-align:right;padding:7px 6px;font-weight:800;color:var(--nhc,#6c3483)">'+r.pos+'</td>'
+            +'<td style="padding:7px 6px;font-weight:600">'+esc(r.i.name)+'</td><td style="text-align:center;padding:7px 4px;color:#555;white-space:nowrap">'+r.i.w+'–'+r.i.l+'</td>'
+            +'<td style="text-align:right;padding:7px 6px;white-space:nowrap;font-size:12px">'+mv+'</td></tr>';
+        });
+        h+='<tr id="nhTsNone" style="'+(shown?'display:none':'')+'"><td colspan="4" style="padding:12px;text-align:center;color:#888">No pair with that name.</td></tr>';
+        h+='</tbody></table>';
+        box.innerHTML=h;
+        Array.prototype.forEach.call(box.querySelectorAll("button[data-cat]"),function(b){ b.onclick=function(){ state.cat=b.getAttribute("data-cat"); draw(); }; });
+        var f=box.querySelector("#nhTsFind"); if(f){ f.oninput=function(){ state.q=f.value; var qq=state.q.trim().toLowerCase(), n=0;
+          Array.prototype.forEach.call(box.querySelectorAll("tr[data-n]"),function(tr){ var hit=!qq || tr.getAttribute("data-n").indexOf(qq)>=0; tr.style.display=hit?"":"none"; if(hit) n++; });
+          var none=box.querySelector("#nhTsNone"); if(none) none.style.display=n?"none":""; }; }
+      }).catch(function(){ box.innerHTML='<div style="padding:14px;text-align:center;color:#c0392b;font-size:13px">Could not read the matches — try again.</div>'; });
+    };
+    W.nhTsToggle=function(){
+      var p=document.getElementById("nhTsPanel"), c=document.getElementById("nhTsChev"); if(!p) return;
+      var open=p.style.display==="none"; p.style.display=open?"block":"none"; if(c) c.textContent=open?"▲":"▼";
+      if(open) draw();
+    };
+    var place=function(){
+      try{
+        var scr=document.getElementById("laddersScreen"); if(!scr) return;
+        var have=document.getElementById("nhTsWrap");
+        if(!on()){ if(have) have.style.display="none"; return; }
+        if(have){ have.style.display=""; return; }
+        var club=Array.prototype.filter.call(scr.querySelectorAll(".ladders-group-title"),function(t){ return /club ladder/i.test(t.textContent||""); })[0];
+        var grid=club&&club.nextElementSibling; if(!grid) return;
+        var w=document.createElement("div"); w.id="nhTsWrap";
+        w.innerHTML='<div class="ladders-group-title">Challenge Ladder</div>'
+          +'<div class="ladders-grid one-col"><button class="menu-btn" style="font-weight:700" onclick="nhTsToggle()">⬆️ Challenge Ladder — take the spot &nbsp;<span id="nhTsChev" style="font-size:12px">▼</span></button></div>'
+          +'<div id="nhTsPanel" style="display:none;margin-top:8px">'
+          +'<div style="padding:10px 12px;background:rgba(108,52,131,.06);border:1px solid rgba(108,52,131,.22);border-radius:10px;margin:0 0 10px;font-size:12px;line-height:1.5;color:#3a2348">'
+          +'<b>What this ladder is.</b> It is built only from matches played, and every move comes from the last match. '
+          +'It is <b>not</b> a rank or a rating — it is a live picture of who has beaten whom.<br><br>'
+          +'<b>How it moves.</b> Beat a pair <b>above</b> you and you take its place — it and everyone between move down one. Beat a pair below you and nothing moves. '
+          +'A new pair’s first match: win and it takes the loser’s place; lose and it starts at the bottom. Each partnership has its own place. '
+          +'The Pair Ratings and the Good ’ol Club Ladder are not affected.</div>'
+          +'<div id="nhTsBody"></div></div>';
+        grid.parentNode.insertBefore(w, grid.nextSibling);
+      }catch(e){}
+    };
+    setInterval(function(){ var s=document.getElementById("laddersScreen"); if(s && s.classList.contains("active")){ place(); if(CACHE.cid!=null){ try{ if(CACHE.cid!==Number(CLUB_ID||0)){ CACHE={}; var p=document.getElementById("nhTsPanel"); if(p && p.style.display!=="none") draw(); } }catch(e){} } } }, 400);
+    W.__nhTsBuild=build;   /* for the test */
   })();
 
 })();</script>
