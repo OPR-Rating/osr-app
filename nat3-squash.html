@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q115";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q116";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -5735,7 +5735,8 @@ async function _submitMatchInner(){
   // Resolve the DIVISION this match belongs to. Fixtures/entries store singles as
   // "<Type> Singles" and doubles as "<Type>". Using the bare Match Type for a singles
   // match finds nothing, so duplicate checks and fixture-matching silently no-op.
-  const _mDiv = (entryData.format==='singles') ? (entryData.type+' Singles') : entryData.type;
+  let _mDiv = (entryData.format==='singles') ? (entryData.type+' Singles') : entryData.type;
+  try{ if(window.__nsqSectionOf){ const _sx=await window.__nsqSectionOf(entryData); if(_sx) _mDiv=_sx; } }catch(_e){}   /* q116 */
   const btn=document.getElementById('submitBtn');
   // DUPLICATE FAILSAFE (all match types, incl. social): before saving, check whether the
   // SAME FOUR PLAYERS already appear in the most RECENTLY ENTERED matches. This guards the
@@ -5932,7 +5933,8 @@ async function routeHandicapEntry(ed, err, btn){
   // type, so a singles HANDICAP result searched a division that doesn't exist and
   // reported "No draw found". Same expression as the rated path's _mDiv.
   const isSingles = ed.format==='singles';
-  const div = isSingles ? (ed.type + ' Singles') : ed.type;
+  let div = isSingles ? (ed.type + ' Singles') : ed.type;
+  try{ if(window.__nsqSectionOf){ const _sx=await window.__nsqSectionOf(ed); if(_sx){ div=_sx; window.__nsqPlace=null; } } }catch(_e){}   /* q116 */
   // normalise a player-name for comparison
   const norm = s => (s||'').trim().toLowerCase();
   // team identity = the set of its player names (order-independent within a pair)
@@ -18518,6 +18520,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       names.forEach(function(n){ var p=DEC.people[String(n||"").trim().toLowerCase()]; if(!p) return; var d=divOfPerson(p); if(d && (!best || d.sort<best.sort)) best=d; });
       S.bands=save; return best; }
     function namesOf(a,b){ var out=[]; [a,b].forEach(function(v){ String(v||"").split(" & ").forEach(function(x){ x=x.trim(); if(x) out.push(x); }); }); return out; }
+    /* q116: the tournament entry asks the same decider which division a pair belongs in (the higher player's) */
+    W.__nsqTeamBand=function(p1,p2){ var d=decTeam(namesOf(p1,p2)); return d?{label:d.label, sort:d.sort}:null; };
+    W.__nsqBandsReady=function(){ return DEC.bands.length>0 && Object.keys(DEC.people).length>0; };
+    W.__nsqBandList=function(){ return DEC.bands.slice().sort(function(a,b){ return a.sort-b.sort; }); };
+    W.__nsqDecLoad=function(){ try{ DEC.at=0; decLoad(true); }catch(e){} };
     W.__nsqSaveBoard=function(body, cid){
       try{
         var m=(body&&body.match)||{}, cs=W.PLAT.clubs||[];
@@ -19857,6 +19864,176 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           card.innerHTML='<h2>Masters</h2><button onclick="window.nsqOpen('+Number(W.PLAT.cid||0)+')" style="width:100%;text-align:left;display:flex;align-items:center;gap:10px;padding:12px 14px;background:none;border:0;font:inherit;cursor:pointer"><span style="flex:1"><b style="display:block;font-size:15px">Divisions</b><span style="font-size:12.5px;color:#7a6658">national divisions \u00b7 this club\u2019s divisions \u00b7 place members</span></span><span style="color:#D35400;font-weight:800">\u203a</span></button>';
           band.parentNode.insertBefore(card, band.nextSibling); } }catch(e3){}
       return r; };
+  })();
+
+  /* ===================================================================================================================
+     NAT-SQUASH q116 · TOURNAMENTS BY DIVISION (Andre). The member still picks Men's / Ladies / Mixed / All Sorts; on save the
+     pair is placed in "<category> - <Div>" — the division of its HIGHER player (the same decider the boards use). Each
+     division section is then its own draw (the existing per-division engine: seeds, groups, playoffs, knockout). An
+     organiser can move a pair UP a division before either draw ("playing up"). Results still rate in the category.
+     A tournament that already has entries in the plain category (made before q116) is left exactly as it was.
+     =================================================================================================================== */
+  (function(){
+    var W=window;
+    var BASES=["Men's","Ladies","Mixed","All Sorts"];
+    var esc=function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+    var baseOf=function(c){ c=String(c||"").trim(); var i=c.indexOf(" - "); return i>0?c.slice(0,i).trim():c; };
+    var secOf=function(c){ c=String(c||"").trim(); var i=c.indexOf(" - "); return i>0?c.slice(i+3).trim():""; };
+    var bandSort=function(lbl){ var bs=(W.__nsqBandList&&W.__nsqBandList())||[]; for(var i=0;i<bs.length;i++){ if(String(bs[i].label).toLowerCase()===String(lbl||"").toLowerCase()) return bs[i].sort; } return 999; };
+    var bandAbove=function(lbl){ var bs=(W.__nsqBandList&&W.__nsqBandList())||[], s=bandSort(lbl), up=null;
+      bs.forEach(function(b){ if(b.sort<s && (!up || b.sort>up.sort)) up=b; }); return up?up.label:null; };
+    W.__nsqTourBase=baseOf; W.__nsqTourSec=secOf;
+    var ENC=encodeURIComponent;
+    var cid=function(){ try{ return CLUB_ID; }catch(e){ return 0; } };
+    var getEntries=function(tour){ return sbGet("tournament_entries?select=*&club_id=eq."+cid()+"&tournament=eq."+ENC(tour)).then(function(r){ return Array.isArray(r)?r:[]; }).catch(function(){ return []; }); };
+    var waitBands=function(){ return new Promise(function(res){ var n=0; if(W.__nsqDecLoad && !(W.__nsqBandsReady&&W.__nsqBandsReady())) W.__nsqDecLoad();
+      (function tick(){ if(W.__nsqBandsReady && W.__nsqBandsReady()) return res(true); if(++n>40) return res(false); setTimeout(tick,200); })(); }); };
+    var jresp=function(o,st){ return new Response(JSON.stringify(o),{status:st||200,headers:{"Content-Type":"application/json"}}); };
+    var showMsg=function(html){ setTimeout(function(){ var m=document.getElementById("etMsg"); if(m) m.innerHTML=html; }, 60); };
+
+    /* ---- 1. a pair's entry is placed in its division section ---- */
+    var _f=W.fetch;
+    W.fetch=function(u,init){
+      try{
+        var url=String(u&&u.url||u||"");
+        if(/\/functions\/v1\/(tournament|plat_tournament_squash)(\?|$)/.test(url) && init && init.body && String(init.method||"").toUpperCase()==="POST"){
+          var b=JSON.parse(init.body);
+          if(b && b.action==="enter_team" && b.entry && BASES.indexOf(String(b.entry.category||""))>=0 && b.entry.p2){
+            var en=b.entry, base=en.category;
+            return getEntries(en.tournament).then(function(all){
+              if(all.some(function(r){ return r.category===base; })) return _f.call(W,u,init);       /* a pre-q116 tournament: as it was */
+              return waitBands().then(function(ok){
+                var d=ok && W.__nsqTeamBand ? W.__nsqTeamBand(en.p1,en.p2) : null;
+                if(!d){ var why="Could not work out this pair's division"+(ok?" (is each player on the register with a rating?)":" — the divisions are still loading, try again in a moment")+".";
+                  showMsg('<span style="color:#c0392b">'+esc(why)+'</span>'); return jresp({ok:false,error:why},400); }
+                var sec=base+" - "+d.label; en.category=sec; var i2={}; for(var k in init) i2[k]=init[k]; i2.body=JSON.stringify(b);
+                return _f.call(W,u,i2).then(function(r){
+                  r.clone().json().then(function(j){
+                    if(r.ok && j && j.ok!==false){ W.__nsqLastPlaced={at:Date.now(), html:'<span style="color:#1e8449;font-weight:800">'+esc(en.p1+" / "+en.p2)+' placed in '+esc(d.label)+'</span> <span style="color:#6b6b76">— the higher player\u2019s division.</span>'}; }
+                    else showMsg('<span style="color:#c0392b">'+esc((j&&j.error)||("Not saved ("+r.status+")"))+'</span>');
+                  }).catch(function(){});
+                  return r; });
+              });
+            });
+          }
+        }
+        /* a result entered on the main Enter Match screen: once saved (and rated), put it on its division's fixture */
+        if(/\/functions\/v1\/(submit_match|plat_submit_match)(\?|$)/.test(url) && init && init.body && W.__nsqPlace){
+          var pl=W.__nsqPlace, bm=null; try{ bm=JSON.parse(init.body).match; }catch(e){}
+          if(bm && pl.event===String(bm.event||"").trim() && Date.now()-pl.at<120000){
+            W.__nsqPlace=null;
+            return _f.call(W,u,init).then(function(r){
+              return r.clone().json().then(function(j){
+                if(!(r.ok && j && j.ok)) return r;
+                return _f.call(W, SB_URL+"/functions/v1/tournament",{method:"POST",headers:{apikey:SB_ANON,Authorization:"Bearer "+SB_ANON,"Content-Type":"application/json"},
+                  body:JSON.stringify({action:"place_match",club_id:cid(),tournament:pl.event,division:pl.division,force_round:bm.force_fixture_round||null,
+                    match:{t1p1:bm.t1p1,t1p2:bm.t1p2,t2p1:bm.t2p1,t2p2:bm.t2p2}})})
+                  .then(function(x){ return x.json().catch(function(){ return {}; }); })
+                  .then(function(p){ if(p && p.ok && p.placed){ j.fixture="placed"; return jresp(j,200); } j.fixture=(j.fixture==="ambiguous"?"ambiguous":"nomatch"); return jresp(j,200); })
+                  .catch(function(){ return r; });
+              }).catch(function(){ return r; });
+            });
+          }
+        }
+      }catch(err){}
+      return _f.apply(W,arguments);
+    };
+
+    /* ---- 2. which division section does a result belong to? (the Enter Match checks look there, not in the plain category) ---- */
+    W.__nsqSectionOf=function(ed){
+      var ev=String(ed&&ed.event||"").trim(); if(!ev || ev==="Social" || ev==="Ladder Match" || !ed.t1p2) return Promise.resolve(null);
+      var base=String(ed.type||"");
+      return getEntries(ev).then(function(all){
+        if(all.some(function(r){ return r.category===base; })) return null;
+        var best=null, bestN=0, hit=function(r,x){ return x && (r.p1===x || r.p2===x); };
+        var secs={}; all.forEach(function(r){ if(baseOf(r.category)===base && r.category!==base) (secs[r.category]=secs[r.category]||[]).push(r); });
+        Object.keys(secs).forEach(function(s){ var n=0; [ed.t1p1,ed.t1p2,ed.t2p1,ed.t2p2].forEach(function(x){ if(secs[s].some(function(r){ return hit(r,x); })) n++; });
+          if(n>bestN){ bestN=n; best=s; } });
+        if(!best || bestN<2) return null;
+        W.__nsqPlace={event:ev, division:best, at:Date.now()};
+        return best;
+      });
+    };
+
+    /* ---- 3. a section reads "Men's Doubles · Div B" wherever the draw names it ---- */
+    var _lbl=W.tmDivLabel;
+    if(typeof _lbl==="function") W.tmDivLabel=function(d){ var s=secOf(d); return s ? (_lbl(baseOf(d))+" \u00b7 "+s) : _lbl(d); };
+    var _divs=W.tmDivisions;
+    if(typeof _divs==="function") W.tmDivisions=function(t){ return _divs(t).then(function(ds){
+      var bo=function(c){ var i=BASES.indexOf(baseOf(c)); return i<0?9:i; };
+      return (ds||[]).slice().sort(function(a,b){ return (bo(a)-bo(b)) || (bandSort(secOf(a))-bandSort(secOf(b))) || (a<b?-1:a>b?1:0); }); }); };
+
+    /* ---- 4. the organiser moves a pair up (or back) before the draw ---- */
+    W.nsqMoveEntry=function(id,to,up){
+      var pinEl=document.getElementById("etPin"), pin=(pinEl&&pinEl.value||"").trim();
+      if(!pin){ pin=(prompt("Admin PIN to move this pair")||"").trim(); if(!pin) return; if(pinEl) pinEl.value=pin; }
+      _f.call(W, SB_URL+"/functions/v1/tournament",{method:"POST",headers:{apikey:SB_ANON,Authorization:"Bearer "+SB_ANON,"Content-Type":"application/json"},
+        body:JSON.stringify({action:"move_entry",club_id:cid(),admin_pin:pin,entry_id:id,to_category:to,played_up:!!up})})
+        .then(function(x){ return x.json().catch(function(){ return {}; }).then(function(j){
+          if(x.ok && j && j.ok){ W.__nsqLastPlaced={at:Date.now(), html:'<span style="color:#1e8449;font-weight:800">Moved to '+esc(secOf(to))+'.</span>'}; W.renderEnterScreen(); }
+          else alert((j&&j.error)||("Not moved ("+x.status+")")); }); })
+        .catch(function(){ alert("Connection problem — the pair was not moved."); });
+    };
+
+    /* ---- 5. the Enter a team page lists the category's pairs by division ---- */
+    var _res=W.renderEnterScreen;
+    if(typeof _res==="function") W.renderEnterScreen=async function(){
+      var out=await _res.apply(this,arguments);
+      try{
+        var tour=W._etTournament, base=W._etCat, body=document.getElementById("etBody");
+        if(!tour || !body || BASES.indexOf(base)<0) return out;
+        var all=await getEntries(tour);
+        if(all.some(function(r){ return r.category===base; })) return out;                 /* pre-q116 tournament */
+        await waitBands();
+        var mine=all.filter(function(r){ return baseOf(r.category)===base && r.category!==base; });
+        var locked=W._etLocked||new Set();
+        /* names already entered in ANY division of this category can't be picked again */
+        W._etUsedInDiv=W._etUsedInDiv||{}; W._etUsedInDiv[base]=[]; mine.forEach(function(r){ W._etUsedInDiv[base].push(r.p1, r.p2); });
+        /* the counter counts the whole category */
+        var cards=body.querySelectorAll(".card"), cnt=null, list=null;
+        Array.prototype.forEach.call(cards,function(c){ var h=c.querySelector("h2"); if(!h) return; var t=h.textContent||"";
+          if(!cnt && t.indexOf(base+":")===0) cnt=c; if(!list && /^\s*Entered teams/.test(t)) list=c; });
+        var cap=(W._etCaps && W._etCaps[base]!=null)?Number(W._etCaps[base]):null;
+        if(cnt){ var h2=cnt.querySelector("h2"); if(h2) h2.textContent=base+": "+mine.length+(cap!=null?(" / "+cap):"")+" entered"; }
+        /* how placement works, under the entry card's line */
+        var ec=document.getElementById("etCat"); ec=ec&&ec.closest(".card");
+        if(ec && !ec.querySelector(".nsqPlaceNote")){ var sub=ec.querySelector("p.sub");
+          if(sub){ sub.classList.add("nsqPlaceNote"); sub.textContent="Pick two players for "+base+". Each pair is placed in its division by its higher player\u2019s rating \u2014 every division is its own draw, seeded separately. An organiser can move a pair up a division before the draw."; } }
+        if(W.__nsqLastPlaced && Date.now()-W.__nsqLastPlaced.at<8000){ var m=document.getElementById("etMsg"); if(m) m.innerHTML=W.__nsqLastPlaced.html; W.__nsqLastPlaced=null; }
+        /* the list, by division */
+        if(list){
+          var by={}; mine.forEach(function(r){ (by[r.category]=by[r.category]||[]).push(r); });
+          var secs=Object.keys(by).sort(function(a,b){ return bandSort(secOf(a))-bandSort(secOf(b)); });
+          var h='<h2>Entered teams <span class="tm-divtag">'+esc(base)+'</span></h2>';
+          if(!secs.length) h+='<p class="sub">Nothing entered in '+esc(base)+' yet. Add a team above — each pair goes into its own division.</p>';
+          secs.forEach(function(s){
+            var rows=by[s].slice().sort(function(x,y){ return (y.seed_rating||0)-(x.seed_rating||0); }), dl=locked.has(s), lab=secOf(s), above=bandAbove(lab);
+            h+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:10px 0 4px"><b style="font-size:14px">'+esc(lab)+'</b><span style="font-size:11px;color:#888">'+rows.length+' team'+(rows.length!==1?'s':'')+(dl?' \u00b7 draw done':'')+'</span></div>';
+            h+='<table style="margin-bottom:8px"><thead><tr><th class="num">Seed</th><th>Team</th><th class="num">Rating</th><th></th></tr></thead><tbody>';
+            rows.forEach(function(r,i){
+              var nat=(W.__nsqTeamBand&&W.__nsqTeamBand(r.p1,r.p2))||null, natSec=nat?(base+" - "+nat.label):null;
+              var acts='';
+              if(!dl){
+                acts+='<button onclick="etRemoveTeam('+Number(r.id)+')" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:16px;padding:0 4px" title="Remove">\u00d7</button>';
+                if(above && !locked.has(base+" - "+above)) acts+='<button onclick="nsqMoveEntry('+Number(r.id)+',\''+esc((base+" - "+above).replace(/'/g,"\\'"))+'\',true)" style="background:none;border:1px solid #c9c4d4;border-radius:6px;color:#555;cursor:pointer;font-size:11px;padding:2px 6px;margin-left:4px;white-space:nowrap" title="Move this pair up to '+esc(above)+'">\u2191 Up</button>';
+                if(r.played_up && natSec && natSec!==s && !locked.has(natSec)) acts+='<button onclick="nsqMoveEntry('+Number(r.id)+',\''+esc(natSec.replace(/'/g,"\\'"))+'\',false)" style="background:none;border:1px solid #c9c4d4;border-radius:6px;color:#555;cursor:pointer;font-size:11px;padding:2px 6px;margin-left:4px;white-space:nowrap" title="Back to '+esc(nat.label)+'">\u2193 Back</button>';
+              }
+              h+='<tr><td class="num"><span class="seed'+(i===0?' s1':'')+'">'+(i+1)+'</span></td><td><b>'+esc(r.p1+" / "+r.p2)+'</b>'+(r.played_up?' <span style="font-size:10px;font-weight:800;color:#b9770e;background:#fff3dc;border-radius:5px;padding:1px 5px;white-space:nowrap">playing up</span>':'')+'</td><td class="num">'+Math.round(r.seed_rating||0)+'</td><td class="num" style="white-space:nowrap">'+acts+'</td></tr>';
+            });
+            h+='</tbody></table>';
+          });
+          list.innerHTML=h;
+        }
+        /* the draw cards: this category's divisions, top division first */
+        var gen=null; Array.prototype.forEach.call(body.querySelectorAll(".card"),function(c){ var t=(c.querySelector("h2")||{}).textContent||""; if(/^\s*Generate draws/.test(t)) gen=c; });
+        if(gen){ var blocks=Array.prototype.filter.call(gen.children,function(x){ var bb=x.querySelector&&x.querySelector("b"); return bb && /^(Men's|Ladies|Mixed|All Sorts)( - |$)/.test((bb.textContent||"").trim()); });
+          var tail=document.getElementById("etGenMsg");
+          blocks.sort(function(a,b){ var A=a.querySelector("b").textContent.trim(), B=b.querySelector("b").textContent.trim(), ia=BASES.indexOf(baseOf(A)), ib=BASES.indexOf(baseOf(B));
+            return (ia-ib) || (bandSort(secOf(A))-bandSort(secOf(B))); });
+          blocks.forEach(function(x){ var bb=x.querySelector("b"), t=bb.textContent.trim(); if(secOf(t)) bb.textContent=W.tmDivLabel(t); if(tail) gen.insertBefore(x, tail); else gen.appendChild(x); }); }
+      }catch(err){ try{ console.warn("q116 entries", err); }catch(e){} }
+      return out;
+    };
   })();
 
 })();</script>
