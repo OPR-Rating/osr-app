@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q122";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q123";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -20052,16 +20052,18 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
   (function(){
     if(!W.NEWAPP) return;
     var CATS=[["Men's","Men's"],["Ladies","Ladies'"],["Mixed","Mixed"],["All Sorts","All Sorts"]];
-    var on=function(){ try{ var c=Number(CLUB_ID||0); if(!c) return false;
+    var on=function(){ try{ var c=boardNow(); if(!c) return false;
         if((W.PLAT.clubs||[]).some(function(x){ return Number(x.parent_id)===c; })) return false;   /* a group / division board only — a door has no matches of its own */
         var L=W.__nhTsBoards; return W.__nhTsAll===true || !L || L.indexOf(c)>=0; }catch(e){ return false; } };
+    /* the board on screen: the page's own id (W.PLAT.cid) — CLUB_ID can still hold the board you came from */
+    var boardNow=function(){ try{ return Number((W.PLAT&&W.PLAT.cid)||CLUB_ID||0); }catch(e){ return Number((W.PLAT&&W.PLAT.cid)||0); } };
     var esc=function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
     var side=function(a,b){ var n=[]; [a,b].forEach(function(v){ String(v||"").split(" & ").forEach(function(x){ x=x.trim(); if(x) n.push(x); }); }); return n; };
     var keyOf=function(n){ return n.map(function(x){ return x.toLowerCase(); }).sort().join("|"); };
     var fmtD=function(d){ try{ var t=new Date(String(d)+"T12:00:00"); return t.getDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][t.getMonth()]; }catch(e){ return d||""; } };
     var CACHE={};
     var load=function(){
-      var cid=0; try{ cid=Number(CLUB_ID||0); }catch(e){}
+      var cid=0; try{ cid=boardNow(); }catch(e){}
       if(CACHE.cid===cid && CACHE.at && Date.now()-CACHE.at<60000) return Promise.resolve(CACHE.rows);
       var out=[], page=function(off){
         /* squash: opened from a CLUB's door it reads every division of that club together */
@@ -20216,12 +20218,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       try{ if(!ensure()) return; showScreen("nhLfScreen"); try{ W.scrollTo(0,0); }catch(e){} draw(); }catch(e){}
     };
     /* a different board while the page is open: read that board's matches */
-    setInterval(function(){ try{ var s=document.getElementById("nhLfScreen"); if(s && s.classList.contains("active") && CACHE.cid!=null && CACHE.cid!==Number(CLUB_ID||0)){ CACHE={}; draw(); } }catch(e){} }, 600);
+    setInterval(function(){ try{ var s=document.getElementById("nhLfScreen"); if(s && s.classList.contains("active") && CACHE.cid!=null && CACHE.cid!==boardNow()){ CACHE={}; draw(); } }catch(e){} }, 600);
     /* BIGGEST LEAPS (Andre, 11 Oct): a bracket on the page where the index lives — padel: a group's page, after Movers;
        squash: a club's front door, after Movers — the three biggest single-match climbs of the last 28 days. Read only. */
     var leapHere=function(){
       try{
-        var c=Number(CLUB_ID||0); if(!c) return false;
+        var c=boardNow(); if(!c) return false;
         var q=new URLSearchParams(location.search); if(q.get("go")) return false;
         var cs=W.PLAT.clubs||[], kids=cs.filter(function(x){ return Number(x.parent_id)===c; });
         if(W.__nhLfClubWide) return kids.length>0 && !kids.some(function(k){ return cs.some(function(x){ return Number(x.parent_id)===Number(k.id); }); });
@@ -20233,7 +20235,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       try{
         var hs=document.getElementById("homeScreen"), nh=document.getElementById("nh");
         if(!hs || !hs.classList.contains("active") || !nh || !leapHere()) return;
-        var cid=String(Number(CLUB_ID||0)), have=document.getElementById("nhLeapBrk");
+        var cid=String(boardNow()), have=document.getElementById("nhLeapBrk");
         if(have && have.getAttribute("data-cid")===cid && nh.contains(have)) return;
         if(have) have.remove();
         var h2s=Array.prototype.slice.call(nh.querySelectorAll(".brk > h2"));
@@ -20244,7 +20246,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         else if(before && before.parentNode){ before.parentNode.insertBefore(host, before); }
         else return;
         load().then(function(rows){
-          if(String(Number(CLUB_ID||0))!==cid || !document.body.contains(host)) return;
+          if(String(boardNow())!==cid || !document.body.contains(host)) return;
           var today=todayN(), all=[];
           CATS.forEach(function(c){ var lp=[]; build(rows, c[0], null, lp); lp.forEach(function(x){ if(!x.isNew && today-dayN(x.d)<=LEAPDAYS){ x.cat=c[1]; all.push(x); } });   /* climbs by pairs already on it */ });
           all.sort(function(a,b){ return (b.up-a.up) || (a.d<b.d?1:-1); });
