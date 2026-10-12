@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q125";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q126";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -20042,8 +20042,8 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         /* ---- 6. BLOCK ENTRY (q125, Andre): the organiser pastes a list of names in pair order ---- */
         if(ec && !document.getElementById("nsqBlk")){
           var blk=document.createElement("div"); blk.className="card"; blk.id="nsqBlk";
-          blk.innerHTML='<h2 style="cursor:pointer" onclick="nsqBlkFold()">Block entry <span style="font-size:11px;font-weight:600;color:#888">\u25be a list of names</span></h2>'
-            +'<div id="nsqBlkBody" style="display:none">'
+          blk.innerHTML='<h2>Block entry <span style="font-size:11px;font-weight:600;color:#888">paste a list of names</span></h2>'
+            +'<div id="nsqBlkBody">'
             +'<p class="sub">Paste the names in pair order \u2014 <b>Andre Farrell, Jeff Tseng, \u2026</b> or one pair per line as <b>Andre Farrell &amp; Jeff Tseng</b>. Every name must be on the register. Two men \u2192 Men\u2019s, two ladies \u2192 Ladies, one of each \u2192 Mixed; each pair goes to its higher player\u2019s division.</p>'
             +'<textarea id="nsqBlkTxt" rows="6" placeholder="Andre Farrell, Jeff Tseng, \u2026" style="width:100%;box-sizing:border-box;padding:10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit"></textarea>'
             +'<div style="display:flex;gap:8px;margin:10px 0"><button class="btn btn-primary" onclick="nsqBlkCheck()" style="flex:1">Check the list</button></div>'
