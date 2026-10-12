@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q127";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q128";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -20032,17 +20032,21 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
               }
               h+='<tr><td class="num"><span class="seed'+(i===0?' s1':'')+'">'+(i+1)+'</span></td><td><b>'+esc(r.p1+" / "+r.p2)+'</b>'+(r.played_up?' <span style="font-size:10px;font-weight:800;color:#b9770e;background:#fff3dc;border-radius:5px;padding:1px 5px;white-space:nowrap">playing up</span>':(nat&&bandSort(nat.label)<bandSort(lab)?' <span style="font-size:10px;font-weight:800;color:#1f6fbf;background:#e7f0fb;border-radius:5px;padding:1px 5px;white-space:nowrap">playing down</span>':''))+'</td><td class="num">'+Math.round(r.seed_rating||0)+'</td><td class="num" style="white-space:nowrap">'+acts+'</td></tr>';
             });
-            h+='</tbody></table>';
+            h+='</tbody></table><div class="nsqDivGen" data-sec="'+esc(s)+'"></div>';   /* q128: that division's draw block lands here */
           });
           list.innerHTML=h;
         }
         /* the draw cards: this category's divisions, top division first */
         var gen=null; Array.prototype.forEach.call(body.querySelectorAll(".card"),function(c){ var t=(c.querySelector("h2")||{}).textContent||""; if(/^\s*Generate draws/.test(t)) gen=c; });
+        /* q128 (Andre): each division's draw block sits UNDER that division in the list, this category only; the other
+           categories' blocks stay hidden until their tab is opened. The admin code card moves above the list. */
         if(gen){ var blocks=Array.prototype.filter.call(gen.children,function(x){ var bb=x.querySelector&&x.querySelector("b"); return bb && /^(Men's|Ladies|Mixed|All Sorts)( - |$)/.test((bb.textContent||"").trim()); });
-          var tail=document.getElementById("etGenMsg");
-          blocks.sort(function(a,b){ var A=a.querySelector("b").textContent.trim(), B=b.querySelector("b").textContent.trim(), ia=BASES.indexOf(baseOf(A)), ib=BASES.indexOf(baseOf(B));
-            return (ia-ib) || (bandSort(secOf(A))-bandSort(secOf(B))); });
-          blocks.forEach(function(x){ var bb=x.querySelector("b"), t=bb.textContent.trim(); if(secOf(t)) bb.textContent=W.tmDivLabel(t); if(tail) gen.insertBefore(x, tail); else gen.appendChild(x); }); }
+          blocks.forEach(function(x){ var bb=x.querySelector("b"), t=bb.textContent.trim(); if(secOf(t)) bb.textContent=W.tmDivLabel(t);
+            var slot=list?list.querySelector('.nsqDivGen[data-sec="'+t.replace(/"/g,'&quot;')+'"]'):null;
+            if(slot && baseOf(t)===base){ x.style.display=""; x.style.marginTop="6px"; slot.appendChild(x); } else x.style.display="none"; });
+          var ph=gen.querySelector("h2"); if(ph) ph.textContent="Admin code";
+          var ps=gen.querySelector("p.sub"); if(ps) ps.textContent="Type the admin code once, then generate each division\u2019s draw from its own block below. Generating closes that division\u2019s entry.";
+          if(list && gen.parentNode===list.parentNode) list.parentNode.insertBefore(gen, list); }
         /* ---- 6. BLOCK ENTRY (q125, Andre): the organiser pastes a list of names in pair order ---- */
         if(ec && !document.getElementById("nsqBlk")){
           var blk=document.createElement("div"); blk.className="card"; blk.id="nsqBlk";
