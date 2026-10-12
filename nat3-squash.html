@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q130";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q131";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -20397,6 +20397,299 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     };
     setInterval(leapBrk, 900);
     W.__nhTsBuild=build;   /* for the test */
+  })();
+
+  /* ===================================================================================================================
+     NAT-SQUASH q131 · ORDER OF PLAY (Andre, 12 Oct). After the draws: the organiser lists venues (courts), allocates
+     each division a venue · courts · day · start · slot length, adds breaks, and the system fills the courts from the
+     draw. The public page reads venue → time → court for a day, with a name search; a thin strip under each fixture on
+     Draw & Rounds says where and when; My page lists the member's own matches. Server: plat_tournament_squash
+     v2026.10.13-1 (oop_* actions); tables from q131_order_of_play.sql. Reads are public; writes need the admin code.
+     =================================================================================================================== */
+  (function(){
+    var W=window;
+    var esc=function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+    var ENC=encodeURIComponent;
+    var cid=function(){ try{ return Number(CLUB_ID)||0; }catch(e){ return 0; } };
+    var tourNow=function(){ try{ return (W._tmCtx&&W._tmCtx.tournament)||W._etTournament||TOURNAMENT_EVENT||""; }catch(e){ return ""; } };
+    var H=function(){ return {apikey:SB_ANON,Authorization:"Bearer "+SB_ANON,"Content-Type":"application/json"}; };
+    var rest=function(q){ return fetch(SB_URL+"/rest/v1/"+q,{headers:H()}).then(function(r){ return r.ok?r.json():[]; }).catch(function(){ return []; }); };
+    var act=function(body){ body.club_id=cid(); return fetch(SB_URL+"/functions/v1/tournament",{method:"POST",headers:H(),body:JSON.stringify(body)})
+      .then(function(r){ return r.json().catch(function(){ return {ok:false,error:"No reply ("+r.status+")"}; }); }).catch(function(){ return {ok:false,error:"Connection problem."}; }); };
+    var baseOf=function(c){ return W.__nsqTourBase?W.__nsqTourBase(c):String(c||""); };
+    var secOf=function(c){ return W.__nsqTourSec?W.__nsqTourSec(c):""; };
+    var divLabel=function(d){ try{ return W.tmDivLabel?W.tmDivLabel(d):d; }catch(e){ return d; } };
+    var hhmm=function(t){ var m=String(t||"").match(/^(\d{1,2}):(\d{2})/); return m?(("0"+m[1]).slice(-2)+":"+m[2]):String(t||""); };
+    var tmin=function(t){ var m=String(t||"").match(/^(\d{1,2}):(\d{2})/); return m?Number(m[1])*60+Number(m[2]):NaN; };
+    var DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], MONS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    var fmtDay=function(d){ var m=String(d||"").match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return String(d||""); var dt=new Date(Date.UTC(+m[1],+m[2]-1,+m[3])); return DAYS[dt.getUTCDay()]+" "+(+m[3])+" "+MONS[+m[2]-1]; };
+    var todayISO=function(){ var d=new Date(); return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); };
+
+    /* ---------- data for one tournament ---------- */
+    var D={tour:"",at:0,venues:[],allocs:[],breaks:[],rows:[],fx:{},ents:{},divs:[]};
+    var load=function(force){
+      var tour=tourNow(), pool=Number(W.PLAT&&W.PLAT.pool||0), c=cid();
+      if(!tour||!c) return Promise.resolve(D);
+      if(!force && D.tour===tour && Date.now()-D.at<15000) return Promise.resolve(D);
+      return Promise.all([
+        rest("plat_squash_venues?pool_id=eq."+pool+"&select=id,name,courts,club_id&order=name.asc"),
+        rest("plat_squash_oop_alloc?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=*"),
+        rest("plat_squash_oop_breaks?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=*&order=play_day.asc,start_time.asc"),
+        rest("plat_squash_order_of_play?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=*&order=play_day.asc,start_time.asc,court.asc"),
+        rest("plat_squash_tournament_fixtures?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=id,division,round,round_type,seed_a,seed_b,sets_a,sets_b"),
+        rest("plat_squash_tournament_entries?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=category,seed,p1,p2")
+      ]).then(function(r){
+        D={tour:tour,at:Date.now(),venues:r[0]||[],allocs:r[1]||[],breaks:r[2]||[],rows:r[3]||[],fx:{},ents:{},divs:[]};
+        var dv={}; (r[4]||[]).forEach(function(f){ D.fx[f.id]=f; dv[f.division]=1; });
+        (r[5]||[]).forEach(function(e){ D.ents[e.category+"|"+e.seed]=e; });
+        D.divs=Object.keys(dv); return D; });
+    };
+    var venueOf=function(id){ return D.venues.filter(function(v){ return +v.id===+id; })[0]||null; };
+    var pairName=function(div,seed){ var e=D.ents[div+"|"+seed]; return e?(e.p1+(e.p2?" & "+e.p2:"")):("Seed "+seed); };
+    var rowView=function(r){ var f=D.fx[r.fixture_id]||{}; var a=pairName(f.division||r.division,f.seed_a), b=pairName(f.division||r.division,f.seed_b);
+      var played=f.sets_a!=null, score=played?(f.sets_a+"-"+f.sets_b):""; return {r:r,f:f,a:a,b:b,played:played,score:score,label:divLabel(r.division)}; };
+
+    /* ---------- the screen ---------- */
+    var ensure=function(){
+      var scr=document.getElementById("nsqOopScreen"); if(scr) return scr;
+      var host=document.getElementById("tournamentScreen")||document.getElementById("laddersScreen"); if(!host||!host.parentNode) return null;
+      scr=document.createElement("div"); scr.className="screen hidden"; scr.id="nsqOopScreen";
+      scr.innerHTML='<div class="header"><button class="back-btn" onclick="nsqOopBack()">&#8592;</button><h1>Order of Play</h1></div>'
+        +'<div class="screen-content"><div id="nsqOopBody"><div class="loading">Loading\u2026</div></div></div>';
+      host.parentNode.insertBefore(scr, host.nextSibling);
+      return scr;
+    };
+    var UI={day:"",venue:0,div:"",q:"",admin:false,pin:"",openAdmin:false,editing:null};
+    W.nsqOopBack=function(){ try{ if(typeof showScreen==="function") showScreen("tournamentScreen"); }catch(e){} };
+    W.nsqOopOpen=function(){ if(!ensure()) return; UI.editing=null; showScreen("nsqOopScreen"); try{ W.scrollTo(0,0); }catch(e){} draw(true); };
+    W.nsqOopSet=function(k,v){ UI[k]=v; draw(false); };
+    W.nsqOopQ=function(v){ UI.q=String(v||"").trim().toLowerCase(); render(); };
+    W.nsqOopAdmin=function(){ UI.openAdmin=!UI.openAdmin; render(); };
+    var draw=function(force){ var b=document.getElementById("nsqOopBody"); if(!b) return; load(force).then(function(){ render(); }); };
+    var btn=function(label,on,extra){ return '<button type="button" onclick="'+on+'" style="border:1.5px solid rgba(211,84,0,.3);background:#fff;color:#D35400;border-radius:20px;padding:7px 13px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;'+(extra||'')+'">'+label+'</button>'; };
+    var dbtn=function(label,fn,d,extra){ return '<button type="button" data-d="'+esc(d)+'" onclick="'+fn+'(this.dataset.d)" style="border:1.5px solid rgba(211,84,0,.3);background:#fff;color:#D35400;border-radius:20px;padding:7px 13px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;'+(extra||'')+'">'+label+'</button>'; };
+    var pill=function(label,on,active){ return '<button type="button" onclick="'+on+'" style="border:1.5px solid '+(active?'#D35400':'rgba(211,84,0,.3)')+';background:'+(active?'#D35400':'#fff')+';color:'+(active?'#fff':'#D35400')+';border-radius:20px;padding:7px 13px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">'+label+'</button>'; };
+    var inp=function(id,ph,val,type,extra){ return '<input id="'+id+'" type="'+(type||'text')+'" placeholder="'+esc(ph)+'" value="'+esc(val==null?'':val)+'" style="padding:9px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit;min-width:0;'+(extra||'')+'">'; };
+
+    var render=function(){
+      var b=document.getElementById("nsqOopBody"); if(!b) return;
+      var tour=D.tour, rows=D.rows.map(rowView);
+      var days=[]; rows.forEach(function(x){ if(days.indexOf(x.r.play_day)<0) days.push(x.r.play_day); }); days.sort();
+      if(!UI.day || days.indexOf(UI.day)<0){ var t=todayISO(); UI.day=days.filter(function(d){ return d>=t; })[0]||days[days.length-1]||""; }
+      var h='<div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#7a6658;margin:14px 0 8px">'+esc(tour)+'</div>';
+      /* filters */
+      if(days.length){
+        h+='<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px">'+days.map(function(d){ return pill(fmtDay(d),"nsqOopSet('day','"+d+"')",d===UI.day); }).join("")+'</div>';
+        var vs=[]; rows.forEach(function(x){ if(x.r.play_day===UI.day && vs.indexOf(+x.r.venue_id)<0) vs.push(+x.r.venue_id); });
+        if(vs.length>1) h+='<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px">'+pill("All venues","nsqOopSet('venue',0)",!UI.venue)+vs.map(function(v){ var vv=venueOf(v); return pill(esc(vv?vv.name:("Venue "+v)),"nsqOopSet('venue',"+v+")",UI.venue===v); }).join("")+'</div>';
+        var dvs=[]; rows.forEach(function(x){ if(x.r.play_day===UI.day && dvs.indexOf(x.r.division)<0) dvs.push(x.r.division); });
+        h+='<div style="display:flex;gap:8px;margin:4px 0 8px"><select onchange="nsqOopSet(\'div\',this.value)" style="flex:1;padding:9px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit"><option value="">All divisions</option>'
+          + dvs.sort().map(function(d){ return '<option value="'+esc(d)+'"'+(d===UI.div?' selected':'')+'>'+esc(divLabel(d))+'</option>'; }).join("")+'</select>'
+          + '<input type="search" placeholder="Find a name" value="'+esc(UI.q)+'" oninput="nsqOopQ(this.value)" style="flex:1;padding:9px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit;min-width:0"></div>';
+        h+='<div style="display:flex;gap:8px;margin:0 0 10px">'+btn("\ud83d\udda8 Print","nsqOopPrint()")+btn("\u2b07 Excel","nsqOopCsv()")+'</div>';
+      }
+      /* the schedule for the day */
+      var show=rows.filter(function(x){ return x.r.play_day===UI.day && (!UI.venue||+x.r.venue_id===UI.venue) && (!UI.div||x.r.division===UI.div)
+        && (!UI.q || (x.a+" "+x.b).toLowerCase().indexOf(UI.q)>=0); });
+      if(!rows.length){
+        h+='<div class="card"><h2>Nothing scheduled yet</h2><p class="sub">Once the draws are generated, the organiser allocates each division a venue, courts, a day and a start time below, and the system fills the courts.</p></div>';
+      } else if(!show.length){
+        h+='<div class="card"><p class="sub">No matches match that filter on '+esc(fmtDay(UI.day))+'.</p></div>';
+      } else {
+        var byV={}; show.forEach(function(x){ (byV[x.r.venue_id]=byV[x.r.venue_id]||[]).push(x); });
+        Object.keys(byV).forEach(function(vid){
+          var vv=venueOf(vid), list=byV[vid].slice().sort(function(p,q){ return (tmin(p.r.start_time)-tmin(q.r.start_time))||(p.r.court-q.r.court); });
+          h+='<div class="card"><h2>'+esc(vv?vv.name:("Venue "+vid))+' <span class="tm-divtag">'+esc(fmtDay(UI.day))+'</span></h2>';
+          var brks=D.breaks.filter(function(k){ return +k.venue_id===+vid && k.play_day===UI.day; });
+          var lastT=null;
+          list.forEach(function(x){
+            var t=hhmm(x.r.start_time);
+            if(t!==lastT){
+              brks.forEach(function(k){ var ks=tmin(k.start_time); if(lastT!=null && ks>=tmin(lastT) && ks<tmin(t)) h+='<div style="margin:10px 0 2px;font-size:12px;color:#7a6658;font-weight:700">\u2014 '+esc(k.label||"Break")+' '+hhmm(k.start_time)+' \u00b7 '+k.minutes+' min \u2014</div>'; });
+              h+='<div style="margin:10px 0 4px;font-size:15px;font-weight:800;color:#1f1a2b">'+t+'</div>'; lastT=t; }
+            var canTap=UI.admin;
+            h+='<div '+(canTap?'onclick="nsqOopEdit('+x.r.id+')" style="cursor:pointer;"':'style="')+'display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid #ece7f2;border-radius:10px;margin:4px 0;background:'+(x.played?'#f4f9f4':'#fff')+'">'
+              +'<span style="flex:none;min-width:54px;font-size:11px;font-weight:800;color:#D35400;text-transform:uppercase;letter-spacing:.06em">Court '+x.r.court+'</span>'
+              +'<span style="flex:1;min-width:0"><b style="display:block;font-size:14px;color:#1f1a2b">'+esc(x.a)+' <span style="color:#9a8578;font-weight:600">v</span> '+esc(x.b)+'</b>'
+              +'<span style="font-size:11.5px;color:#7a6658">'+esc(x.label)+(x.r.status==="moved"?' \u00b7 moved':'')+'</span></span>'
+              +(x.played?'<span style="flex:none;font-weight:800;color:#1e8449">'+esc(x.score)+'</span>':'')+'</div>';
+            if(UI.editing===x.r.id) h+=editForm(x);
+          });
+          h+='</div>';
+        });
+      }
+      /* the organiser */
+      h+='<div class="card"><h2 style="cursor:pointer" onclick="nsqOopAdmin()">Organiser <span style="font-size:11px;font-weight:600;color:#888">'+(UI.openAdmin?'\u25b4':'\u25be')+' venues \u00b7 allocation \u00b7 generate</span></h2>'
+        +(UI.openAdmin?adminHtml():'')+'</div>';
+      b.innerHTML=h;
+    };
+
+    /* ---------- organiser ---------- */
+    var adminHtml=function(){
+      var h='<div style="display:flex;gap:8px;margin:4px 0 10px">'+inp("nsqOopPin","Admin code",UI.pin,"password","flex:1")+btn(UI.admin?"Code set":"Use code","nsqOopUsePin()")+'</div>';
+      /* venues */
+      h+='<div style="font-weight:800;margin:8px 0 4px">Venues <span style="font-size:11px;color:#888;font-weight:600">the register\u2019s places of play</span></div>';
+      if(!D.venues.length) h+='<p class="sub">No venues yet.</p>';
+      D.venues.forEach(function(v){ var cl=(W.PLAT.clubs||[]).filter(function(c){ return +c.id===+v.club_id; })[0];
+        h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0ecf6"><span style="flex:1"><b>'+esc(v.name)+'</b> <span style="color:#7a6658;font-size:12px">\u00b7 '+v.courts+' court'+(v.courts!==1?'s':'')+(cl?' \u00b7 '+esc(cl.name):'')+'</span></span>'
+          +'<button onclick="nsqOopVenueEdit('+v.id+')" style="background:none;border:1px solid #c9c4d4;border-radius:6px;color:#555;cursor:pointer;font-size:11px;padding:2px 6px">edit</button>'
+          +'<button onclick="nsqOopVenueRemove('+v.id+')" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:16px;padding:0 4px" title="Remove">\u00d7</button></div>'; });
+      var ev=UI.venueEdit||{};
+      var clubs=(W.PLAT.clubs||[]).filter(function(c){ return c.parent_id && !(W.PLAT.clubs||[]).some(function(x){ return +x.parent_id===+c.id && (W.PLAT.clubs||[]).some(function(y){ return +y.parent_id===+x.id; }); }); });
+      h+='<div style="display:grid;grid-template-columns:1fr 70px;gap:6px;margin:8px 0 4px">'+inp("nsqOopVName","Venue name (Berea, Wanderers\u2026)",ev.name)+inp("nsqOopVCourts","Courts",ev.courts||"","number")
+        +'<select id="nsqOopVClub" style="grid-column:1/3;padding:9px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:13px;font-family:inherit"><option value="">Not a club on the system (a hired venue)</option>'
+        + (W.PLAT.clubs||[]).filter(function(c){ return c.parent_id; }).map(function(c){ return '<option value="'+c.id+'"'+(ev.club_id&&+ev.club_id===+c.id?' selected':'')+'>'+esc(c.name)+'</option>'; }).join("")+'</select>'
+        +'<div style="grid-column:1/3;display:flex;gap:8px">'+btn(ev.id?"Save venue":"Add venue","nsqOopVenueSave()","flex:1")+(ev.id?btn("Cancel","nsqOopVenueEdit(0)"):'')+'</div></div>';
+      /* allocation per division */
+      h+='<div style="font-weight:800;margin:14px 0 4px">Allocation <span style="font-size:11px;color:#888;font-weight:600">each division: venue \u00b7 courts \u00b7 day \u00b7 start \u00b7 slot</span></div>';
+      if(!D.divs.length) h+='<p class="sub">No draws generated yet \u2014 generate a division\u2019s draw first.</p>';
+      var divs=D.divs.slice().sort();
+      divs.forEach(function(d){ var a=D.allocs.filter(function(x){ return x.division===d; })[0], vv=a?venueOf(a.venue_id):null;
+        var n=Object.keys(D.fx).filter(function(id){ return D.fx[id].division===d; }).length, sch=D.rows.filter(function(r){ return r.division===d; }).length;
+        h+='<div style="padding:8px 0;border-bottom:1px solid #f0ecf6"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">'+esc(divLabel(d))+'</b><span style="font-size:11px;color:#7a6658">'+sch+' / '+n+' on the schedule</span></div>'
+          +(a?'<div style="font-size:12.5px;color:#3b2a1e;margin:3px 0">'+esc(vv?vv.name:"?")+' \u00b7 courts '+a.court_from+'\u2013'+a.court_to+' \u00b7 '+esc(fmtDay(a.play_day))+' '+hhmm(a.start_time)+(a.end_time?' to '+hhmm(a.end_time):'')+' \u00b7 '+a.slot_minutes+' min slots</div>':'<div style="font-size:12.5px;color:#b9770e;margin:3px 0">not allocated yet</div>')
+          +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+dbtn(a?"Change":"Allocate","nsqOopAllocEdit",d)+(a?dbtn("Generate","nsqOopGenerate",d)+(sch?dbtn("Clear","nsqOopClear",d):'')+dbtn("Remove","nsqOopAllocRemove",d):'')+'</div>'
+          +(UI.allocEdit===d?allocForm(d,a):'')+'</div>'; });
+      if(D.allocs.length) h+='<div style="display:flex;gap:8px;margin:10px 0 0">'+btn("Generate all allocated divisions","nsqOopGenerate('')","flex:1;background:#D35400;color:#fff")+'</div>';
+      h+='<div id="nsqOopGenMsg" class="sub" style="margin:6px 0 0"></div>';
+      /* breaks */
+      h+='<div style="font-weight:800;margin:14px 0 4px">Breaks in the schedule <span style="font-size:11px;color:#888;font-weight:600">a venue\u2019s day: when, how long</span></div>';
+      D.breaks.forEach(function(k){ var vv=venueOf(k.venue_id);
+        h+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0ecf6"><span style="flex:1;font-size:13px"><b>'+esc(k.label||"Break")+'</b> \u00b7 '+esc(vv?vv.name:"?")+' \u00b7 '+esc(fmtDay(k.play_day))+' '+hhmm(k.start_time)+' \u00b7 '+k.minutes+' min</span>'
+          +'<button onclick="nsqOopBreakRemove('+k.id+')" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:16px;padding:0 4px">\u00d7</button></div>'; });
+      h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0 0">'
+        +'<select id="nsqOopBVenue" style="grid-column:1/3;padding:9px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:13px;font-family:inherit">'+D.venues.map(function(v){ return '<option value="'+v.id+'">'+esc(v.name)+'</option>'; }).join("")+'</select>'
+        +inp("nsqOopBDay","Day","","date")+inp("nsqOopBTime","Start","","time")+inp("nsqOopBMin","Minutes","45","number")+inp("nsqOopBLabel","Label (Lunch)","Lunch")
+        +'<div style="grid-column:1/3">'+btn("Add break","nsqOopBreakAdd()","width:100%")+'</div></div>';
+      h+='<p class="sub" style="margin-top:12px">Generate places every unscheduled match of a division on the next free court and slot \u2014 earliest first, no court double-booked, no player on two courts at once, breaks respected. A knockout\u2019s later rounds are placed when their pairs are known: generate again. Tap a match on the schedule above (with the code set) to move it.</p>';
+      return h;
+    };
+    var allocForm=function(d,a){
+      a=a||{};
+      return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0 2px;padding:10px;background:rgba(211,84,0,.05);border:1px solid #e6e3ec;border-radius:10px">'
+        +'<select id="nsqOopAVenue" onchange="nsqOopAllocVenue()" style="grid-column:1/3;padding:9px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:13px;font-family:inherit">'+(D.venues.length?'':'<option value="">Add a venue first</option>')+D.venues.map(function(v){ return '<option value="'+v.id+'"'+(a.venue_id&&+a.venue_id===+v.id?' selected':'')+'>'+esc(v.name)+' \u00b7 '+v.courts+' courts</option>'; }).join("")+'</select>'
+        +'<label style="font-size:12px;color:#7a6658">Court from '+inp("nsqOopACf","1",a.court_from||1,"number","width:100%")+'</label><label style="font-size:12px;color:#7a6658">Court to '+inp("nsqOopACt","",a.court_to||"","number","width:100%")+'</label>'
+        +'<label style="font-size:12px;color:#7a6658">Day '+inp("nsqOopADay","",a.play_day||"","date","width:100%")+'</label><label style="font-size:12px;color:#7a6658">Start '+inp("nsqOopAStart","",a.start_time?hhmm(a.start_time):"","time","width:100%")+'</label>'
+        +'<label style="font-size:12px;color:#7a6658">Slot (minutes) '+inp("nsqOopASlot","60",a.slot_minutes||"","number","width:100%")+'</label><label style="font-size:12px;color:#7a6658">Last start (optional) '+inp("nsqOopAEnd","",a.end_time?hhmm(a.end_time):"","time","width:100%")+'</label>'
+        +'<div style="grid-column:1/3;display:flex;gap:8px">'+dbtn("Save allocation","nsqOopAllocSave",d,"flex:1")+btn("Cancel","nsqOopAllocEdit(null)")+'</div></div>';
+    };
+    var editForm=function(x){
+      var r=x.r;
+      return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:2px 0 8px;padding:10px;background:rgba(211,84,0,.05);border:1px solid #e6e3ec;border-radius:10px">'
+        +'<select id="nsqOopMVenue" style="grid-column:1/3;padding:9px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:13px;font-family:inherit">'+D.venues.map(function(v){ return '<option value="'+v.id+'"'+(+r.venue_id===+v.id?' selected':'')+'>'+esc(v.name)+'</option>'; }).join("")+'</select>'
+        +'<label style="font-size:12px;color:#7a6658">Court '+inp("nsqOopMCourt","",r.court,"number","width:100%")+'</label><label style="font-size:12px;color:#7a6658">Day '+inp("nsqOopMDay","",r.play_day,"date","width:100%")+'</label>'
+        +'<label style="font-size:12px;color:#7a6658">Time '+inp("nsqOopMTime","",hhmm(r.start_time),"time","width:100%")+'</label><div></div>'
+        +'<div style="grid-column:1/3;display:flex;gap:8px">'+btn("Move match","nsqOopMove("+r.id+")","flex:1")+btn("Cancel","nsqOopEdit(0)")+'</div><div id="nsqOopMoveMsg" class="sub" style="grid-column:1/3"></div></div>';
+    };
+    var pinOk=function(){ if(!UI.admin||!UI.pin){ alert("Type the admin code in the Organiser section first."); return false; } return true; };
+    var msg=function(id,t,bad){ var m=document.getElementById(id); if(m){ m.innerHTML='<span style="color:'+(bad?'#c0392b':'#1e8449')+'">'+esc(t)+'</span>'; } };
+    W.nsqOopUsePin=function(){ var p=(document.getElementById("nsqOopPin")||{}).value||""; UI.pin=p.trim(); UI.admin=!!UI.pin; render(); };
+    W.nsqOopVenueEdit=function(id){ UI.venueEdit=id?D.venues.filter(function(v){ return +v.id===+id; })[0]:null; render(); };
+    W.nsqOopVenueSave=function(){ if(!pinOk()) return; var name=(document.getElementById("nsqOopVName")||{}).value, courts=(document.getElementById("nsqOopVCourts")||{}).value, club=(document.getElementById("nsqOopVClub")||{}).value;
+      var ev=UI.venueEdit||{}; act({action:"oop_save_venue",admin_pin:UI.pin,venue_id:ev.id||null,name:name,courts:courts,venue_club_id:club||null}).then(function(j){ if(!j.ok){ alert(j.error||"Not saved."); return; } UI.venueEdit=null; draw(true); }); };
+    W.nsqOopVenueRemove=function(id){ if(!pinOk()) return; if(!confirm("Remove this venue?")) return; act({action:"oop_remove_venue",admin_pin:UI.pin,venue_id:id}).then(function(j){ if(!j.ok){ alert(j.error||"Not removed."); return; } draw(true); }); };
+    W.nsqOopAllocEdit=function(d){ UI.allocEdit=d; render(); setTimeout(W.nsqOopAllocVenue,0); };
+    W.nsqOopAllocVenue=function(){ try{ var s=document.getElementById("nsqOopAVenue"), ct=document.getElementById("nsqOopACt"); if(!s||!ct) return; var v=venueOf(s.value); if(v && !ct.value) ct.value=v.courts; }catch(e){} };
+    W.nsqOopAllocSave=function(d){ if(!pinOk()) return; var g=function(id){ return (document.getElementById(id)||{}).value||""; };
+      act({action:"oop_save_alloc",admin_pin:UI.pin,tournament:D.tour,division:d,venue_id:g("nsqOopAVenue"),court_from:g("nsqOopACf"),court_to:g("nsqOopACt"),play_day:g("nsqOopADay"),start_time:g("nsqOopAStart"),slot_minutes:g("nsqOopASlot"),end_time:g("nsqOopAEnd")})
+        .then(function(j){ if(!j.ok){ alert(j.error||"Not saved."); return; } UI.allocEdit=null; draw(true); }); };
+    W.nsqOopAllocRemove=function(d){ if(!pinOk()) return; if(!confirm("Remove the allocation for "+divLabel(d)+"? Its scheduled matches are removed from the schedule too.")) return;
+      act({action:"oop_remove_alloc",admin_pin:UI.pin,tournament:D.tour,division:d}).then(function(j){ if(!j.ok){ alert(j.error||"Not removed."); return; } draw(true); }); };
+    W.nsqOopGenerate=function(d){ if(!pinOk()) return; msg("nsqOopGenMsg","Placing the matches\u2026");
+      act({action:"oop_generate",admin_pin:UI.pin,tournament:D.tour,division:d||""}).then(function(j){ if(!j.ok){ msg("nsqOopGenMsg",j.error||"Not generated.",true); return; }
+        var t=(j.report||[]).map(function(r){ return divLabel(r.division)+": "+r.placed+" placed"+(r.unplaced?", "+r.unplaced+" did not fit (more courts, a later last start, or another day)":"")+(r.waiting?", "+r.waiting+" waiting for earlier rounds":""); }).join(" \u00b7 ");
+        draw(true); setTimeout(function(){ msg("nsqOopGenMsg",t||(j.placed+" placed.")); },800); }); };
+    W.nsqOopClear=function(d){ if(!pinOk()) return; if(!confirm("Take "+(d?divLabel(d):"every division")+" off the schedule? The draw itself is untouched.")) return;
+      act({action:"oop_clear",admin_pin:UI.pin,tournament:D.tour,division:d||""}).then(function(j){ if(!j.ok){ alert(j.error||"Not cleared."); return; } draw(true); }); };
+    W.nsqOopBreakAdd=function(){ if(!pinOk()) return; var g=function(id){ return (document.getElementById(id)||{}).value||""; };
+      act({action:"oop_add_break",admin_pin:UI.pin,tournament:D.tour,venue_id:g("nsqOopBVenue"),play_day:g("nsqOopBDay"),start_time:g("nsqOopBTime"),minutes:g("nsqOopBMin"),label:g("nsqOopBLabel")}).then(function(j){ if(!j.ok){ alert(j.error||"Not added."); return; } draw(true); }); };
+    W.nsqOopBreakRemove=function(id){ if(!pinOk()) return; act({action:"oop_remove_break",admin_pin:UI.pin,break_id:id}).then(function(j){ if(!j.ok){ alert(j.error||"Not removed."); return; } draw(true); }); };
+    W.nsqOopEdit=function(id){ UI.editing=id||null; render(); };
+    W.nsqOopMove=function(id){ if(!pinOk()) return; var g=function(k){ return (document.getElementById(k)||{}).value||""; };
+      act({action:"oop_move",admin_pin:UI.pin,oop_id:id,venue_id:g("nsqOopMVenue"),court:g("nsqOopMCourt"),play_day:g("nsqOopMDay"),start_time:g("nsqOopMTime")}).then(function(j){ if(!j.ok){ msg("nsqOopMoveMsg",j.error||"Not moved.",true); return; } UI.editing=null; draw(true); }); };
+
+    /* ---------- print and Excel ---------- */
+    var listForExport=function(){ return D.rows.map(rowView).slice().sort(function(p,q){ return (p.r.play_day<q.r.play_day?-1:p.r.play_day>q.r.play_day?1:0)||(+p.r.venue_id-+q.r.venue_id)||(tmin(p.r.start_time)-tmin(q.r.start_time))||(p.r.court-q.r.court); }); };
+    W.nsqOopPrint=function(){ var L=listForExport(); if(!L.length) return; var w=window.open("","_blank"); if(!w) return;
+      var h='<html><head><title>Order of Play \u2014 '+esc(D.tour)+'</title><style>body{font-family:Arial,sans-serif;font-size:12px;margin:18px}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:16px 0 6px;border-bottom:2px solid #D35400;padding-bottom:2px}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ddd;padding:4px 6px;text-align:left}th{background:#f3eee9}@media print{h2{page-break-after:avoid}}</style></head><body><h1>Order of Play \u2014 '+esc(D.tour)+'</h1>';
+      var key=""; L.forEach(function(x){ var vv=venueOf(x.r.venue_id), k=x.r.play_day+"|"+x.r.venue_id; if(k!==key){ if(key) h+='</table>'; key=k; h+='<h2>'+esc(vv?vv.name:"Venue")+' \u00b7 '+esc(fmtDay(x.r.play_day))+'</h2><table><tr><th>Time</th><th>Court</th><th>Division</th><th>Match</th><th>Score</th></tr>'; }
+        h+='<tr><td>'+hhmm(x.r.start_time)+'</td><td>'+x.r.court+'</td><td>'+esc(x.label)+'</td><td>'+esc(x.a)+' v '+esc(x.b)+'</td><td>'+esc(x.score)+'</td></tr>'; });
+      h+='</table></body></html>'; w.document.write(h); w.document.close(); setTimeout(function(){ try{ w.print(); }catch(e){} },400); };
+    W.nsqOopCsv=function(){ var L=listForExport(); if(!L.length) return; var q=function(s){ return '"'+String(s==null?"":s).replace(/"/g,'""')+'"'; };
+      var lines=["Day,Venue,Time,Court,Division,Pair A,Pair B,Score"]; L.forEach(function(x){ var vv=venueOf(x.r.venue_id); lines.push([x.r.play_day,vv?vv.name:"",hhmm(x.r.start_time),x.r.court,x.label,x.a,x.b,x.score].map(q).join(",")); });
+      var blob=new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"}), a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="order-of-play-"+D.tour.replace(/[^a-z0-9]+/gi,"-").toLowerCase()+".csv"; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500); };
+
+    /* ---------- the button on the tournament page ---------- */
+    setInterval(function(){ try{
+      var box=document.getElementById("tournamentInternal"); if(!box || box.style.display==="none" || box.querySelector("#nsqOopBtn")) return;
+      var grid=box.querySelector(".ladders-grid"); if(!grid) return;
+      var b=document.createElement("button"); b.className="menu-btn"; b.id="nsqOopBtn"; b.style.marginTop="8px"; b.innerHTML="\ud83d\udd52 Order of Play"; b.setAttribute("onclick","nsqOopOpen()");
+      grid.appendChild(b);
+    }catch(e){} }, 600);
+
+    /* ---------- the strip under each fixture on Draw & Rounds ---------- */
+    setInterval(function(){ try{
+      var scr=document.querySelector(".screen.active"); if(!scr) return;
+      var rows=scr.querySelectorAll('tr[onclick^="tmEnterFixtureResult("]'); if(!rows.length) return;
+      var tour=tourNow(); if(!tour) return;
+      load(false).then(function(){
+        if(!D.rows.length) return;
+        var byFx={}; D.rows.forEach(function(r){ byFx[r.fixture_id]=r; });
+        Array.prototype.forEach.call(scr.querySelectorAll('tr[onclick^="tmEnterFixtureResult("]'),function(tr){
+          var m=String(tr.getAttribute("onclick")||"").match(/\((\d+)\)/); var r=m?byFx[m[1]]:null; var next=tr.nextElementSibling, have=next&&next.classList&&next.classList.contains("nsqOopStrip");
+          if(!r){ if(have) next.remove(); return; }
+          var vv=venueOf(r.venue_id), txt=fmtDay(r.play_day)+" \u00b7 "+hhmm(r.start_time)+" \u00b7 "+(vv?vv.name:"")+" \u00b7 Court "+r.court;
+          if(have){ if(next.dataset.txt!==txt){ next.dataset.txt=txt; next.firstChild.textContent=txt; } return; }
+          var s=document.createElement("tr"); s.className="nsqOopStrip"; s.dataset.txt=txt; var td=document.createElement("td"); td.setAttribute("colspan","6");
+          td.style.cssText="font-size:11px;color:#7a6658;padding:0 8px 6px;border-top:none;text-align:left"; td.textContent=txt; s.appendChild(td); tr.parentNode.insertBefore(s, tr.nextSibling);
+        });
+      });
+    }catch(e){} }, 900);
+
+    /* ---------- My page: your matches ---------- */
+    var MINE={at:0,name:"",html:""};
+    setInterval(function(){ try{
+      var q=new URLSearchParams(location.search); if(q.get("go")!=="me") return;
+      var hs=document.getElementById("homeScreen"), nh=document.getElementById("nh"); if(!hs||!hs.classList.contains("active")||!nh) return;
+      var five=nh.querySelector(".five"); if(!five) return;
+      var me=W.__nsqOopMeTest||""; if(!me){ try{ me=localStorage.getItem("opr_me_"+(W.PLAT.parentId||W.PLAT.cid))||""; }catch(e){} }   /* the glue's own key (meKey) */
+      if(!me){ var h1=nh.querySelector("h1"); me=h1?(h1.textContent||"").trim():""; }
+      if(!me) return;
+      var have=document.getElementById("nsqOopMine");
+      if(have && MINE.name===me && Date.now()-MINE.at<60000) return;
+      if(MINE.name===me && Date.now()-MINE.at<60000 && !have){ /* page redrew: put it back */ }
+      else if(MINE.busy) return;
+      else {
+        MINE.busy=true; MINE.name=me;
+        var boards=(W.PLAT.clubs||[]).map(function(c){ return +c.id; }); if(!boards.length){ MINE.busy=false; return; }
+        var today=todayISO(), low=me.toLowerCase();
+        rest("plat_squash_order_of_play?club_id=in.("+boards.join(",")+")&play_day=gte."+today+"&select=*&order=play_day.asc,start_time.asc&limit=2000").then(function(rows){
+          rows=rows||[]; if(!rows.length){ MINE.at=Date.now(); MINE.html=""; MINE.busy=false; return; }
+          var ids=rows.map(function(r){ return r.fixture_id; });
+          return Promise.all([rest("plat_squash_tournament_fixtures?id=in.("+ids.join(",")+")&select=id,club_id,tournament,division,seed_a,seed_b,sets_a,sets_b"),
+                              rest("plat_squash_venues?pool_id=eq."+(W.PLAT.pool||0)+"&select=id,name")]).then(function(r){
+            var fx={}; (r[0]||[]).forEach(function(f){ fx[f.id]=f; }); var vn={}; (r[1]||[]).forEach(function(v){ vn[v.id]=v.name; });
+            var tours={}; Object.keys(fx).forEach(function(k){ tours[fx[k].club_id+"|"+fx[k].tournament]=fx[k]; });
+            return Promise.all(Object.keys(tours).map(function(k){ var f=tours[k]; return rest("plat_squash_tournament_entries?club_id=eq."+f.club_id+"&tournament=eq."+ENC(f.tournament)+"&select=category,seed,p1,p2"); })).then(function(el){
+              var ents={}; var ks=Object.keys(tours); el.forEach(function(list,i){ (list||[]).forEach(function(e){ ents[ks[i]+"|"+e.category+"|"+e.seed]=e; }); });
+              var mine=[]; rows.forEach(function(row){ var f=fx[row.fixture_id]; if(!f) return; var k=f.club_id+"|"+f.tournament;
+                var A=ents[k+"|"+f.division+"|"+f.seed_a], B=ents[k+"|"+f.division+"|"+f.seed_b]; if(!A||!B) return;
+                var inA=[A.p1,A.p2].some(function(n){ return String(n||"").toLowerCase()===low; }), inB=[B.p1,B.p2].some(function(n){ return String(n||"").toLowerCase()===low; });
+                if(!inA && !inB) return; var us=inA?A:B, them=inA?B:A;
+                mine.push({d:row.play_day,t:hhmm(row.start_time),v:vn[row.venue_id]||"",c:row.court,tour:f.tournament,div:divLabel(f.division),partner:[us.p1,us.p2].filter(function(n){ return n && String(n).toLowerCase()!==low; })[0]||"",them:them.p1+(them.p2?" & "+them.p2:""),played:f.sets_a!=null,score:f.sets_a!=null?(f.sets_a+"-"+f.sets_b):""}); });
+              mine.sort(function(a,b){ return (a.d<b.d?-1:a.d>b.d?1:0)||(a.t<b.t?-1:a.t>b.t?1:0); });
+              MINE.at=Date.now(); MINE.busy=false;
+              if(!mine.length){ MINE.html=""; return; }
+              MINE.html='<h2>Your matches</h2><div class="rows">'+mine.map(function(m){ return '<div class="row" style="cursor:default"><span class="nm"><b>'+esc(fmtDay(m.d))+' \u00b7 '+esc(m.t)+' \u00b7 '+esc(m.v)+' \u00b7 Court '+m.c+'</b><span>'+(m.partner?'with '+esc(m.partner)+' \u00b7 ':'')+'v '+esc(m.them)+' \u00b7 '+esc(m.div)+' \u00b7 '+esc(m.tour)+'</span></span>'+(m.played?'<span class="val"><b>'+esc(m.score)+'</b></span>':'')+'</div>'; }).join("")+'</div>';
+            });
+          });
+        }).then(function(){ place(); }).catch(function(){ MINE.busy=false; });
+        return;
+      }
+      place();
+      function place(){ var nh2=document.getElementById("nh"), f2=nh2&&nh2.querySelector(".five"); if(!f2) return; var old=document.getElementById("nsqOopMine"); if(old) old.remove(); if(!MINE.html) return;
+        var host=document.createElement("div"); host.className="brk"; host.id="nsqOopMine"; host.innerHTML=MINE.html; f2.parentNode.insertBefore(host, f2.nextSibling); }
+    }catch(e){} }, 1200);
   })();
 
 })();</script>
