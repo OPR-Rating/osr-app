@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q129";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q130";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -20073,6 +20073,32 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       }catch(err){ try{ console.warn("q116 entries", err); }catch(e){} }
       return out;
     };
+
+    /* ---- 7. q130 (Andre): on Draw & Rounds, the division pills whose draw is GENERATED are coloured green, so the live
+       draws stand apart from the divisions still to be activated ---- */
+    var LIVE={tour:"",at:0,set:null,busy:false};
+    var liveDivs=function(tour){
+      if(LIVE.tour===tour && Date.now()-LIVE.at<20000 && LIVE.set) return Promise.resolve(LIVE.set);
+      if(LIVE.busy) return Promise.resolve(null); LIVE.busy=true;
+      return sbGet("tournament_fixtures?select=division&club_id=eq."+cid()+"&tournament=eq."+ENC(tour)).then(function(r){
+        var st={}; (Array.isArray(r)?r:[]).forEach(function(f){ if(f.division) st[f.division]=1; });
+        LIVE={tour:tour,at:Date.now(),set:st,busy:false}; return st; }).catch(function(){ LIVE.busy=false; return null; });
+    };
+    if(!document.getElementById("nsqLiveCss")){ var cs=document.createElement("style"); cs.id="nsqLiveCss";
+      cs.textContent=".tm-divbar button.nsqLive{background:#e6f4ea;border-color:#2e7d32;color:#1b5e20}.tm-divbar button.nsqLive.active{background:#2e7d32;border-color:#2e7d32;color:#fff}.tm-divbar button.nsqLive::before{content:'\\25CF';font-size:9px;margin-right:6px;vertical-align:1px}";
+      document.head.appendChild(cs); }
+    setInterval(function(){ try{
+      var bar=document.querySelector("#tournamentScreen.active .tm-divbar:not(.cl-divbar), .screen.active .tm-divbar:not(.cl-divbar)"); if(!bar) return;
+      var tour=(W._tmCtx&&W._tmCtx.tournament)||W.TOURNAMENT_EVENT||""; if(!tour) return;
+      if(bar.dataset.nsqLiveTour===tour && Date.now()-Number(bar.dataset.nsqLiveAt||0)<20000) return;
+      liveDivs(tour).then(function(st){ if(!st) return; bar.dataset.nsqLiveTour=tour; bar.dataset.nsqLiveAt=String(Date.now());
+        Array.prototype.forEach.call(bar.querySelectorAll("button"),function(b){
+          var m=String(b.getAttribute("onclick")||"").match(/tmPickDivision\('(?:[^'\\]|\\.)*','((?:[^'\\]|\\.)*)'\)/); var d=m?m[1].replace(/\\'/g,"'"):"";
+          if(d && st[d]) b.classList.add("nsqLive"); else b.classList.remove("nsqLive"); });
+        if(!bar.querySelector(".nsqLiveKey")){ var k=document.createElement("div"); k.className="nsqLiveKey"; k.style.cssText="flex-basis:100%;font-size:11px;color:#1b5e20;padding:2px 2px 0";
+          k.textContent="\u25CF green = draw generated \u00b7 outlined = still to be activated"; bar.appendChild(k); }
+      });
+    }catch(e){} }, 700);
 
     /* ---- 6. BLOCK ENTRY (q125): parse \u2192 look up \u2192 show the table \u2192 one save, then pre-pairs ---- */
     var BLK={rows:[]};
