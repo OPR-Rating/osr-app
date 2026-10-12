@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q128";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q129";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -20043,10 +20043,22 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         if(gen){ var blocks=Array.prototype.filter.call(gen.children,function(x){ var bb=x.querySelector&&x.querySelector("b"); return bb && /^(Men's|Ladies|Mixed|All Sorts)( - |$)/.test((bb.textContent||"").trim()); });
           blocks.forEach(function(x){ var bb=x.querySelector("b"), t=bb.textContent.trim(); if(secOf(t)) bb.textContent=W.tmDivLabel(t);
             var slot=list?list.querySelector('.nsqDivGen[data-sec="'+t.replace(/"/g,'&quot;')+'"]'):null;
-            if(slot && baseOf(t)===base){ x.style.display=""; x.style.marginTop="6px"; slot.appendChild(x); } else x.style.display="none"; });
-          var ph=gen.querySelector("h2"); if(ph) ph.textContent="Admin code";
-          var ps=gen.querySelector("p.sub"); if(ps) ps.textContent="Type the admin code once, then generate each division\u2019s draw from its own block below. Generating closes that division\u2019s entry.";
-          if(list && gen.parentNode===list.parentNode) list.parentNode.insertBefore(gen, list); }
+            if(slot && baseOf(t)===base){ x.style.display=""; x.style.marginTop="6px"; slot.appendChild(x);
+              /* q129 (Andre): the admin code is typed right where the draw is generated — each block has its own box, kept in
+                 step with the page's one; the result message shows under that block too */
+              var gb=Array.prototype.filter.call(x.querySelectorAll("button"),function(b2){ return /^Generate/.test((b2.innerText||"").trim()); })[0];
+              if(gb && !x.querySelector(".nsqDivPin")){
+                var pe=document.getElementById("etPin"), row=document.createElement("div"); row.style.cssText="display:flex;gap:8px;align-items:center;margin:8px 0 6px";
+                row.innerHTML='<input type="password" class="nsqDivPin" placeholder="Admin code" value="'+esc(pe?pe.value:"")+'" style="flex:1;min-width:0;padding:9px 10px;border:1.5px solid #B8480A;border-radius:8px;font-size:14px">';
+                gb.parentNode.insertBefore(row, gb); row.appendChild(gb); gb.style.flex="1";
+                var pin2=row.querySelector(".nsqDivPin"); pin2.addEventListener("input",function(){ var pe2=document.getElementById("etPin"); if(pe2) pe2.value=pin2.value; Array.prototype.forEach.call(document.querySelectorAll(".nsqDivPin"),function(o){ if(o!==pin2) o.value=pin2.value; }); });
+                var note=document.createElement("div"); note.className="sub nsqDivMsg"; note.style.margin="4px 0 0"; x.appendChild(note);
+                var prev=""; gb.addEventListener("pointerdown",function(){ var gm=document.getElementById("etGenMsg"); prev=gm?(gm.innerHTML||""):""; note.innerHTML=""; });
+                gb.addEventListener("click",function(){ var n=0; (function tick(){ var gm=document.getElementById("etGenMsg"), cur=gm?(gm.innerHTML||""):"";
+                  if(cur && cur!==prev){ note.innerHTML=cur; return; } if(++n<40) setTimeout(tick,200); else if(cur) note.innerHTML=cur; })(); });
+              } } else x.style.display="none"; });
+          /* q129: the page's own code box is no longer needed on screen — each block carries one; the card is hidden */
+          gen.style.display="none"; }
         /* ---- 6. BLOCK ENTRY (q125, Andre): the organiser pastes a list of names in pair order ---- */
         if(ec && !document.getElementById("nsqBlk")){
           var blk=document.createElement("div"); blk.className="card"; blk.id="nsqBlk";
