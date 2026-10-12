@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q124";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q125";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -18530,6 +18530,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     W.__nsqTeamBand=function(p1,p2){ var d=decTeam(namesOf(p1,p2)); return d?{label:d.label, sort:d.sort}:null; };
     W.__nsqBandsReady=function(){ return DEC.bands.length>0 && Object.keys(DEC.people).length>0; };
     W.__nsqBandList=function(){ return DEC.bands.slice().sort(function(a,b){ return a.sort-b.sort; }); };
+    W.__nsqPerson=function(n){ return DEC.people[String(n||"").trim().toLowerCase()]||null; };   /* q125: block entry looks names up on the register */
     W.__nsqDecLoad=function(){ try{ DEC.at=0; decLoad(true); }catch(e){} };
     W.__nsqSaveBoard=function(body, cid){
       try{
@@ -19762,6 +19763,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     function levelOf(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0];
       if(!id || !me) return "national"; if(!me.parent_id) return "province";
       var par=cs.filter(function(c){ return +c.id===+me.parent_id; })[0]; return (par&&par.parent_id)?"division":"club"; }
+    W.__nsqLevelOf=levelOf;   /* q125: block entry asks which board a tournament is on */
     function provOf(id){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+id; })[0]; if(!me) return null;
       if(!me.parent_id) return me; return cs.filter(function(c){ return +c.id===+me.parent_id; })[0]||null; }
     function load(){
@@ -20037,8 +20039,93 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           blocks.sort(function(a,b){ var A=a.querySelector("b").textContent.trim(), B=b.querySelector("b").textContent.trim(), ia=BASES.indexOf(baseOf(A)), ib=BASES.indexOf(baseOf(B));
             return (ia-ib) || (bandSort(secOf(A))-bandSort(secOf(B))); });
           blocks.forEach(function(x){ var bb=x.querySelector("b"), t=bb.textContent.trim(); if(secOf(t)) bb.textContent=W.tmDivLabel(t); if(tail) gen.insertBefore(x, tail); else gen.appendChild(x); }); }
+        /* ---- 6. BLOCK ENTRY (q125, Andre): the organiser pastes a list of names in pair order ---- */
+        if(ec && !document.getElementById("nsqBlk")){
+          var blk=document.createElement("div"); blk.className="card"; blk.id="nsqBlk";
+          blk.innerHTML='<h2 style="cursor:pointer" onclick="nsqBlkFold()">Block entry <span style="font-size:11px;font-weight:600;color:#888">\u25be a list of names</span></h2>'
+            +'<div id="nsqBlkBody" style="display:none">'
+            +'<p class="sub">Paste the names in pair order \u2014 <b>Andre Farrell, Jeff Tseng, \u2026</b> or one pair per line as <b>Andre Farrell &amp; Jeff Tseng</b>. Every name must be on the register. Two men \u2192 Men\u2019s, two ladies \u2192 Ladies, one of each \u2192 Mixed; each pair goes to its higher player\u2019s division.</p>'
+            +'<textarea id="nsqBlkTxt" rows="6" placeholder="Andre Farrell, Jeff Tseng, \u2026" style="width:100%;box-sizing:border-box;padding:10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit"></textarea>'
+            +'<div style="display:flex;gap:8px;margin:10px 0"><button class="btn btn-primary" onclick="nsqBlkCheck()" style="flex:1">Check the list</button></div>'
+            +'<div id="nsqBlkOut"></div></div>';
+          ec.parentNode.insertBefore(blk, ec.nextSibling);
+        }
       }catch(err){ try{ console.warn("q116 entries", err); }catch(e){} }
       return out;
+    };
+
+    /* ---- 6. BLOCK ENTRY (q125): parse \u2192 look up \u2192 show the table \u2192 one save, then pre-pairs ---- */
+    var BLK={rows:[]};
+    W.nsqBlkFold=function(){ var b=document.getElementById("nsqBlkBody"); if(b) b.style.display=(b.style.display==="none")?"":"none"; };
+    var blkNames=function(txt){ var out=[]; String(txt||"").split(/\r?\n/).forEach(function(line){ line.split(/\s*(?:,|&|;|\t| and )\s*/i).forEach(function(n){ n=n.replace(/\s+/g," ").trim(); if(n) out.push(n); }); }); return out; };
+    var blkRate=function(p){ return Math.round(p.current_rating!=null?p.current_rating:(p.seed_rating!=null?p.seed_rating:0)); };
+    var blkLady=function(g){ return /^[FLW]/i.test(String(g||"")); };
+    W.nsqBlkCheck=async function(){
+      var out=document.getElementById("nsqBlkOut"), tour=W._etTournament; if(!out||!tour) return;
+      out.innerHTML='<p class="sub">Checking the register\u2026</p>';
+      var names=blkNames((document.getElementById("nsqBlkTxt")||{}).value);
+      if(!names.length){ out.innerHTML='<p class="sub" style="color:#c0392b">Nothing to check \u2014 paste the names first.</p>'; return; }
+      if(names.length%2){ out.innerHTML='<p class="sub" style="color:#c0392b">An odd number of names ('+names.length+') \u2014 every pair needs two. Last name read: '+esc(names[names.length-1])+'.</p>'; return; }
+      await waitBands();
+      var all=await getEntries(tour), inCat={}; all.forEach(function(r){ var b=baseOf(r.category); (inCat[b]=inCat[b]||{})[String(r.p1).toLowerCase()]=1; if(r.p2) inCat[b][String(r.p2).toLowerCase()]=1; });
+      var rows=[], missing=[], seen={}, i;
+      for(i=0;i<names.length;i+=2){
+        var a=names[i], b=names[i+1], pa=W.__nsqPerson?W.__nsqPerson(a):null, pb=W.__nsqPerson?W.__nsqPerson(b):null;
+        if(!pa) missing.push(a); if(!pb) missing.push(b); if(!pa||!pb) continue;
+        a=pa.full_name; b=pb.full_name;                                                  /* the register's spelling */
+        var cat=(blkLady(pa.gender)&&blkLady(pb.gender))?"Ladies":(!blkLady(pa.gender)&&!blkLady(pb.gender))?"Men's":"Mixed";
+        var d=W.__nsqTeamBand?W.__nsqTeamBand(a,b):null, why="";
+        if(a===b) why="the same name twice";
+        else if(!d) why="no division (is each player rated?)";
+        else if(seen[cat+"|"+a.toLowerCase()]||seen[cat+"|"+b.toLowerCase()]) why="a name is already in another "+cat+" pair on this list";
+        else if(inCat[cat]&&(inCat[cat][a.toLowerCase()]||inCat[cat][b.toLowerCase()])) why="already entered in "+cat;
+        if(!why){ seen[cat+"|"+a.toLowerCase()]=1; seen[cat+"|"+b.toLowerCase()]=1; }
+        var hi=(blkRate(pa)>=blkRate(pb))?[a,b]:[b,a];
+        rows.push({p1:hi[0],p2:hi[1],category:cat+" - "+(d?d.label:""),base:cat,div:d?d.label:"",seed_rating:(typeof TM!=="undefined"&&TM.pairRating)?TM.pairRating(blkRate(pa),blkRate(pb),cat):Math.round(Math.max(blkRate(pa),blkRate(pb))*0.6+Math.min(blkRate(pa),blkRate(pb))*0.4),why:why,r1:blkRate(pa),r2:blkRate(pb)});
+      }
+      BLK.rows=rows.filter(function(r){ return !r.why; });
+      var h='';
+      if(missing.length) h+='<p class="sub" style="color:#c0392b"><b>Not on the register:</b> '+esc(missing.join(", "))+'. Nothing is saved until the list is clean.</p>';
+      if(rows.length){
+        h+='<table style="margin:6px 0"><thead><tr><th>Pair</th><th>Category</th><th>Division</th><th class="num">Rating</th></tr></thead><tbody>';
+        rows.forEach(function(r){ h+='<tr'+(r.why?' style="color:#b9770e"':'')+'><td><b>'+esc(r.p1+" & "+r.p2)+'</b>'+(r.why?'<div style="font-size:11px">'+esc(r.why)+'</div>':'')+'</td><td>'+esc(r.base)+'</td><td>'+esc(r.div)+'</td><td class="num">'+Math.round(r.seed_rating)+'</td></tr>'; });
+        h+='</tbody></table>';
+      }
+      if(!missing.length && BLK.rows.length){
+        var skip=rows.length-BLK.rows.length;
+        h+='<p class="sub">'+BLK.rows.length+' pair'+(BLK.rows.length!==1?'s':'')+' ready'+(skip?(' \u00b7 '+skip+' skipped (see the notes)'):'')+'. The admin code is needed to enter them.</p>'
+          +'<div style="display:flex;gap:8px"><input id="nsqBlkPin" type="password" placeholder="Admin code" style="flex:1;padding:10px;border:1.5px solid #B8480A;border-radius:8px;font-size:15px"><button class="btn btn-primary" onclick="nsqBlkSave()" style="flex:1">Enter '+BLK.rows.length+' pair'+(BLK.rows.length!==1?'s':'')+'</button></div><div id="nsqBlkMsg" class="sub"></div>';
+      }
+      out.innerHTML=h||'<p class="sub">Nothing read.</p>';
+      var pe=document.getElementById("etPin"), bp=document.getElementById("nsqBlkPin"); if(pe&&bp&&pe.value) bp.value=pe.value;
+    };
+    W.nsqBlkSave=async function(){
+      var msg=document.getElementById("nsqBlkMsg"), pin=((document.getElementById("nsqBlkPin")||{}).value||"").trim(), tour=W._etTournament;
+      if(!pin){ msg.innerHTML='<span style="color:#c0392b">Type the admin code first.</span>'; return; }
+      if(!BLK.rows.length||!tour) return;
+      msg.textContent="Entering "+BLK.rows.length+" pairs\u2026";
+      var rows=BLK.rows.map(function(r){ return {p1:r.p1,p2:r.p2,category:r.category,seed_rating:r.seed_rating}; }), j={};
+      try{ var x=await _f.call(W, SB_URL+"/functions/v1/tournament",{method:"POST",headers:{apikey:SB_ANON,Authorization:"Bearer "+SB_ANON,"Content-Type":"application/json"},
+        body:JSON.stringify({action:"block_entry",club_id:cid(),admin_pin:pin,tournament:tour,rows:rows})}); j=await x.json().catch(function(){ return {}; }); if(!x.ok&&!j.error) j.error="Not saved ("+x.status+")"; }catch(e){ j={error:"Connection problem \u2014 nothing was entered."}; }
+      if(!j||j.ok!==true){ msg.innerHTML='<span style="color:#c0392b">'+esc((j&&j.error)||"Not saved.")+'</span>'; return; }
+      var h='<span style="color:#1e8449;font-weight:800">'+Number(j.added||0)+' pair'+(j.added!==1?'s':'')+' entered.</span>';
+      if(j.skipped&&j.skipped.length) h+=' <span style="color:#b9770e">'+j.skipped.length+' not entered: '+esc(j.skipped.map(function(s){ return s.p1+" & "+s.p2+" ("+s.why+")"; }).join("; "))+'</span>';
+      /* pre-pairs (q057): at a club (or one of its divisions) the entered pairs are created as pre-pairs so they show in Ratings;
+         a province or national event has no club of its own, so each club creates its pairs itself */
+      var made=0, cs=(W.PLAT&&W.PLAT.clubs)||[], me=cs.filter(function(c){ return +c.id===+cid(); })[0], lvl=(W.__nsqLevelOf?W.__nsqLevelOf(+cid()):""), club=0;
+      if(lvl==="club") club=+cid(); else if(lvl==="division"&&me&&me.parent_id) club=+me.parent_id;
+      if(club && j.entered && j.entered.length){
+        msg.innerHTML=h+' Creating pre-pairs\u2026';
+        for(var k=0;k<j.entered.length;k++){ var r=j.entered[k];
+          try{ var rr=await _f.call(W, SB_URL+"/rest/v1/rpc/nsq_add_pair",{method:"POST",headers:{apikey:SB_ANON,Authorization:"Bearer "+SB_ANON,"Content-Type":"application/json"},
+            body:JSON.stringify({p_club:club,p_pin:pin,p_category:baseOf(r.category),p_p1:r.p1,p_p2:r.p2})}); var jj=await rr.json().catch(function(){ return {}; }); if(jj&&jj.ok===true) made++; }catch(e){}
+        }
+        h+=' <span style="color:#6b6b76">'+made+' pre-pair'+(made!==1?'s':'')+' created in Ratings'+(made<j.entered.length?' (the rest already existed in their category)':'')+'.</span>';
+      }
+      msg.innerHTML=h; BLK.rows=[]; var ta=document.getElementById("nsqBlkTxt"); if(ta) ta.value="";
+      var pe=document.getElementById("etPin"); if(pe&&!pe.value) pe.value=pin;
+      W.__nsqLastPlaced={at:Date.now(), html:h};                                     /* the page redraws with the lists; the note stays */
+      setTimeout(function(){ W.renderEnterScreen(); }, 1200);
     };
   })();
 
