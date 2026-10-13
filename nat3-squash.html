@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q142";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q143";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -20977,6 +20977,74 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         if(on){ sliderRow.style.display="none"; var fl=sliderRow.nextElementSibling; if(fl && /Format:/.test(fl.textContent||"")) fl.innerHTML='Format: <b style="color:var(--purple,#D35400);">True Swiss</b> <span style="color:#aaa;">(seeded opening, paired on results)</span>'; }
       });
     }catch(e){} }, 600);
+  })();
+
+  /* ===================================================================================================================
+     NAT-SQUASH q143 · THE CLUB'S TOURNAMENT ON EVERY SCORE SHEET (Andre, 14 Oct). A score sheet opened on a division —
+     the club door opens on its first division — read only that division's tournaments, so the club's tournament was
+     missing from "Event". Now the club's tournaments are listed too; picking one opens the club's own score sheet with
+     the event chosen (the route the front door already uses). And once a tournament is the event, the player pickers
+     put the TOURNAMENT'S ENTRANTS first — 80 names, not the whole province — with everyone else below a divider.
+     =================================================================================================================== */
+  (function(){
+    var W=window;
+    var esc=function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+    var cs=function(){ return W.PLAT.clubs||[]; };
+    var byId=function(id){ return cs().filter(function(c){ return +c.id===+id; })[0]||null; };
+    var level=function(id){ return W.__nsqLevelOf?W.__nsqLevelOf(Number(id)):""; };
+    var cidNow=function(){ try{ return Number(W.PLAT.cid)||CLUB_ID; }catch(e){ return 0; } };
+    var PAGEN=function(){ return (location.pathname.split("/").pop()||"nat3-squash.html"); };
+
+    /* ---- 1. the Event dropdown: the club's tournaments on a division's sheet ---- */
+    (function(){ var f0=W.loadActiveTournaments; if(typeof f0!=="function") return;
+      W.loadActiveTournaments=async function(){
+        var out=await f0.apply(this, arguments);
+        try{
+          var cid=cidNow(); if(level(cid)!=="division") return out;
+          var me=byId(cid), club=me&&me.parent_id?+me.parent_id:0; if(!club) return out;
+          var sel=document.getElementById("matchEvent"); if(!sel) return out;
+          var rows=await sbGet("tournaments?select=name,active,archived&active=eq.true&archived=eq.false&club_id=eq."+club+"&order=id.desc").catch(function(){ return []; });
+          var have={}; Array.prototype.forEach.call(sel.options,function(o){ have[o.value]=1; });
+          var first=Array.prototype.filter.call(sel.options,function(o){ return o.value==="Social"; })[0]||null;
+          (rows||[]).forEach(function(t){ if(have[t.name]) return; var o=document.createElement("option"); o.value=t.name; o.textContent=t.name+" · "+(byId(club)||{}).name; o.setAttribute("data-nsq-club",String(club)); sel.insertBefore(o, first); });
+          if(!sel.dataset.nsqHop){ sel.dataset.nsqHop="1";
+            sel.addEventListener("change",function(){ var o=sel.options[sel.selectedIndex]; var hop=o&&o.getAttribute("data-nsq-club"); if(!hop) return;
+              var href=PAGEN()+"?club="+hop+"&board=1&go=entry&tn="+encodeURIComponent(o.value)+"&back="+encodeURIComponent("?club="+cid);
+              if(W.nhNav) W.nhNav(href); else location.href=href; }); }
+        }catch(e){}
+        return out; }; })();
+
+    /* ---- 2. the player pickers: the tournament's entrants first ---- */
+    var ENT={tour:"",at:0,names:null,busy:false};
+    var entrants=function(tour){
+      if(ENT.tour===tour && ENT.names && Date.now()-ENT.at<60000) return Promise.resolve(ENT.names);
+      if(ENT.busy) return Promise.resolve(ENT.names||null); ENT.busy=true;
+      var cid=cidNow(), me=byId(cid), ids=[cid]; if(me&&me.parent_id) ids.push(+me.parent_id);
+      return sbGet("tournament_entries?select=p1,p2&tournament=eq."+encodeURIComponent(tour)+"&club_id=in.("+ids.join(",")+")").then(function(rows){
+        var m={}; (Array.isArray(rows)?rows:[]).forEach(function(r){ if(r.p1) m[String(r.p1).trim()]=1; if(r.p2) m[String(r.p2).trim()]=1; });
+        ENT={tour:tour,at:Date.now(),names:m,busy:false}; return m; }).catch(function(){ ENT.busy=false; return ENT.names||null; });
+    };
+    (function(){ var f0=W.openPlayerModal; if(typeof f0!=="function") return;
+      W.openPlayerModal=async function(fieldId,label){
+        var out=await f0.apply(this, arguments);
+        try{
+          var ev=String((W.entryData&&W.entryData.event)||(typeof entryData!=="undefined"&&entryData&&entryData.event)||"").trim();
+          if(!ev || ev==="Social" || ev==="Ladder Match") return out;
+          var m=await entrants(ev); if(!m) return out;
+          var list=W._currentModalPlayers||(typeof _currentModalPlayers!=="undefined"?_currentModalPlayers:null); if(!list||!list.length) return out;
+          var inT=list.filter(function(p){ return m[String(p).trim()]; }), rest=list.filter(function(p){ return !m[String(p).trim()]; });
+          if(!inT.length) return out;
+          var ordered=inT.concat(rest);
+          try{ _currentModalPlayers=ordered; }catch(e){} W._currentModalPlayers=ordered;
+          var q=(document.getElementById("playerModalSearch")||{}).value||""; if(q.trim()) return out;
+          renderModalList(ordered);
+          var box=document.getElementById("playerModalList"); if(box && rest.length){
+            var items=box.querySelectorAll(".player-modal-item"); if(items.length>inT.length){
+              var hd=document.createElement("div"); hd.style.cssText="padding:8px 12px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#7a6658;background:#f3eee9";
+              hd.textContent="In "+ev; box.insertBefore(hd, items[0]);
+              var hd2=hd.cloneNode(); hd2.textContent="Everyone else"; box.insertBefore(hd2, items[inT.length]); } }
+        }catch(e){}
+        return out; }; })();
   })();
 
 })();</script>
