@@ -918,7 +918,7 @@ st0.textContent += "html{overflow-y:scroll}";   // p98: the scrollbar's space is
              and says so. A GROUP still has no door: it is a board. */
           /* Nat-Squash: a club under a province is a door even before it has divisions (its parent has no parent) */
           var isClubRung = (W.PLAT.kids.length>0) || (W.NEWAPP && !W.PLAT.parentId) || (W.NEWAPP && W.PLAT.parentId && !pm[W.PLAT.parentId]);
-          try{ localStorage.setItem("plat_nat_isclub_"+CID, W.PLAT.parentId?"0":"1"); }catch(e){}
+          try{ if(Object.keys(pm).length) localStorage.setItem("plat_nat_isclub_"+CID, W.PLAT.parentId?"0":"1"); }catch(e){}   /* q146: only when the parent map is known */
           W.PLAT.clubDoor=(CID>0 && !BOARDQ && isClubRung);
           /* n29: WHO HAS ACTUALLY PLAYED HERE. A board listed every member, the ledger only those who have
              played, so a registered-but-unplayed member sat in the board's ratings table and pushed everyone
@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q145";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q146";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -12094,6 +12094,7 @@ W.mePair=function(name,col){
      half the height of the door's cards. Tap one → that group's entry sheet. */
   function newPickPage(){
     var C=W.PLAT.cid; var club=(W.PLAT.clubs||[]).filter(function(c){ return Number(c.id)===Number(C); })[0]||{name:W.PLAT.name||"Club"};
+    try{ if(W.__nsqLevelOf && W.__nsqLevelOf(Number(C))==="division"){ W.nhNav(PAGE+"?club="+C+"&go=entry",{replace:true}); return; } }catch(e){}   /* q146: a division has no chooser — its own sheet */
     var w=nhWrap(); if(!w) return;
     var raw=clubRaw(C), first=inkSafe(raw||W.PLAT.colour||"#D35400");
     nhCSS(); nhOneWayIn(); nhInk(first); nhHeaderSkin(first, nhDeep(first));
@@ -14044,6 +14045,7 @@ W.nhOpenPair=function(name){
        same chooser the door uses. */
     /* a DOOR is not a board: standing there, the app cannot know which board you mean, so it asks */
     var onBoard=(Number(here)>0 && !W.PLAT.clubDoor);   /* a door or a ledger cannot know which board you mean */
+    try{ if(Number(here)>0 && W.__nsqLevelOf && W.__nsqLevelOf(Number(here))==="division") onBoard=true; }catch(e){}   /* q146 */
     var homeHref=regOnly?(PAGE+"?pool="+W.PLAT.pool):(PAGE+"?club="+C);
     bar.innerHTML='<a class="on" href="'+homeHref+'">'+ic.home+(regOnly?"Register":"Club home")+'</a>'
       + (onBoard ? ('<a href="'+PAGE+'?club='+here+board+'&go=entry">'+ic.score+'Enter a score</a>')
