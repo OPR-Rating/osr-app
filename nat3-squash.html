@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q143";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q145";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -20141,8 +20141,15 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         Array.prototype.forEach.call(bar.querySelectorAll("button"),function(b){
           var m=String(b.getAttribute("onclick")||"").match(/tmPickDivision\('(?:[^'\\]|\\.)*','((?:[^'\\]|\\.)*)'\)/); var d=m?m[1].replace(/\\'/g,"'"):"";
           if(d && st[d]) b.classList.add("nsqLive"); else b.classList.remove("nsqLive"); });
+        /* q144 (Andre): the pills sit side by side — when every pill is "<category> · <section>", the category is said once
+           in the key line and the pills carry just the section; tighter padding so four fit on a phone */
+        try{ var bs=Array.prototype.filter.call(bar.querySelectorAll("button"),function(b){ return /tmPickDivision\(/.test(String(b.getAttribute("onclick")||"")); });
+          var pre=null, ok=bs.length>1; bs.forEach(function(b){ var t=(b.dataset.nsqFull||b.textContent||"").replace(/^\u25CF\s*/,"").trim(); b.dataset.nsqFull=t; var i=t.indexOf(" \u00b7 "); var p0=i>0?t.slice(0,i):null; if(!p0){ ok=false; return; } if(pre===null) pre=p0; else if(pre!==p0) ok=false; });
+          bs.forEach(function(b){ var t=b.dataset.nsqFull||""; b.textContent=(ok&&pre)?t.slice(pre.length+3):t; b.style.padding="7px 12px"; b.style.fontSize="12.5px"; });
+          bar.dataset.nsqPre=(ok&&pre)?pre:""; }catch(e){}
         if(!bar.querySelector(".nsqLiveKey")){ var k=document.createElement("div"); k.className="nsqLiveKey"; k.style.cssText="flex-basis:100%;font-size:11px;color:#1b5e20;padding:2px 2px 0";
-          k.textContent="\u25CF green = draw generated \u00b7 outlined = still to be activated"; bar.appendChild(k); }
+          bar.appendChild(k); }
+        var kk=bar.querySelector(".nsqLiveKey"); if(kk) kk.textContent=(bar.dataset.nsqPre?(bar.dataset.nsqPre+" \u2014 "):"")+"\u25CF green = draw generated \u00b7 outlined = still to be activated";
       });
     }catch(e){} }, 700);
 
@@ -21031,8 +21038,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           var ev=String((W.entryData&&W.entryData.event)||(typeof entryData!=="undefined"&&entryData&&entryData.event)||"").trim();
           if(!ev || ev==="Social" || ev==="Ladder Match") return out;
           var m=await entrants(ev); if(!m) return out;
-          var list=W._currentModalPlayers||(typeof _currentModalPlayers!=="undefined"?_currentModalPlayers:null); if(!list||!list.length) return out;
-          var inT=list.filter(function(p){ return m[String(p).trim()]; }), rest=list.filter(function(p){ return !m[String(p).trim()]; });
+          var list=W._currentModalPlayers||(typeof _currentModalPlayers!=="undefined"?_currentModalPlayers:null); list=list||[];
+          /* q145: EVERY entrant, not only the ones on this board's own list — the tournament's players come from every club */
+          var ids=["t1p1","t1p2","t2p1","t2p2"], taken={}; ids.forEach(function(id){ if(id===fieldId) return; var el=document.getElementById(id+"_val"); if(el&&el.value) taken[String(el.value).trim()]=1; });
+          var inT=Object.keys(m).filter(function(n){ return !taken[n]; }).sort(function(a,b){ return a.localeCompare(b); });
+          var rest=list.filter(function(p){ return !m[String(p).trim()]; });
           if(!inT.length) return out;
           var ordered=inT.concat(rest);
           try{ _currentModalPlayers=ordered; }catch(e){} W._currentModalPlayers=ordered;
