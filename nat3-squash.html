@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q132";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q136";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -19887,17 +19887,19 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var esc=function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
     var baseOf=function(c){ c=String(c||"").trim(); var i=c.indexOf(" - "); return i>0?c.slice(0,i).trim():c; };
     var secOf=function(c){ c=String(c||"").trim(); var i=c.indexOf(" - "); return i>0?c.slice(i+3).trim():""; };
-    var bandSort=function(lbl){ var bs=(W.__nsqBandList&&W.__nsqBandList())||[]; for(var i=0;i<bs.length;i++){ if(String(bs[i].label).toLowerCase()===String(lbl||"").toLowerCase()) return bs[i].sort; } return 999; };
-    var bandAbove=function(lbl){ var bs=(W.__nsqBandList&&W.__nsqBandList())||[], s=bandSort(lbl), up=null;
+    var bandsAll=function(){ return ((W.__nsqOpenBands&&W.__nsqOpenBands())||[]).concat((W.__nsqBandList&&W.__nsqBandList())||[]); };   /* q134: the organiser's open divisions first */
+    var bandFam=function(lbl){ var bs=bandsAll(); for(var i=0;i<bs.length;i++){ if(String(bs[i].label).toLowerCase()===String(lbl||"").toLowerCase()) return bs[i].fam||"reg"; } return "reg"; };
+    var bandSort=function(lbl){ var bs=bandsAll(); for(var i=0;i<bs.length;i++){ if(String(bs[i].label).toLowerCase()===String(lbl||"").toLowerCase()) return bs[i].sort; } return 999; };
+    var bandAbove=function(lbl){ var fam=bandFam(lbl), bs=bandsAll().filter(function(b){ return (b.fam||"reg")===fam; }), s=bandSort(lbl), up=null;
       bs.forEach(function(b){ if(b.sort<s && (!up || b.sort>up.sort)) up=b; }); return up?up.label:null; };
-    var bandBelow=function(lbl){ var bs=(W.__nsqBandList&&W.__nsqBandList())||[], s=bandSort(lbl), dn=null;   /* q127: the next division down */
+    var bandBelow=function(lbl){ var fam=bandFam(lbl), bs=bandsAll().filter(function(b){ return (b.fam||"reg")===fam; }), s=bandSort(lbl), dn=null;   /* q127: the next division down */
       bs.forEach(function(b){ if(b.sort>s && (!dn || b.sort<dn.sort)) dn=b; }); return dn?dn.label:null; };
     W.__nsqTourBase=baseOf; W.__nsqTourSec=secOf;
     var ENC=encodeURIComponent;
     var cid=function(){ try{ return CLUB_ID; }catch(e){ return 0; } };
     var getEntries=function(tour){ return sbGet("tournament_entries?select=*&club_id=eq."+cid()+"&tournament=eq."+ENC(tour)).then(function(r){ return Array.isArray(r)?r:[]; }).catch(function(){ return []; }); };
     var waitBands=function(){ return new Promise(function(res){ var n=0; if(W.__nsqDecLoad && !(W.__nsqBandsReady&&W.__nsqBandsReady())) W.__nsqDecLoad();
-      (function tick(){ if(W.__nsqBandsReady && W.__nsqBandsReady()) return res(true); if(++n>40) return res(false); setTimeout(tick,200); })(); }); };
+      (function tick(){ if(W.__nsqBandsReady && W.__nsqBandsReady()){ if(W.__nsqOpenLoad) return W.__nsqOpenLoad().then(function(){ res(true); }); return res(true); } if(++n>40) return res(false); setTimeout(tick,200); })(); }); };   /* q134: the open cut-offs load with the bands */
     var jresp=function(o,st){ return new Response(JSON.stringify(o),{status:st||200,headers:{"Content-Type":"application/json"}}); };
     var showMsg=function(html){ setTimeout(function(){ var m=document.getElementById("etMsg"); if(m) m.innerHTML=html; }, 60); };
 
@@ -19913,13 +19915,13 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
             return getEntries(en.tournament).then(function(all){
               if(all.some(function(r){ return r.category===base; })) return _f.call(W,u,init);       /* a pre-q116 tournament: as it was */
               return waitBands().then(function(ok){
-                var d=ok && W.__nsqTeamBand ? W.__nsqTeamBand(en.p1,en.p2) : null;
+                var d=ok && W.__nsqTeamBand ? W.__nsqTeamBand(en.p1,en.p2,base) : null;   /* q134: All Sorts may use the organiser's cut-offs */
                 if(!d){ var why="Could not work out this pair's division"+(ok?" (is each player on the register with a rating?)":" — the divisions are still loading, try again in a moment")+".";
                   showMsg('<span style="color:#c0392b">'+esc(why)+'</span>'); return jresp({ok:false,error:why},400); }
                 var sec=base+" - "+d.label; en.category=sec; var i2={}; for(var k in init) i2[k]=init[k]; i2.body=JSON.stringify(b);
                 return _f.call(W,u,i2).then(function(r){
                   r.clone().json().then(function(j){
-                    if(r.ok && j && j.ok!==false){ W.__nsqLastPlaced={at:Date.now(), html:'<span style="color:#1e8449;font-weight:800">'+esc(en.p1+" / "+en.p2)+' placed in '+esc(d.label)+'</span> <span style="color:#6b6b76">— the higher player\u2019s division.</span>'}; }
+                    if(r.ok && j && j.ok!==false){ W.__nsqLastPlaced={at:Date.now(), html:'<span style="color:#1e8449;font-weight:800">'+esc(en.p1+" / "+en.p2)+' placed in '+esc(d.label)+'</span> <span style="color:#6b6b76">'+esc(d.open?d.why:"\u2014 the higher player\u2019s division.")+'</span>'}; }
                     else showMsg('<span style="color:#c0392b">'+esc((j&&j.error)||("Not saved ("+r.status+")"))+'</span>');
                   }).catch(function(){});
                   return r; });
@@ -19997,8 +19999,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         await waitBands();
         var mine=all.filter(function(r){ return baseOf(r.category)===base && r.category!==base; });
         var locked=W._etLocked||new Set();
-        /* names already entered in ANY division of this category can't be picked again */
-        W._etUsedInDiv=W._etUsedInDiv||{}; W._etUsedInDiv[base]=[]; mine.forEach(function(r){ W._etUsedInDiv[base].push(r.p1, r.p2); });
+        /* q136: a player may be in more than one division of the category, so the picker offers everyone; the save refuses
+           the same division twice */
+        W._etUsedInDiv=W._etUsedInDiv||{}; W._etUsedInDiv[base]=[];
         /* the counter counts the whole category */
         var cards=body.querySelectorAll(".card"), cnt=null, list=null;
         Array.prototype.forEach.call(cards,function(c){ var h=c.querySelector("h2"); if(!h) return; var t=h.textContent||"";
@@ -20021,7 +20024,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
             h+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:10px 0 4px"><b style="font-size:14px">'+esc(lab)+'</b><span style="font-size:11px;color:#888">'+rows.length+' team'+(rows.length!==1?'s':'')+(dl?' \u00b7 draw done':'')+'</span></div>';
             h+='<table style="margin-bottom:8px"><thead><tr><th class="num">Seed</th><th>Team</th><th class="num">Rating</th><th></th></tr></thead><tbody>';
             rows.forEach(function(r,i){
-              var nat=(W.__nsqTeamBand&&W.__nsqTeamBand(r.p1,r.p2))||null, natSec=nat?(base+" - "+nat.label):null, below=bandBelow(lab);
+              var nat=(W.__nsqTeamBand&&W.__nsqTeamBand(r.p1,r.p2,base))||null, natSec=nat?(base+" - "+nat.label):null, below=bandBelow(lab);
               var acts='';
               if(!dl){
                 acts+='<button onclick="etRemoveTeam('+Number(r.id)+')" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:16px;padding:0 4px" title="Remove">\u00d7</button>';
@@ -20064,7 +20067,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           var blk=document.createElement("div"); blk.className="card"; blk.id="nsqBlk";
           blk.innerHTML='<h2>Block entry <span style="font-size:11px;font-weight:600;color:#888">paste a list of names</span></h2>'
             +'<div id="nsqBlkBody">'
-            +'<p class="sub">Paste the names in pair order \u2014 <b>Andre Farrell, Jeff Tseng, \u2026</b> or one pair per line as <b>Andre Farrell &amp; Jeff Tseng</b>. Every name must be on the register. Two men \u2192 Men\u2019s, two ladies \u2192 Ladies, one of each \u2192 Mixed; each pair goes to its higher player\u2019s division.</p>'
+            +'<p class="sub">Paste the names in pair order \u2014 <b>Andre Farrell, Jeff Tseng, \u2026</b> or one pair per line as <b>Andre Farrell &amp; Jeff Tseng</b>. Every name must be on the register. Two men \u2192 Men\u2019s, two ladies \u2192 Ladies, one of each \u2192 Mixed; each pair goes to its higher player\u2019s division (an open tournament: to the organiser\u2019s divisions). A player may be in more than one division, with a different partner.</p>'
             +'<textarea id="nsqBlkTxt" rows="6" placeholder="Andre Farrell, Jeff Tseng, \u2026" style="width:100%;box-sizing:border-box;padding:10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit"></textarea>'
             +'<div style="display:flex;gap:8px;margin:10px 0"><button class="btn btn-primary" onclick="nsqBlkCheck()" style="flex:1">Check the list</button></div>'
             +'<div id="nsqBlkOut"></div></div>';
@@ -20113,19 +20116,21 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(!names.length){ out.innerHTML='<p class="sub" style="color:#c0392b">Nothing to check \u2014 paste the names first.</p>'; return; }
       if(names.length%2){ out.innerHTML='<p class="sub" style="color:#c0392b">An odd number of names ('+names.length+') \u2014 every pair needs two. Last name read: '+esc(names[names.length-1])+'.</p>'; return; }
       await waitBands();
-      var all=await getEntries(tour), inCat={}; all.forEach(function(r){ var b=baseOf(r.category); (inCat[b]=inCat[b]||{})[String(r.p1).toLowerCase()]=1; if(r.p2) inCat[b][String(r.p2).toLowerCase()]=1; });
+      var all=await getEntries(tour), inCat={}; all.forEach(function(r){ var b=r.category; (inCat[b]=inCat[b]||{})[String(r.p1).toLowerCase()]=1; if(r.p2) inCat[b][String(r.p2).toLowerCase()]=1; });   /* q136: per division */
       var rows=[], missing=[], seen={}, i;
       for(i=0;i<names.length;i+=2){
         var a=names[i], b=names[i+1], pa=W.__nsqPerson?W.__nsqPerson(a):null, pb=W.__nsqPerson?W.__nsqPerson(b):null;
         if(!pa) missing.push(a); if(!pb) missing.push(b); if(!pa||!pb) continue;
         a=pa.full_name; b=pb.full_name;                                                  /* the register's spelling */
         var cat=(blkLady(pa.gender)&&blkLady(pb.gender))?"Ladies":(!blkLady(pa.gender)&&!blkLady(pb.gender))?"Men's":"Mixed";
-        var d=W.__nsqTeamBand?W.__nsqTeamBand(a,b):null, why="";
+        if(W.__nsqOpenCat) cat=W.__nsqOpenCat(cat);                                   /* q134: a tournament that runs All Sorts only takes every pair there */
+        var d=W.__nsqTeamBand?W.__nsqTeamBand(a,b,cat):null, why="";
         if(a===b) why="the same name twice";
         else if(!d) why="no division (is each player rated?)";
-        else if(seen[cat+"|"+a.toLowerCase()]||seen[cat+"|"+b.toLowerCase()]) why="a name is already in another "+cat+" pair on this list";
-        else if(inCat[cat]&&(inCat[cat][a.toLowerCase()]||inCat[cat][b.toLowerCase()])) why="already entered in "+cat;
-        if(!why){ seen[cat+"|"+a.toLowerCase()]=1; seen[cat+"|"+b.toLowerCase()]=1; }
+        var sec=cat+" - "+(d?d.label:"");                                                      /* q136: twice in the same DIVISION is refused; another division is fine */
+        if(!why && (seen[sec+"|"+a.toLowerCase()]||seen[sec+"|"+b.toLowerCase()])) why="a name is already in another "+sec+" pair on this list";
+        else if(!why && inCat[sec]&&(inCat[sec][a.toLowerCase()]||inCat[sec][b.toLowerCase()])) why="already entered in "+sec;
+        if(!why){ seen[sec+"|"+a.toLowerCase()]=1; seen[sec+"|"+b.toLowerCase()]=1; }
         var hi=(blkRate(pa)>=blkRate(pb))?[a,b]:[b,a];
         rows.push({p1:hi[0],p2:hi[1],category:cat+" - "+(d?d.label:""),base:cat,div:d?d.label:"",seed_rating:(typeof TM!=="undefined"&&TM.pairRating)?TM.pairRating(blkRate(pa),blkRate(pb),cat):Math.round(Math.max(blkRate(pa),blkRate(pb))*0.6+Math.min(blkRate(pa),blkRate(pb))*0.4),why:why,r1:blkRate(pa),r2:blkRate(pb)});
       }
@@ -20691,6 +20696,244 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       function place(){ var nh2=document.getElementById("nh"), f2=nh2&&nh2.querySelector(".five"); if(!f2) return; var old=document.getElementById("nsqOopMine"); if(old) old.remove(); if(!MINE.html) return;
         var host=document.createElement("div"); host.className="brk"; host.id="nsqOopMine"; host.innerHTML=MINE.html; f2.parentNode.insertBefore(host, f2.nextSibling); }
     }catch(e){} }, 1200);
+  })();
+
+  /* ===================================================================================================================
+     NAT-SQUASH q134 · THE ORGANISER'S OWN DIVISIONS (Andre, 13 Oct). Any category of a tournament (Men's, Ladies, Mixed,
+     All Sorts) can be cut into divisions the organiser sets on the entry page — "Section 1 from 1600, Section 2 from 1450,
+     Section 3 the rest" — by the pair's HIGHER player or by its COMBINED (60/40) rating. Entries (one by one or the block
+     list) are placed by those cut-offs instead of the register's band scale; each division is its own draw (Swiss, round
+     robin or knockout, as the tournament runs). Results still rate in the category exactly as before; the register's own
+     divisions never change. Table nsq_open_divs (one row per tournament + category), rpc nsq_set_open_divs (the board's
+     code, the register's code, the master code). A category with no cut-offs keeps the register's bands.
+     =================================================================================================================== */
+  (function(){
+    var W=window;
+    var B="https://djmbnvikrdgnomjhtkgf.supabase.co";
+    var H=function(){ return {apikey:W.__SQ_ANON||"",Authorization:"Bearer "+(W.__SQ_ANON||""),"Content-Type":"application/json"}; };
+    var esc=function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+    var cid=function(){ try{ return Number(W.PLAT&&W.PLAT.cid)||CLUB_ID; }catch(e){ return 0; } };
+    var tourNow=function(){ return W._etTournament || (W._tmCtx&&W._tmCtx.tournament) || W.TOURNAMENT_EVENT || ""; };
+    var OPEN={}, REDRAWN={}, LAST={at:0,html:""};   /* tournament → {at, cats:{category → {mode, cuts:[{label,from}]}}}  (cuts top division first) */
+    var load=function(tour, force){
+      var o=OPEN[tour]; if(o && !force && Date.now()-o.at<30000) return Promise.resolve(o);
+      return fetch(B+"/rest/v1/nsq_open_divs?club_id=eq."+cid()+"&tournament=eq."+encodeURIComponent(tour)+"&select=category,mode,cuts",{headers:H()})
+        .then(function(r){ return r.ok?r.json():[]; }).then(function(rows){
+          var cats={};
+          (rows||[]).forEach(function(row){ var cuts=[];
+            if(Array.isArray(row.cuts)) cuts=row.cuts.map(function(c){ return {label:String(c.label||"").trim(), from:Number(c.from)}; }).filter(function(c){ return c.label; });
+            cuts.sort(function(a,b){ return b.from-a.from; });
+            if(cuts.length) cats[String(row.category||"").trim()]={mode:(row.mode==="combined")?"combined":"highest", cuts:cuts}; });
+          OPEN[tour]={at:Date.now(), cats:cats}; return OPEN[tour]; })
+        .catch(function(){ OPEN[tour]=OPEN[tour]||{at:0,cats:{}}; return OPEN[tour]; });
+    };
+    var cutsFor=function(cat){ var o=OPEN[tourNow()]; return (o&&o.cats[cat])||null; };
+    W.__nsqOpenLoad=function(tour){ return load(tour||tourNow()); };
+
+    /* the open divisions as bands (sort 0.01, 0.02 … so they sit above the register's; a family tag keeps Up/Down inside
+       them): the category on the entry page, or every category's when none is on screen */
+    W.__nsqOpenBands=function(){ var o=OPEN[tourNow()]; if(!o) return []; var cats=(W._etCat && o.cats[W._etCat])?[W._etCat]:Object.keys(o.cats), out=[], seen={};
+      cats.forEach(function(c){ o.cats[c].cuts.forEach(function(x,i){ if(seen[x.label.toLowerCase()]) return; seen[x.label.toLowerCase()]=1; out.push({label:x.label, sort:(i+1)/100, fam:"open"}); }); }); return out; };
+
+    /* which category a pair really enters: the gender category when the tournament runs it, else All Sorts when it runs that */
+    W.__nsqOpenCat=function(cat){ var al=W._etAllowed||[]; if(!al.length) return cat; if(al.indexOf(cat)>=0) return cat; if(al.indexOf("All Sorts")>=0) return "All Sorts"; return cat; };
+
+    /* the decider: a category with cut-offs → the organiser's division; everything else → the register's bands */
+    var rate=function(p){ return Math.round(p&&p.current_rating!=null?p.current_rating:(p&&p.seed_rating!=null?p.seed_rating:0)); };
+    var band0=W.__nsqTeamBand;
+    W.__nsqTeamBand=function(p1,p2,cat){
+      var o=cat?cutsFor(cat):null;
+      if(!o) return band0?band0(p1,p2):null;
+      var a=W.__nsqPerson?W.__nsqPerson(p1):null, b=W.__nsqPerson?W.__nsqPerson(p2):null; if(!a||!b) return null;
+      var r1=rate(a), r2=rate(b), v;
+      if(o.mode==="combined") v=(typeof TM!=="undefined"&&TM.pairRating)?TM.pairRating(r1,r2,cat):Math.round(Math.max(r1,r2)*0.6+Math.min(r1,r2)*0.4);
+      else v=Math.max(r1,r2);
+      var pick=null; for(var i=0;i<o.cuts.length;i++){ if(v>=o.cuts[i].from){ pick=o.cuts[i]; break; } }
+      if(!pick) pick=o.cuts[o.cuts.length-1];                               /* below every cut-off: the bottom division takes them */
+      var idx=o.cuts.indexOf(pick);
+      return {label:pick.label, sort:(idx+1)/100, open:true, why:" — "+(o.mode==="combined"?"by the pair’s combined rating ("+Math.round(v)+")":"by the higher player ("+Math.round(v)+")")+"."};
+    };
+
+    /* ---- the organiser's card on the entry page: the category on screen ---- */
+    var modeNote=function(m){ return m==="combined"?"A pair is placed by its <b>combined</b> rating (stronger × 60% + weaker × 40%), whoever the higher player is.":"A pair is placed by its <b>higher player’s</b> rating."; };
+    var rowHtml=function(label,from){ return '<div class="nsqOpenRow" style="display:flex;gap:6px;align-items:center;margin:4px 0"><input class="nsqOpenLbl" value="'+esc(label)+'" placeholder="Division name" style="flex:2;min-width:0;padding:8px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px"><span style="font-size:12px;color:#888;white-space:nowrap">from</span><input class="nsqOpenFrom" type="number" step="50" value="'+(from>0?from:"")+'" placeholder="0 = the rest" style="flex:1;min-width:0;padding:8px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px"><button class="nsqOpenDel" title="Remove" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:16px;padding:0 4px">×</button></div>'; };
+    var draw=function(card, tour, cat, o){
+      var pe=document.getElementById("etPin"); o=o||{mode:"highest",cuts:[]};
+      var h='<h2>Your own divisions <span style="font-size:11px;font-weight:600;color:#888">for '+esc(cat)+' in this tournament</span></h2>'
+        +'<p class="sub">'+(o.cuts.length?'<b style="color:#1e8449">In use.</b> ':'<b>Not set</b> — '+esc(cat)+' goes by the register’s divisions. ')+'Type a name and the rating each division starts from, top division first; the bottom division takes everyone below its number. Pairs entered after this are placed by these cut-offs; pairs already entered stay where they are (use ↑ ↓ to move them). The players’ own ratings and divisions on the register are not touched.</p>'
+        +'<div style="display:flex;gap:6px;margin:6px 0 8px"><button class="btn '+(o.mode!=="combined"?"btn-primary":"btn-ghost")+'" data-mode="highest" style="flex:1">Sort by highest</button><button class="btn '+(o.mode==="combined"?"btn-primary":"btn-ghost")+'" data-mode="combined" style="flex:1">Sort by combined</button></div>'
+        +'<p class="sub nsqOpenModeNote" style="margin:0 0 8px">'+modeNote(o.mode)+'</p>'
+        +'<div class="nsqOpenRows">';
+      var rows=o.cuts.length?o.cuts:[{label:"Section 1",from:1600},{label:"Section 2",from:1450},{label:"Section 3",from:0}];
+      rows.forEach(function(c){ h+=rowHtml(c.label,c.from); });
+      h+='</div><div style="display:flex;gap:8px;margin:8px 0"><button class="btn btn-ghost nsqOpenAdd" style="flex:1">+ Add a division</button>'+(o.cuts.length?'<button class="btn btn-ghost nsqOpenNone" style="flex:1">Use the register’s divisions</button>':'')+'</div>'
+        +'<div style="display:flex;gap:8px"><input type="password" class="nsqOpenPin" placeholder="Admin code" value="'+esc(pe?pe.value:"")+'" style="flex:1;min-width:0;padding:10px;border:1.5px solid #B8480A;border-radius:8px;font-size:15px"><button class="btn btn-primary nsqOpenSave" style="flex:1">Save for '+esc(cat)+'</button></div>'
+        +'<div class="sub nsqOpenMsg" style="margin:6px 0 0">'+(Date.now()-LAST.at<15000?LAST.html:"")+'</div>';
+      card.innerHTML=h; card.dataset.mode=o.mode;
+      Array.prototype.forEach.call(card.querySelectorAll("button[data-mode]"),function(b){ b.addEventListener("click",function(){ card.dataset.mode=b.dataset.mode;
+        Array.prototype.forEach.call(card.querySelectorAll("button[data-mode]"),function(x){ x.className="btn "+(x===b?"btn-primary":"btn-ghost"); });
+        card.querySelector(".nsqOpenModeNote").innerHTML=modeNote(b.dataset.mode); }); });
+      card.querySelector(".nsqOpenAdd").addEventListener("click",function(){ var n=card.querySelectorAll(".nsqOpenRow").length; var d=document.createElement("div"); d.innerHTML=rowHtml("Section "+(n+1),0); card.querySelector(".nsqOpenRows").appendChild(d.firstChild); });
+      var none=card.querySelector(".nsqOpenNone"); if(none) none.addEventListener("click",function(){ if(!confirm("Drop your divisions for "+cat+" and go back to the register’s? Pairs already entered stay where they are.")) return; save(card,tour,cat,true); });
+      card.querySelector(".nsqOpenSave").addEventListener("click",function(){ save(card,tour,cat,false); });
+      card.addEventListener("click",function(ev){ var t=ev.target; if(t&&t.classList&&t.classList.contains("nsqOpenDel")){ var r=t.closest(".nsqOpenRow"); if(r) r.remove(); } });
+    };
+    var save=function(card,tour,cat,clear){
+      var msg=card.querySelector(".nsqOpenMsg"), pin=(card.querySelector(".nsqOpenPin").value||"").trim();
+      if(!pin){ msg.innerHTML='<span style="color:#c0392b">Type the admin code first.</span>'; return; }
+      var cuts=[], seen={}, bad="";
+      if(!clear) Array.prototype.forEach.call(card.querySelectorAll(".nsqOpenRow"),function(r){ var l=(r.querySelector(".nsqOpenLbl").value||"").trim(), f=Number(r.querySelector(".nsqOpenFrom").value||0);
+        if(!l) return; if(seen[l.toLowerCase()]) bad="Two divisions are called "+l+"."; seen[l.toLowerCase()]=1; cuts.push({label:l,from:f>0?f:0}); });
+      if(bad){ msg.innerHTML='<span style="color:#c0392b">'+esc(bad)+'</span>'; return; }
+      if(!cuts.length && !clear){ msg.innerHTML='<span style="color:#c0392b">Give at least one division (or press “Use the register’s divisions”).</span>'; return; }
+      cuts.sort(function(a,b){ return b.from-a.from; });
+      msg.textContent="Saving…";
+      fetch(B+"/rest/v1/rpc/nsq_set_open_divs",{method:"POST",headers:H(),body:JSON.stringify({p_club:cid(),p_pin:pin,p_tournament:tour,p_category:cat,p_mode:card.dataset.mode||"highest",p_cuts:cuts})})
+        .then(function(r){ return r.json().catch(function(){ return {}; }); }).then(function(j){
+          if(!j||j.ok!==true){ msg.innerHTML='<span style="color:#c0392b">'+esc((j&&j.error)||"Not saved.")+'</span>'; return; }
+          var pe=document.getElementById("etPin"); if(pe&&!pe.value) pe.value=pin;
+          load(tour,true).then(function(){
+            LAST={at:Date.now(), html:'<span style="color:#1e8449;font-weight:800">'+(cuts.length?('Saved for '+esc(cat)+' — '+cuts.map(function(c){ return esc(c.label)+(c.from>0?" from "+c.from:" (the rest)"); }).join(" · ")):(esc(cat)+' goes by the register’s divisions again'))+'.</span>'};
+            msg.innerHTML=LAST.html; REDRAWN[tour]=1; card.dataset.key=""; if(W.renderEnterScreen) setTimeout(function(){ W.renderEnterScreen(); },300); });
+        }).catch(function(){ msg.innerHTML='<span style="color:#c0392b">Connection problem — not saved.</span>'; });
+    };
+
+    /* the card appears on the entry page for the category on screen */
+    var CATS=["Men's","Ladies","Mixed","All Sorts"];
+    setInterval(function(){ try{
+      var tour=W._etTournament, cat=W._etCat, ec=document.getElementById("etCat"); if(!tour||!ec||CATS.indexOf(cat)<0) return;
+      var scr=ec.closest(".screen"); if(scr && !scr.classList.contains("active")) return;
+      var card=document.getElementById("nsqOpen"), host=ec.closest(".card"); if(!host) return;
+      var key=tour+"|"+cat; if(card && card.dataset.key===key) return;
+      if(!card){ card=document.createElement("div"); card.className="card"; card.id="nsqOpen"; var blk=document.getElementById("nsqBlk"); (blk||host).parentNode.insertBefore(card,(blk||host).nextSibling); }
+      card.dataset.key=key; card.innerHTML='<h2>Your own divisions</h2><p class="sub">Loading…</p>';
+      load(tour).then(function(o){ if(card.dataset.key===key) draw(card,tour,cat,o.cats[cat]); if(Object.keys(o.cats).length && W.renderEnterScreen && !REDRAWN[tour]){ REDRAWN[tour]=1; W.renderEnterScreen(); } });   /* once: the list is redrawn with the open divisions known */
+    }catch(e){} }, 700);
+
+    /* the cut-offs are loaded whenever a tournament comes on screen, so the deciders have them */
+    setInterval(function(){ try{ var t=tourNow(); if(t && !(OPEN[t] && Date.now()-OPEN[t].at<30000)) load(t); }catch(e){} }, 1500);
+  })();
+
+  /* ===================================================================================================================
+     NAT-SQUASH q135 · TRUE SWISS (Andre, 13 Oct). A Swiss division can open SEEDED instead of banded: round 1 is 1 v N,
+     2 v N-1 … by the frozen seeds; every later round pairs teams on their RECORD — the teams on the same number of
+     match wins play each other, top half of the group against the bottom half (ordered by the standings), an odd group's
+     lowest team floats down, and nobody meets twice. The organiser generates each next round from the Rounds tab and
+     stops when enough rounds are played. Nothing new is stored: a division whose draw has no banded ("fixed") rounds is
+     a true-Swiss division. The banded opening (3 fixed rounds) stays the default.
+     =================================================================================================================== */
+  (function(){
+    var W=window;
+    var esc=function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+    var OPEN={};                       /* division → true when the organiser picked the seeded opening (this page) */
+    var LS=function(d){ try{ return "nsqSwissOpen|"+(W._etTournament||"")+"|"+d; }catch(e){ return "nsqSwissOpen|"+d; } };
+    var isOpen=function(d){ if(OPEN[d]!=null) return OPEN[d]; try{ return localStorage.getItem(LS(d))==="1"; }catch(e){ return false; } };
+    W.nsqSwissOpenSet=function(d,on){ OPEN[d]=!!on; try{ localStorage.setItem(LS(d),on?"1":"0"); }catch(e){} if(W.renderEnterScreen) W.renderEnterScreen(); };
+
+    /* ---- the pairing: pure, tested on its own (node) ----
+       order   : every seed, best record first (the standings order)
+       winsOf  : seed → match wins
+       played  : function(a,b) → true when they have met
+       returns : [[a,b],…] or null when no rematch-free pairing exists */
+    var pairList=function(L, played){
+      if(!L.length) return [];
+      var m=L.length, a=L[0], half=Math.floor(m/2);
+      var cands=L.slice(half).concat(L.slice(1,half));              /* bottom half first, in order; then the rest of the top half */
+      for(var i=0;i<cands.length;i++){ var b=cands[i]; if(played(a,b)) continue;
+        var rest=L.filter(function(x){ return x!==a && x!==b; }); var r=pairList(rest, played);
+        if(r) return [[a,b]].concat(r); }
+      return null;
+    };
+    var trueSwiss=function(order, winsOf, played){
+      var groups=[], last=null; order.forEach(function(s){ var w=winsOf(s)||0; if(last===null || w!==last){ groups.push([]); last=w; } groups[groups.length-1].push(s); });
+      var out=[], carry=[];
+      for(var g=0; g<groups.length; g++){
+        var L=carry.concat(groups[g]); carry=[]; var r=null;
+        if(L.length%2===0){ r=pairList(L, played); }
+        if(!r){ /* float the lowest (or lowest two when even) down to the next group — try from the bottom up */
+          var need=(L.length%2===1)?1:2, found=false;
+          if(need===1){ for(var k=L.length-1;k>=0 && !found;k--){ var rest=L.filter(function(x,i){ return i!==k; }); r=pairList(rest, played); if(r){ carry=[L[k]]; found=true; } } }
+          else { for(var k2=L.length-1;k2>=1 && !found;k2--){ for(var k1=k2-1;k1>=0 && !found;k1--){ var rest2=L.filter(function(x,i){ return i!==k1 && i!==k2; }); r=pairList(rest2, played); if(r){ carry=[L[k1],L[k2]]; found=true; } } } }
+          if(!found){ if(g===groups.length-1) return null; carry=L; r=[]; }   /* a whole group floats (rare) */
+        }
+        out=out.concat(r);
+      }
+      if(carry.length){ var r2=pairList(carry, played); if(!r2) return null; out=out.concat(r2); }
+      return out;
+    };
+    /* when the group-by-group pass cannot avoid a rematch, a whole-field search: pair each team with the nearest record
+       it has not met (closest score first, fold order within a score), backtracking, no rematch anywhere */
+    var globalSwiss=function(order, winsOf, played){
+      var pos={}; order.forEach(function(s,i){ pos[s]=i; }); var budget=200000;
+      var rec=function(L){ if(!L.length) return []; if(--budget<=0) return null;
+        var a=L[0], rest=L.slice(1);
+        var cands=rest.filter(function(b){ return !played(a,b); }).sort(function(x,y){ var dx=Math.abs(winsOf(x)-winsOf(a)), dy=Math.abs(winsOf(y)-winsOf(a)); return dx-dy || pos[x]-pos[y]; });
+        for(var i=0;i<cands.length;i++){ var b=cands[i]; var r=rec(rest.filter(function(x){ return x!==b; })); if(r) return [[a,b]].concat(r); }
+        return null; };
+      return rec(order.slice());
+    };
+    var trueSwissAny=function(order, winsOf, played){ return trueSwiss(order, winsOf, played) || globalSwiss(order, winsOf, played); };
+    W.__nsqTrueSwiss=trueSwissAny;
+
+    /* ---- the next round: a true-Swiss division (no "fixed" rounds in its draw) is paired on records ---- */
+    var LASTFX={};                                                   /* division → the fixtures last loaded for it */
+    (function(){ var f0=W.tmLoadFixtures; if(typeof f0!=="function") return;
+      W.tmLoadFixtures=async function(t,d){ var r=await f0.apply(this,arguments); try{ if(d) LASTFX[d]=Array.isArray(r)?r:[]; }catch(e){} return r; }; })();
+    (function(){ if(typeof TM==="undefined" || !TM || typeof TM.swissRound!=="function") return; var s0=TM.swissRound;
+      TM.swissRound=function(N, ranked, history){
+        try{
+          var d=W._tmCtx&&W._tmCtx.division, fx=d?LASTFX[d]:null;
+          if(fx && fx.length && !fx.some(function(f){ return f.round_type==="fixed"; })){
+            var wins={}; fx.forEach(function(f){ if(f.sets_a==null || f.round_type==="ko" || f.round_type==="plate" || f.round_type==="final" || f.round>=90) return; if(Number(f.sets_a)>Number(f.sets_b)) wins[f.seed_a]=(wins[f.seed_a]||0)+1; else wins[f.seed_b]=(wins[f.seed_b]||0)+1; });
+            var played=function(a,b){ return history.has([a,b].sort(function(x,y){ return x-y; }).join("-")); };
+            var pairs=trueSwissAny(ranked.slice(), function(s){ return wins[s]||0; }, played);
+            if(pairs) return {pairs:pairs.map(function(p){ return p.slice().sort(function(x,y){ return x-y; }); }), widened:0, rematches:0, trueSwiss:true};
+          }
+        }catch(e){}
+        return s0.apply(this, arguments);
+      }; })();
+
+    /* ---- the draw block: a switch for Swiss divisions; the seeded opening writes round 1 only ---- */
+    (function(){ var g0=W.etGenerateDiv; if(typeof g0!=="function") return;
+      W.etGenerateDiv=async function(division){
+        var fmt=W._etTourFormat || (W._etFmt && W._etFmt[division]) || "swiss";
+        if(fmt!=="swiss" || !isOpen(division)) return g0.apply(this, arguments);
+        var tournament=W._etTournament, pin=((document.getElementById("etPin")||{}).value||"").trim(), gmsg=document.getElementById("etGenMsg");
+        if(!pin){ gmsg.innerHTML='<span style="color:#c0392b;">Enter the admin PIN first.</span>'; return; }
+        var entries=TM.seedEntries(await W.tmLoadEntries(tournament, division)), N=entries.length;
+        if(N<4){ gmsg.innerHTML='<span style="color:#c0392b;">'+esc(division)+' needs at least 4 teams.</span>'; return; }
+        if(N%2){ gmsg.innerHTML='<span style="color:#B9770E;">'+esc(division)+' has an odd number ('+N+'). Swiss needs an even field — add or remove one.</span>'; return; }
+        var existing=await W.tmLoadFixtures(tournament, division);
+        if(existing.length && !confirm(division+" already has a draw. Regenerate it? (This replaces the existing "+division+" fixtures.)")) return;
+        W.TM_ADMIN_PIN=pin; try{ TM_ADMIN_PIN=pin; }catch(e){}
+        gmsg.textContent="Generating "+division+" round 1 (seeded)…";
+        var H={apikey:SB_ANON,Authorization:"Bearer "+SB_ANON,"Content-Type":"application/json"};
+        var sr=await fetch(SB_URL+"/functions/v1/tournament",{method:"POST",headers:H,body:JSON.stringify({action:"save_seeds",club_id:CLUB_ID,admin_pin:pin,seeds:entries.map(function(e){ return {id:e.id,seed:e.seed}; })})});
+        var sj=await sr.json().catch(function(){ return {}; }); if(!sr.ok||!sj.ok){ gmsg.innerHTML='<span style="color:#c0392b;">Could not save seeds: '+esc((sj&&sj.error)||sr.status)+'</span>'; return; }
+        var A_END=TM.divSplit?TM.divSplit(N):Math.ceil(N/2), rows=[];
+        for(var i=1;i<=N/2;i++) rows.push({tournament:tournament,division:division,round:1,round_type:"swiss",seed_a:i,seed_b:N+1-i,band:TM.bandClass(i,N+1-i,A_END)});
+        var fr=await fetch(SB_URL+"/functions/v1/tournament",{method:"POST",headers:H,body:JSON.stringify({action:"write_fixtures",club_id:CLUB_ID,admin_pin:pin,tournament:tournament,division:division,replace:true,fixtures:rows})});
+        var fj=await fr.json().catch(function(){ return {}; }); if(!fr.ok||!fj.ok){ gmsg.innerHTML='<span style="color:#c0392b;">Could not write fixtures: '+esc((fj&&fj.error)||fr.status)+'</span>'; return; }
+        gmsg.innerHTML='<span style="color:#1e8449;font-weight:800">'+esc(division)+' round 1 created: '+rows.length+' matches, 1 v '+N+', 2 v '+(N-1)+' … Generate each next round from the Rounds tab once the results are in.</span>';
+        W.loadTournamentSheet(tournament, division);
+      }; })();
+
+    /* the switch sits above each Swiss division's rounds slider (the page is rebuilt often; add once per build) */
+    setInterval(function(){ try{
+      if(!W._etTournament || W._etTourFormat!=="swiss") return;
+      var body=document.getElementById("etBody"); if(!body) return;
+      Array.prototype.forEach.call(body.querySelectorAll("input[type=range]"),function(sl){
+        var blk=sl.parentNode&&sl.parentNode.parentNode; if(!blk || blk.querySelector(".nsqSwissSw")) return;
+        var m=String(sl.getAttribute("oninput")||"").match(/etSetDivRounds\('((?:[^'\\]|\\.)*)'/); if(!m) return; var d=m[1].replace(/\\'/g,"'"), on=isOpen(d);
+        var row=document.createElement("div"); row.className="nsqSwissSw"; row.style.cssText="margin:0 0 8px";
+        row.innerHTML='<div style="font-size:12px;font-weight:700;color:#5aa98d;margin:0 0 6px">How does the Swiss open?</div>'
+          +'<div style="display:flex;flex-direction:column;gap:6px"><button class="ac-btn '+(on?'ac-btn-ghost':'ac-btn-primary')+'" data-on="0" style="text-align:left;line-height:1.35">'+(on?'○ ':'● ')+'<b>Banded</b> — 3 fixed rounds inside the bands, then Swiss rounds</button>'
+          +'<button class="ac-btn '+(on?'ac-btn-primary':'ac-btn-ghost')+'" data-on="1" style="text-align:left;line-height:1.35">'+(on?'● ':'○ ')+'<b>Seeded, true Swiss</b> — round 1 is 1 v last, 2 v second-last …; every round after that pairs teams on the same record, no rematches. Generate each round from the Rounds tab; stop when enough are played.</button></div>';
+        Array.prototype.forEach.call(row.querySelectorAll("button[data-on]"),function(b){ b.addEventListener("click",function(){ W.nsqSwissOpenSet(d, b.dataset.on==="1"); }); });
+        var sliderRow=sl.parentNode; sliderRow.parentNode.insertBefore(row, sliderRow);
+        if(on){ sliderRow.style.display="none"; var fl=sliderRow.nextElementSibling; if(fl && /Format:/.test(fl.textContent||"")) fl.innerHTML='Format: <b style="color:var(--purple,#D35400);">True Swiss</b> <span style="color:#aaa;">(seeded opening, paired on results)</span>'; }
+      });
+    }catch(e){} }, 600);
   })();
 
 })();</script>
