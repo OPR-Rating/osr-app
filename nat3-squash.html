@@ -3590,7 +3590,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q138";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q142";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -5280,7 +5280,7 @@ async function step1Next(){
         // singles match must look up "Men's Singles" — otherwise this guard finds no
         // fixtures and wrongly says the draw hasn't been generated.
         const _div = (format==='singles') ? (type+' Singles') : type;
-        const fx = await sbGet(`tournament_fixtures?select=id&tournament=eq.${encodeURIComponent(event)}&division=eq.${encodeURIComponent(_div)}&club_id=eq.${CLUB_ID}&limit=1`) || [];
+        const fx = await sbGet(`tournament_fixtures?select=id&tournament=eq.${encodeURIComponent(event)}&or=(division.eq.${encodeURIComponent('"'+_div+'"')},division.ilike.${encodeURIComponent('"'+_div+' - *"')})&club_id=eq.${CLUB_ID}&limit=1`) || [];   /* q141: the category or any of its sections */
         if(fx.length===0){
           alert('The '+_div+' draw for "'+event+'" has not been generated yet.\n\nFor an internal tournament, enter teams and generate the '+_div+' draw on the Tournaments page before recording results.');
           return; // stay on step 1
@@ -17341,9 +17341,17 @@ W.nhOpenPair=function(name){
     var C=W.PLAT.tourClub||W.PLAT.cid, enc=encodeURIComponent(tn);
     return Promise.all([
       W.sbGet("tournament_entries?select=category,seed,p1,p2&club_id=eq."+C+"&tournament=eq."+enc),
-      W.sbGet("tournament_fixtures?select=division,round,round_type,seed_a,seed_b,sets_a,sets_b,games_a,games_b,band&club_id=eq."+C+"&tournament=eq."+enc+"&order=round.asc")
+      W.sbGet("tournament_fixtures?select=id,division,round,round_type,seed_a,seed_b,sets_a,sets_b,games_a,games_b,band&club_id=eq."+C+"&tournament=eq."+enc+"&order=round.asc"),
+      W.sbGet("plat_squash_order_of_play?select=fixture_id,venue_id,court,play_day,start_time&club_id=eq."+C+"&tournament=eq."+enc).catch(function(){ return []; }),   /* q140 */
+      W.sbGet("plat_squash_venues?select=id,name&pool_id=eq."+Number(W.PLAT.pool||0)).catch(function(){ return []; })
     ]).then(function(r){
       var ents=r[0]||[], fx=r[1]||[], divs={};
+      /* q140: where and when each fixture is played, from the Order of Play */
+      var VN={}; (r[3]||[]).forEach(function(v){ VN[v.id]=v.name; });
+      var DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], MONS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      var fday=function(d){ var m=String(d||"").match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return String(d||""); var dt=new Date(Date.UTC(+m[1],+m[2]-1,+m[3])); return DAYS[dt.getUTCDay()]+" "+(+m[3])+" "+MONS[+m[2]-1]; };
+      var WHEN={}; (r[2]||[]).forEach(function(o){ var t=String(o.start_time||"").slice(0,5); WHEN[o.fixture_id]=fday(o.play_day)+" \u00b7 "+t+" \u00b7 Court "+o.court+(VN[o.venue_id]?" \u00b7 "+VN[o.venue_id]:""); });
+      fx.forEach(function(f){ f._when=WHEN[f.id]||""; });
       ents.forEach(function(e2){ var d=e2.category||""; (divs[d]=divs[d]||{teams:{},rounds:{}}).teams[e2.seed]=[e2.p1,e2.p2].filter(Boolean).join(" & "); });
       fx.forEach(function(f){ var d=f.division||""; divs[d]=divs[d]||{teams:{},rounds:{}}; var k=f.round+"|"+(f.round_type||"rr"); (divs[d].rounds[k]=divs[d].rounds[k]||[]).push(f); });
       return {name:tn, divs:divs};
@@ -17356,7 +17364,7 @@ W.nhOpenPair=function(name){
   function nhFxLine(f, teams){
     var A=f.seed_a===0?"BYE":(teams[f.seed_a]||("Seed "+f.seed_a)), B=f.seed_b===0?"BYE":(teams[f.seed_b]||("Seed "+f.seed_b));
     if(f.seed_a===0||f.seed_b===0) return {a:A,b:B,s:"bye"};
-    return {a:A, b:B, s:(f.sets_a!=null&&f.sets_b!=null)?(f.sets_a+"\u2013"+f.sets_b):"to play"};
+    return {a:A, b:B, s:(f.sets_a!=null&&f.sets_b!=null)?(f.sets_a+"\u2013"+f.sets_b):"to play", w:f._when||""};
   }
   W.nhTourSchedule=function(){
     nhSchedData().then(function(D){
@@ -17368,7 +17376,7 @@ W.nhOpenPair=function(name){
         h+='<section><h2>'+esc(dn||"Division")+'</h2><div class="teams">'+seeds.map(function(s){ return '<span><b>'+s+'</b> '+esc(d.teams[s])+'</span>'; }).join("")+'</div>';
         Object.keys(d.rounds).sort(function(a,b){ var x=a.split("|"), y=b.split("|"); var o={rr:0,ko:1,plate:2,final:3}; return (o[x[1]]||0)-(o[y[1]]||0) || (+x[0])-(+y[0]); }).forEach(function(k){
           h+='<div class="rd"><h3>'+esc(nhRoundName(k, d.rounds[k], Object.keys(d.rounds).some(function(x){ return +x.split('|')[0]>10; })))+'</h3><table>'+d.rounds[k].map(function(f){ var L=nhFxLine(f,d.teams);
-            return '<tr><td>'+esc(L.a)+'</td><td class="v">v</td><td>'+esc(L.b)+'</td><td class="s">'+esc(L.s)+'</td></tr>'; }).join("")+'</table></div>'; });
+            return '<tr><td><b>'+esc(L.a)+'</b></td><td class="v">v</td><td><b>'+esc(L.b)+'</b></td><td class="s">'+esc(L.s)+'</td></tr>'+(L.w?'<tr class="w"><td colspan="4">'+esc(L.w)+'</td></tr>':''); }).join("")+'</table></div>'; });
         if(!Object.keys(d.rounds).length) h+='<div class="sub">No draw yet.</div>';
         h+='</section>'; });
       var w=W.open("","_blank"); if(!w){ W.alert("Allow pop-ups to print the full schedule."); return; }
@@ -17377,7 +17385,7 @@ W.nhOpenPair=function(name){
         +'section{break-inside:auto;margin:0 0 14px;border-top:2px solid #333;padding-top:6px}h2{font-size:15px;margin:0 0 5px;break-after:avoid}h3{font-size:12.5px;margin:8px 0 3px;color:#333;break-after:avoid}'
         +'.rd{break-inside:avoid;page-break-inside:avoid}.teams{break-after:avoid}'
         +'.teams{display:flex;flex-wrap:wrap;gap:4px 14px;margin-bottom:4px}table{width:100%;border-collapse:collapse;table-layout:fixed}td{padding:3px 6px;border-bottom:1px solid #ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
-        +'td.v{width:24px;color:#888;text-align:center}td.s{width:72px;text-align:right;font-weight:bold}@page{margin:12mm}</style></head><body>'+h+'</body></html>');
+        +'td.v{width:24px;color:#888;text-align:center}td.s{width:72px;text-align:right;font-weight:bold}tr.w td{border-bottom:1px solid #bbb;padding:0 6px 6px;font-size:11px;color:#7E3200;white-space:normal}tr:not(.w) td{border-bottom:none;padding-top:7px}@page{margin:12mm}</style></head><body>'+h+'</body></html>');
       w.document.close(); w.focus(); setTimeout(function(){ try{ w.print(); }catch(e){} }, 350);
     });
   };
@@ -17387,7 +17395,7 @@ W.nhOpenPair=function(name){
       var out=["\ud83c\udfc6 "+D.name+" \u2014 full schedule"];
       Object.keys(D.divs).sort().forEach(function(dn){ var d=D.divs[dn]; out.push("", "*"+(dn||"Division")+"*");
         Object.keys(d.rounds).sort(function(a,b){ return (+a.split("|")[0])-(+b.split("|")[0]); }).forEach(function(k){ out.push(nhRoundName(k, d.rounds[k], Object.keys(d.rounds).some(function(x){ return +x.split('|')[0]>10; }))+":");
-          d.rounds[k].forEach(function(f){ var L=nhFxLine(f,d.teams); out.push("  "+L.a+" v "+L.b+" \u2014 "+L.s); }); }); });
+          d.rounds[k].forEach(function(f){ var L=nhFxLine(f,d.teams); out.push("  "+L.a+" v "+L.b+" \u2014 "+L.s+(L.w?("  ("+L.w+")"):"")); }); }); });
       var t=out.join("\n");
       if(navigator.share){ navigator.share({title:D.name, text:t}).catch(function(){}); return; }
       W.open("https://wa.me/?text="+encodeURIComponent(t), "_blank");
@@ -19991,7 +19999,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     /* ---- 5. the Enter a team page lists the category's pairs by division ---- */
     var _res=W.renderEnterScreen;
     if(typeof _res==="function") W.renderEnterScreen=async function(){
-      var out=await _res.apply(this,arguments);
+      /* q139 (Andre): ONE paint. The parent draws, the squash layer rearranges, the divisions card mounts — all under a
+         hidden body; shown once at the end instead of flashing three layouts */
+      var _eb=document.getElementById("etBody"); if(_eb) _eb.style.visibility="hidden";
+      var out; try{ out=await _res.apply(this,arguments); }catch(e0){ if(_eb) _eb.style.visibility=""; throw e0; }
       try{
         var tour=W._etTournament, base=W._etCat, body=document.getElementById("etBody");
         if(!tour || !body || BASES.indexOf(base)<0) return out;
@@ -20009,6 +20020,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           if(!cnt && t.indexOf(base+":")===0) cnt=c; if(!list && /^\s*Entered teams/.test(t)) list=c; });
         var cap=(W._etCaps && W._etCaps[base]!=null)?Number(W._etCaps[base]):null;
         if(cnt){ var h2=cnt.querySelector("h2"); if(h2) h2.textContent=base+": "+mine.length+(cap!=null?(" / "+cap):"")+" entered"; }
+        /* q142 (Andre): the parent judged "entry open" by the plain category, which never has a draw when the tournament runs in
+           sections — when EVERY section of this category has its draw, the category is closed: say so and hide the forms */
+        var secsAll={}; mine.forEach(function(r){ secsAll[r.category]=1; }); var secNames=Object.keys(secsAll);
+        var allLocked=secNames.length>0 && secNames.every(function(sn){ return locked.has(sn); });
+        W.__nsqClosed=allLocked?base:"";                                         /* applied at the end of the redraw, once every card is there */
         /* how placement works, under the entry card's line */
         var ec=document.getElementById("etCat"); ec=ec&&ec.closest(".card");
         if(ec && !ec.querySelector(".nsqPlaceNote")){ var sub=ec.querySelector("p.sub");
@@ -20050,7 +20066,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
             if(slot && baseOf(t)===base){ x.style.display=""; x.style.marginTop="6px"; slot.appendChild(x);
               /* q129 (Andre): the admin code is typed right where the draw is generated — each block has its own box, kept in
                  step with the page's one; the result message shows under that block too */
-              var gb=Array.prototype.filter.call(x.querySelectorAll("button"),function(b2){ return /^Generate/.test((b2.innerText||"").trim()); })[0];
+              var gb=Array.prototype.filter.call(x.querySelectorAll("button"),function(b2){ return /^Generate/.test((b2.textContent||"").trim()); })[0];
               if(gb && !x.querySelector(".nsqDivPin")){
                 var pe=document.getElementById("etPin"), row=document.createElement("div"); row.style.cssText="display:flex;gap:8px;align-items:center;margin:8px 0 6px";
                 row.innerHTML='<input type="password" class="nsqDivPin" placeholder="Admin code" value="'+esc(pe?pe.value:"")+'" style="flex:1;min-width:0;padding:9px 10px;border:1.5px solid #B8480A;border-radius:8px;font-size:14px">';
@@ -20075,6 +20091,19 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           ec.parentNode.insertBefore(blk, ec);   /* q137: block entry above the one-at-a-time card (set-up first, then the list, then singles) */
         }
       }catch(err){ try{ console.warn("q116 entries", err); }catch(e){} }
+      try{ if(W.__nsqOpenMount) await W.__nsqOpenMount(); }catch(e){}
+      try{ /* q142: a closed category — the forms go, the list says why */
+        var _cl=W.__nsqClosed||"", _ecC=document.getElementById("etCat"); _ecC=_ecC&&_ecC.closest(".card");
+        ["nsqOpen","nsqBlk","nsqMulti"].forEach(function(id){ var x=document.getElementById(id); if(x) x.style.display=_cl?"none":""; });
+        if(_ecC) _ecC.style.display=_cl?"none":"";
+        var _ebx=document.getElementById("etBody"); if(_ebx){ if(_cl) _ebx.setAttribute("data-nsq-closed","1"); else _ebx.removeAttribute("data-nsq-closed"); }
+        if(!document.getElementById("nsqClosedCss")){ var _cs=document.createElement("style"); _cs.id="nsqClosedCss"; _cs.textContent="#etBody[data-nsq-closed='1'] #nsqMulti{display:none!important}"; document.head.appendChild(_cs); }
+        if(_cl) Array.prototype.forEach.call(document.querySelectorAll("#etBody span"),function(sp){ if(/^\s*entry open\s*$/i.test(sp.textContent||"")){ sp.textContent="DRAW DONE"; sp.style.color="#c0392b"; } });
+        var _lc=Array.prototype.filter.call(document.querySelectorAll("#etBody .card"),function(c){ return /^\s*Entered teams/.test((c.querySelector("h2")||{}).textContent||""); })[0];
+        if(_lc){ var _old=_lc.querySelector(".nsqClosedNote"); if(_old) _old.remove();
+          if(_cl){ var cn=document.createElement("p"); cn.className="sub nsqClosedNote"; cn.style.color="#c0392b"; cn.textContent="Every "+_cl+" section has its draw \u2014 entry is closed."; _lc.insertBefore(cn, _lc.firstChild.nextSibling); } }
+      }catch(e){}
+      try{ var _eb2=document.getElementById("etBody"); if(_eb2) _eb2.style.visibility=""; }catch(e){}
       return out;
     };
 
@@ -20091,6 +20120,19 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     if(!document.getElementById("nsqLiveCss")){ var cs=document.createElement("style"); cs.id="nsqLiveCss";
       cs.textContent=".tm-divbar button.nsqLive{background:#e6f4ea;border-color:#2e7d32;color:#1b5e20}.tm-divbar button.nsqLive.active{background:#2e7d32;border-color:#2e7d32;color:#fff}.tm-divbar button.nsqLive::before{content:'\\25CF';font-size:9px;margin-right:6px;vertical-align:1px}";
       document.head.appendChild(cs); }
+    /* q141 (Andre): once EVERY division of the tournament has its draw, the "Enter a team / generate a draw" button leaves
+       the tournament page — entries are closed; the draws live under Open draw & standings */
+    setInterval(function(){ try{
+      var scr=document.getElementById("tournamentScreen"); if(!scr||!scr.classList.contains("active")) return;
+      var btn=Array.prototype.filter.call(scr.querySelectorAll("button"),function(b){ return /Enter a team \/ generate a draw/.test(b.textContent||""); })[0]; if(!btn) return;
+      var tour=""; try{ tour=String(TOURNAMENT_EVENT||""); }catch(e){ tour=String(W.TOURNAMENT_EVENT||""); } if(!tour) return;
+      if(btn.dataset.nsqTour===tour && Date.now()-Number(btn.dataset.nsqAt||0)<20000) return;
+      btn.dataset.nsqTour=tour; btn.dataset.nsqAt=String(Date.now());
+      Promise.all([getEntries(tour), liveDivs(tour)]).then(function(r){ var ents=r[0]||[], st=r[1]; if(!st){ btn.dataset.nsqAt="0"; return; }   /* busy: try again */
+        var divs={}; ents.forEach(function(e){ if(e.category) divs[e.category]=1; }); var names=Object.keys(divs);
+        var allDone=names.length>0 && names.every(function(d){ return !!st[d]; });
+        btn.style.display=allDone?"none":""; });
+    }catch(e){} }, 900);
     setInterval(function(){ try{
       var bar=document.querySelector("#tournamentScreen.active .tm-divbar:not(.cl-divbar), .screen.active .tm-divbar:not(.cl-divbar)"); if(!bar) return;
       var tour=(W._tmCtx&&W._tmCtx.tournament)||W.TOURNAMENT_EVENT||""; if(!tour) return;
@@ -20618,9 +20660,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     /* ---------- print and Excel ---------- */
     var listForExport=function(){ return D.rows.map(rowView).slice().sort(function(p,q){ return (p.r.play_day<q.r.play_day?-1:p.r.play_day>q.r.play_day?1:0)||(+p.r.venue_id-+q.r.venue_id)||(tmin(p.r.start_time)-tmin(q.r.start_time))||(p.r.court-q.r.court); }); };
     W.nsqOopPrint=function(){ var L=listForExport(); if(!L.length) return; var w=window.open("","_blank"); if(!w) return;
-      var h='<html><head><title>Order of Play \u2014 '+esc(D.tour)+'</title><style>body{font-family:Arial,sans-serif;font-size:12px;margin:18px}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:16px 0 6px;border-bottom:2px solid #D35400;padding-bottom:2px}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ddd;padding:4px 6px;text-align:left}th{background:#f3eee9}@media print{h2{page-break-after:avoid}}</style></head><body><h1>Order of Play \u2014 '+esc(D.tour)+'</h1>';
-      var key=""; L.forEach(function(x){ var vv=venueOf(x.r.venue_id), k=x.r.play_day+"|"+x.r.venue_id; if(k!==key){ if(key) h+='</table>'; key=k; h+='<h2>'+esc(vv?vv.name:"Venue")+' \u00b7 '+esc(fmtDay(x.r.play_day))+'</h2><table><tr><th>Time</th><th>Court</th><th>Division</th><th>Match</th><th>Score</th></tr>'; }
-        h+='<tr><td>'+hhmm(x.r.start_time)+'</td><td>'+x.r.court+'</td><td>'+esc(x.label)+'</td><td>'+esc(x.a)+' v '+esc(x.b)+'</td><td>'+esc(x.score)+'</td></tr>'; });
+      var h='<html><head><title>Order of Play \u2014 '+esc(D.tour)+'</title><style>body{font-family:Arial,sans-serif;font-size:12px;margin:18px}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:16px 0 6px;border-bottom:2px solid #D35400;padding-bottom:2px}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ddd;padding:6px 6px;text-align:left;vertical-align:middle}th{background:#f3eee9;font-size:11px;text-transform:uppercase;letter-spacing:.04em}tr:nth-child(even) td{background:#faf7f3}td.t{font-weight:bold;font-size:13px;width:33%}td.v{color:#999;text-align:center;width:20px}td.n{white-space:nowrap;color:#444}td.d{color:#7E3200;font-size:11px;white-space:nowrap}td.sc{text-align:right;font-weight:bold;width:52px}@media print{h2{page-break-after:avoid}tr{page-break-inside:avoid}}</style></head><body><h1>Order of Play \u2014 '+esc(D.tour)+'</h1>';
+      var key=""; L.forEach(function(x){ var vv=venueOf(x.r.venue_id), k=x.r.play_day+"|"+x.r.venue_id; if(k!==key){ if(key) h+='</table>'; key=k; h+='<h2>'+esc(vv?vv.name:"Venue")+' \u00b7 '+esc(fmtDay(x.r.play_day))+'</h2><table><tr><th>Time</th><th>Court</th><th>Division</th><th>Team A</th><th></th><th>Team B</th><th>Score</th></tr>'; }
+        h+='<tr><td class="n"><b>'+hhmm(x.r.start_time)+'</b></td><td class="n">'+x.r.court+'</td><td class="d">'+esc(x.label)+'</td><td class="t">'+esc(x.a)+'</td><td class="v">v</td><td class="t">'+esc(x.b)+'</td><td class="sc">'+esc(x.score)+'</td></tr>'; });   /* q140: a column per team, names bold, striped rows */
       h+='</table></body></html>'; w.document.write(h); w.document.close(); setTimeout(function(){ try{ w.print(); }catch(e){} },400); };
     W.nsqOopCsv=function(){ var L=listForExport(); if(!L.length) return; var q=function(s){ return '"'+String(s==null?"":s).replace(/"/g,'""')+'"'; };
       var lines=["Day,Venue,Time,Court,Division,Pair A,Pair B,Score"]; L.forEach(function(x){ var vv=venueOf(x.r.venue_id); lines.push([x.r.play_day,vv?vv.name:"",hhmm(x.r.start_time),x.r.court,x.label,x.a,x.b,x.score].map(q).join(",")); });
@@ -20795,21 +20837,21 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           var pe=document.getElementById("etPin"); if(pe&&!pe.value) pe.value=pin;
           load(tour,true).then(function(){
             LAST={at:Date.now(), html:'<span style="color:#1e8449;font-weight:800">'+(cuts.length?('Saved for '+esc(cat)+' — '+cuts.map(function(c){ return esc(c.label)+(c.from>0?" from "+c.from:" (the rest)"); }).join(" · ")):(esc(cat)+' goes by the register’s divisions again'))+'.</span>'};
-            msg.innerHTML=LAST.html; REDRAWN[tour]=1; card.dataset.key=""; if(W.renderEnterScreen) setTimeout(function(){ W.renderEnterScreen(); },300); });
+            msg.innerHTML=LAST.html; card.dataset.key=""; if(W.renderEnterScreen) setTimeout(function(){ W.renderEnterScreen(); },300); });
         }).catch(function(){ msg.innerHTML='<span style="color:#c0392b">Connection problem — not saved.</span>'; });
     };
 
     /* the card appears on the entry page for the category on screen */
     var CATS=["Men's","Ladies","Mixed","All Sorts"];
-    setInterval(function(){ try{
-      var tour=W._etTournament, cat=W._etCat, ec=document.getElementById("etCat"); if(!tour||!ec||CATS.indexOf(cat)<0) return;
-      var scr=ec.closest(".screen"); if(scr && !scr.classList.contains("active")) return;
-      var card=document.getElementById("nsqOpen"), host=ec.closest(".card"); if(!host) return;
-      var key=tour+"|"+cat; if(card && card.dataset.key===key) return;
-      if(!card){ card=document.createElement("div"); card.className="card"; card.id="nsqOpen"; var blk=document.getElementById("nsqBlk"); host.parentNode.insertBefore(card, blk||host); }   /* q137 (Andre): set-up first — the divisions card sits ABOVE the entry cards */
-      card.dataset.key=key; card.innerHTML='<h2>Your own divisions</h2><p class="sub">Loading…</p>';
-      load(tour).then(function(o){ if(card.dataset.key===key) draw(card,tour,cat,o.cats[cat]); if(Object.keys(o.cats).length && W.renderEnterScreen && !REDRAWN[tour]){ REDRAWN[tour]=1; W.renderEnterScreen(); } });   /* once: the list is redrawn with the open divisions known */
-    }catch(e){} }, 700);
+    /* q139: the card is mounted by the entry page's own redraw (one paint, no flash) — no polling, no second redraw */
+    W.__nsqOpenMount=function(){
+      var tour=W._etTournament, cat=W._etCat, ec=document.getElementById("etCat"); if(!tour||!ec||CATS.indexOf(cat)<0) return Promise.resolve();
+      var card=document.getElementById("nsqOpen"), host=ec.closest(".card"); if(!host) return Promise.resolve();
+      if(!card){ card=document.createElement("div"); card.className="card"; card.id="nsqOpen"; }
+      var blk=document.getElementById("nsqBlk"); host.parentNode.insertBefore(card, blk||host);   /* q137 (Andre): set-up first — above the entry cards */
+      var key=tour+"|"+cat; card.dataset.key=key;
+      return load(tour).then(function(o){ if(card.dataset.key===key) draw(card,tour,cat,o.cats[cat]); }).catch(function(){});
+    };
 
     /* the cut-offs are loaded whenever a tournament comes on screen, so the deciders have them */
     setInterval(function(){ try{ var t=tourNow(); if(t && !(OPEN[t] && Date.now()-OPEN[t].at<30000)) load(t); }catch(e){} }, 1500);
