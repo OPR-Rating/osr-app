@@ -3600,7 +3600,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q163";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q164";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -20535,9 +20535,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         rest("plat_squash_oop_breaks?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=*&order=play_day.asc,start_time.asc"),
         rest("plat_squash_order_of_play?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=*&order=play_day.asc,start_time.asc,court.asc"),
         rest("plat_squash_tournament_fixtures?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=id,division,round,round_type,seed_a,seed_b,sets_a,sets_b"),
-        rest("plat_squash_tournament_entries?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=category,seed,p1,p2")
+        rest("plat_squash_tournament_entries?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=category,seed,p1,p2"),
+        rest("plat_squash_oop_days?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=*&order=play_day.asc")   /* q164 */
       ]).then(function(r){
-        D={tour:tour,at:Date.now(),venues:r[0]||[],allocs:r[1]||[],breaks:r[2]||[],rows:r[3]||[],fx:{},ents:{},divs:[]};
+        D={tour:tour,at:Date.now(),venues:r[0]||[],allocs:r[1]||[],breaks:r[2]||[],rows:r[3]||[],fx:{},ents:{},divs:[],days:Array.isArray(r[6])?r[6]:[]};
+        UI.daysEdit=null;
         var dv={}; (r[4]||[]).forEach(function(f){ D.fx[f.id]=f; dv[f.division]=1; });
         (r[5]||[]).forEach(function(e){ D.ents[e.category+"|"+e.seed]=e; });
         D.divs=Object.keys(dv); return D; });
@@ -20552,27 +20554,45 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
        committee plays it) is laid on its day's courts after what is really scheduled, marked "pairs to follow".
        Display only — nothing is saved; Generate places the real matches when the round exists. ---------- */
     var addDays=function(iso,n){ var m=String(iso||"").match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return iso; var d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3]+n)); return d.toISOString().slice(0,10); };
+    /* q164: a day's own window (start, finish) from the tournament's playing days, else the section's start/last start */
+    var dayWin=function(day){ var w=(D.days||[]).filter(function(x){ return String(x.play_day)===day; })[0]; return w?{s:tmin(w.start_time), e:w.end_time?tmin(w.end_time):NaN, finish:true}:null; };
+    var planOf=function(a){ var arr=a&&a.day_plan; if(typeof arr==="string"){ try{ arr=JSON.parse(arr); }catch(e){ arr=null; } } return Array.isArray(arr)&&arr.length?arr:null; };
+    var tokens=function(t){ return String(t||"").split(/[,;\s]+/).map(function(x){ return x.trim().toUpperCase(); }).filter(Boolean); };
     var provRows=function(){
       var out=[], used={};
       D.rows.forEach(function(r){ used[r.venue_id+"|"+r.play_day+"|"+tmin(r.start_time)+"|"+r.court]=1; });
       D.allocs.slice().sort(function(a,b){ return String(a.division).localeCompare(String(b.division)); }).forEach(function(a){
         var d=a.division, fxs=Object.keys(D.fx).map(function(k){ return D.fx[k]; }).filter(function(f){ return f.division===d; });
-        if(!fxs.length || fxs.some(function(f){ return f.round_type==="rr" || f.round_type==="ko"; })) return;          /* Swiss sections only */
+        if(!fxs.length) return;
+        var isRR=fxs.some(function(f){ return f.round_type==="rr"; }), hasKO=fxs.some(function(f){ return Number(f.round)>=90; });
         var N=Object.keys(D.ents).filter(function(k){ return k.indexOf(d+"|")===0; }).length; if(N<4) return;
-        var planned=Math.ceil(Math.log(N)/Math.LN2), have=0; fxs.forEach(function(f){ if(Number(f.round)<90 && Number(f.round)>have) have=Number(f.round); });
-        var rpd=Math.max(1,Number(a.rounds_per_day||1)), first=String(a.play_day), last=a.last_day?String(a.last_day):first, slot=Number(a.slot_minutes||60), st=tmin(a.start_time), endAt=a.end_time?tmin(a.end_time):NaN;
-        for(var r=have+1; r<=planned; r++){
-          var day=addDays(first, Math.floor((r-1)/rpd)); if(day>last) day=last;
-          var brk=D.breaks.filter(function(k){ return +k.venue_id===+a.venue_id && k.play_day===day; }).map(function(k){ var s0=tmin(k.start_time); return [s0, s0+Number(k.minutes||30)]; });
-          var m=1, t=st, guard=0;
-          while(m<=Math.floor(N/2) && guard++<400){
-            if(!isNaN(endAt) && t>endAt) break;
-            if(brk.some(function(b){ return t<b[1] && t+slot>b[0]; })){ t+=slot; continue; }
-            for(var c=Number(a.court_from); c<=Number(a.court_to) && m<=Math.floor(N/2); c++){ var key=a.venue_id+"|"+day+"|"+t+"|"+c; if(used[key]) continue; used[key]=1;
-              out.push({prov:true, r:{id:"p"+d+r+m, play_day:day, venue_id:a.venue_id, start_time:("0"+Math.floor(t/60)).slice(-2)+":"+("0"+(t%60)).slice(-2), court:c, division:d, status:""},
-                a:"Round "+r+" \u00b7 match "+m+" \u2014 pairs to follow", b:"", played:false, score:"", label:divLabel(d)+" \u00b7 provisional"}); m++; }
-            t+=slot; }
+        var have=0; fxs.forEach(function(f){ var r=Number(f.round); if(r<90){ var w=(f.round_type==="rr"&&r>10)?((r-1)%10)+1:r; if(w>have) have=w; } });
+        var half=Math.floor(N/2), jobs=[];                                   /* {day, label, n} */
+        var plan=planOf(a);
+        if(plan){
+          var koRounds={}; fxs.forEach(function(f){ if(Number(f.round)>=90) koRounds[Number(f.round)]=1; });
+          plan.forEach(function(p){ tokens(p.rounds).forEach(function(t){ var x=t.match(/^(\d+)([AB])?$/);
+            if(x){ var r=+x[1]; if(isRR || r<=have) return; var n=x[2]?(x[2]==="A"?Math.ceil(half/2):Math.floor(half/2)):half; jobs.push({day:p.day,label:"Round "+r+(x[2]?(x[2]==="A"?" (first half)":" (second half)"):""),n:n}); return; }
+            if(/^(SF|S|SEMI|SEMIS|P1)$/.test(t) && !hasKO) jobs.push({day:p.day,label:"Semi-final",n:2});
+            else if(/^(F|FINAL|FINALS|P2)$/.test(t) && Object.keys(koRounds).length<2) jobs.push({day:p.day,label:"Final",n:1}); }); });
+        } else {
+          if(isRR || hasKO) return;                                          /* without a plan: Swiss rounds only, as before */
+          var planned=Math.ceil(Math.log(N)/Math.LN2), rpd=Math.max(1,Number(a.rounds_per_day||1)), first=String(a.play_day), last=a.last_day?String(a.last_day):first;
+          for(var r=have+1; r<=planned; r++){ var dd=addDays(first, Math.floor((r-1)/rpd)); if(dd>last) dd=last; jobs.push({day:dd,label:"Round "+r,n:half}); }
         }
+        var slot=Number(a.slot_minutes||60);
+        jobs.forEach(function(J){
+          var w=dayWin(J.day), st=w&&!isNaN(w.s)?w.s:tmin(a.start_time), endAt=w?w.e:(a.end_time?tmin(a.end_time):NaN), fin=!!w;
+          var brk=D.breaks.filter(function(k){ return +k.venue_id===+a.venue_id && k.play_day===J.day; }).map(function(k){ var s0=tmin(k.start_time); return [s0, s0+Number(k.minutes||30)]; });
+          var m=1, t=st, guard=0;
+          while(m<=J.n && guard++<400){
+            if(!isNaN(endAt) && (fin ? t+slot>endAt : t>endAt)) break;
+            if(brk.some(function(b){ return t<b[1] && t+slot>b[0]; })){ t+=slot; continue; }
+            for(var c=Number(a.court_from); c<=Number(a.court_to) && m<=J.n; c++){ var key=a.venue_id+"|"+J.day+"|"+t+"|"+c; if(used[key]) continue; used[key]=1;
+              out.push({prov:true, r:{id:"p"+d+J.label+m, play_day:J.day, venue_id:a.venue_id, start_time:("0"+Math.floor(t/60)).slice(-2)+":"+("0"+(t%60)).slice(-2), court:c, division:d, status:""},
+                a:J.label+" · match "+m+" — pairs to follow", b:"", played:false, score:"", label:divLabel(d)+" · provisional"}); m++; }
+            t+=slot; }
+        });
       });
       return out;
     };
@@ -20597,7 +20617,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var btn=function(label,on,extra){ return '<button type="button" onclick="'+on+'" style="border:1.5px solid rgba(211,84,0,.3);background:#fff;color:#D35400;border-radius:20px;padding:7px 13px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;'+(extra||'')+'">'+label+'</button>'; };
     var dbtn=function(label,fn,d,extra){ return '<button type="button" data-d="'+esc(d)+'" onclick="'+fn+'(this.dataset.d)" style="border:1.5px solid rgba(211,84,0,.3);background:#fff;color:#D35400;border-radius:20px;padding:7px 13px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;'+(extra||'')+'">'+label+'</button>'; };
     var pill=function(label,on,active){ return '<button type="button" onclick="'+on+'" style="border:1.5px solid '+(active?'#D35400':'rgba(211,84,0,.3)')+';background:'+(active?'#D35400':'#fff')+';color:'+(active?'#fff':'#D35400')+';border-radius:20px;padding:7px 13px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">'+label+'</button>'; };
-    var inp=function(id,ph,val,type,extra){ return '<input id="'+id+'" type="'+(type||'text')+'" placeholder="'+esc(ph)+'" value="'+esc(val==null?'':val)+'" style="padding:9px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit;min-width:0;'+(extra||'')+'">'; };
+    var inp=function(id,ph,val,type,extra,attrs){ return '<input id="'+id+'" '+(attrs||'')+' type="'+(type||'text')+'" placeholder="'+esc(ph)+'" value="'+esc(val==null?'':val)+'" style="padding:9px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit;min-width:0;'+(extra||'')+'">'; };
 
     var render=function(){
       var b=document.getElementById("nsqOopBody"); if(!b) return;
@@ -20668,13 +20688,14 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         + (W.PLAT.clubs||[]).filter(function(c){ return W.__nsqLevelOf?W.__nsqLevelOf(+c.id)==="club":!!c.parent_id; }).map(function(c){ return '<option value="'+c.id+'"'+(ev.club_id&&+ev.club_id===+c.id?' selected':'')+'>'+esc(c.name)+'</option>'; }).join("")+'</select>'   /* q132: clubs only */
         +'<div style="grid-column:1/3;display:flex;gap:8px">'+btn(ev.id?"Save venue":"Add venue","nsqOopVenueSave()","flex:1")+(ev.id?btn("Cancel","nsqOopVenueEdit(0)"):'')+'</div></div>';
       /* allocation per division */
+      h+=daysHtml();   /* q164 */
       h+='<div style="font-weight:800;margin:14px 0 4px">Allocation <span style="font-size:11px;color:#888;font-weight:600">each division: venue \u00b7 courts \u00b7 day \u00b7 start \u00b7 slot</span></div>';
       if(!D.divs.length) h+='<p class="sub">No draws generated yet \u2014 generate a division\u2019s draw first.</p>';
       var divs=D.divs.slice().sort();
       divs.forEach(function(d){ var a=D.allocs.filter(function(x){ return x.division===d; })[0], vv=a?venueOf(a.venue_id):null;
         var n=Object.keys(D.fx).filter(function(id){ return D.fx[id].division===d; }).length, sch=D.rows.filter(function(r){ return r.division===d; }).length;
         h+='<div style="padding:8px 0;border-bottom:1px solid #f0ecf6"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">'+esc(divLabel(d))+'</b><span style="font-size:11px;color:#7a6658">'+sch+' / '+n+' on the schedule</span></div>'
-          +(a?'<div style="font-size:12.5px;color:#3b2a1e;margin:3px 0">'+esc(vv?vv.name:"?")+' \u00b7 courts '+a.court_from+'\u2013'+a.court_to+' \u00b7 '+esc(fmtDay(a.play_day))+' '+hhmm(a.start_time)+(a.end_time?' to '+hhmm(a.end_time):'')+' \u00b7 '+a.slot_minutes+' min slots'+(a.last_day&&a.last_day!==a.play_day?' \u00b7 to '+esc(fmtDay(a.last_day))+' \u00b7 '+(a.rounds_per_day||1)+' round'+((a.rounds_per_day||1)!==1?'s':'')+' a day':'')+'</div>':'<div style="font-size:12.5px;color:#b9770e;margin:3px 0">not allocated yet</div>')
+          +(a?'<div style="font-size:12.5px;color:#3b2a1e;margin:3px 0">'+esc(vv?vv.name:"?")+' \u00b7 courts '+a.court_from+'\u2013'+a.court_to+' \u00b7 '+esc(fmtDay(a.play_day))+' '+hhmm(a.start_time)+(a.end_time?' to '+hhmm(a.end_time):'')+' \u00b7 '+a.slot_minutes+' min slots'+(planOf(a)?(' \u00b7 plan: '+planOf(a).map(function(p){ return fmtDay(p.day).replace(/ \d+ \w+$/,"")+' '+p.rounds; }).join(' \u00b7 ')):'')+(a.last_day&&a.last_day!==a.play_day&&!planOf(a)?' \u00b7 to '+esc(fmtDay(a.last_day))+' \u00b7 '+(a.rounds_per_day||1)+' round'+((a.rounds_per_day||1)!==1?'s':'')+' a day':'')+'</div>':'<div style="font-size:12.5px;color:#b9770e;margin:3px 0">not allocated yet</div>')
           +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+dbtn(a?"Change":"Allocate","nsqOopAllocEdit",d)+(a?dbtn("Generate","nsqOopGenerate",d)+(sch?dbtn("Clear","nsqOopClear",d):'')+dbtn("Remove","nsqOopAllocRemove",d):'')+'</div>'
           +(UI.allocEdit===d?allocForm(d,a):'')+'</div>'; });
       if(D.allocs.length) h+='<div style="display:flex;gap:8px;margin:10px 0 0">'+btn("Generate all allocated divisions","nsqOopGenerate('')","flex:1;background:#D35400;color:#fff")+'</div>';
@@ -20692,15 +20713,47 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       h+='<p class="sub" style="margin-top:12px">Generate places every unscheduled match of a division on the next free court and slot \u2014 earliest first, no court double-booked, no player on two courts at once, breaks respected. A knockout\u2019s later rounds are placed when their pairs are known: generate again. Tap a match on the schedule above (with the code set) to move it.</p>';
       return h;
     };
+    /* q164: one line per day between the first and last day, the rounds typed for each */
+    var planRows=function(a){ a=a||{};
+      var f=(document.getElementById("nsqOopADay")||{}).value||a.play_day||"", l=(document.getElementById("nsqOopALast")||{}).value||a.last_day||f;
+      if(!f) return '<div class="sub" style="margin:4px 0">Set the first and last day to plan each day.</div>';
+      var have={}; (planOf(a)||[]).forEach(function(p){ have[p.day]=p.rounds; });
+      var h='', d=f, n=0; while(d<=l && n++<21){ h+='<div style="display:flex;align-items:center;gap:8px;margin:4px 0"><span style="flex:none;width:96px;font-size:13px;font-weight:700">'+esc(fmtDay(d))+'</span>'
+        +'<input data-day="'+d+'" value="'+esc(have[d]||"")+'" placeholder="e.g. 1, 2a, 2b, SF, F" style="flex:1;padding:8px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit;min-width:0"></div>'; d=addDays(d,1); }
+      return h; };
+    W.nsqOopPlanRows=function(){ var box=document.getElementById("nsqOopPlanBox"); if(!box) return; var keep={}; Array.prototype.forEach.call(box.querySelectorAll("input[data-day]"),function(x){ keep[x.dataset.day]=x.value; });
+      var a=D.allocs.filter(function(x){ return x.division===UI.allocEdit; })[0]||{}; box.innerHTML=planRows(a);
+      Array.prototype.forEach.call(box.querySelectorAll("input[data-day]"),function(x){ if(keep[x.dataset.day]!=null) x.value=keep[x.dataset.day]; }); };
+    /* q164: the tournament's playing days — each day its own start and finish */
+    var daysHtml=function(){
+      if(!UI.daysEdit) UI.daysEdit=(D.days||[]).map(function(x){ return {d:String(x.play_day), s:hhmm(x.start_time), e:x.end_time?hhmm(x.end_time):""}; });
+      var h='<div style="font-weight:800;margin:14px 0 4px">Playing days <span style="font-size:11px;color:#888;font-weight:600">each day: start \u00b7 finish (the last match ends by then)</span></div>';
+      if(!UI.daysEdit.length) h+='<p class="sub" style="margin:2px 0">None set \u2014 every day uses the section\u2019s own start time.</p>';
+      UI.daysEdit.forEach(function(x,i){ h+='<div style="display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:6px;align-items:center;margin:4px 0">'
+        +'<input type="date" value="'+esc(x.d)+'" onchange="nsqOopDaySet('+i+',\'d\',this.value)" style="padding:8px;border:1.5px solid #c9c4d4;border-radius:8px;font-family:inherit;min-width:0">'
+        +'<input type="time" value="'+esc(x.s)+'" onchange="nsqOopDaySet('+i+',\'s\',this.value)" style="padding:8px;border:1.5px solid #c9c4d4;border-radius:8px;font-family:inherit;min-width:0">'
+        +'<input type="time" value="'+esc(x.e)+'" onchange="nsqOopDaySet('+i+',\'e\',this.value)" style="padding:8px;border:1.5px solid #c9c4d4;border-radius:8px;font-family:inherit;min-width:0">'
+        +'<button onclick="nsqOopDayDel('+i+')" style="background:none;border:none;color:#c0392b;cursor:pointer;font-size:16px">\u00d7</button></div>'; });
+      h+='<div style="display:flex;gap:8px;margin:6px 0 0">'+btn("+ Add a day","nsqOopDayAdd()")+btn("Save days","nsqOopDaysSave()","flex:1")+'</div><div id="nsqOopDaysMsg" class="sub" style="margin:4px 0 0"></div>';
+      return h; };
+    W.nsqOopDaySet=function(i,k,v){ if(UI.daysEdit&&UI.daysEdit[i]) UI.daysEdit[i][k]=v; };
+    W.nsqOopDayDel=function(i){ if(UI.daysEdit){ UI.daysEdit.splice(i,1); render(); } };
+    W.nsqOopDayAdd=function(){ UI.daysEdit=UI.daysEdit||[]; var last=UI.daysEdit[UI.daysEdit.length-1]; UI.daysEdit.push(last?{d:addDays(last.d,1), s:last.s, e:last.e}:{d:"",s:"17:00",e:""}); render(); };
+    W.nsqOopDaysSave=function(){ if(!pinOk()) return; var rows=(UI.daysEdit||[]).filter(function(x){ return x.d && x.s; });
+      act({action:"oop_save_days",admin_pin:UI.pin,tournament:D.tour,days:rows.map(function(x){ return {play_day:x.d,start_time:x.s,end_time:x.e||null}; })})
+        .then(function(j){ if(!j.ok){ msg("nsqOopDaysMsg",j.error||"Not saved.",true); return; } draw(true); setTimeout(function(){ msg("nsqOopDaysMsg","Saved \u2014 "+rows.length+" day"+(rows.length!==1?"s":"")+". Press Generate to place the matches in these times."); },400); }); };
     var allocForm=function(d,a){
       a=a||{};
       return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0 2px;padding:10px;background:rgba(211,84,0,.05);border:1px solid #e6e3ec;border-radius:10px">'
         +'<select id="nsqOopAVenue" onchange="nsqOopAllocVenue()" style="grid-column:1/3;padding:9px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:13px;font-family:inherit">'+(D.venues.length?'':'<option value="">Add a venue first</option>')+D.venues.map(function(v){ return '<option value="'+v.id+'"'+(a.venue_id&&+a.venue_id===+v.id?' selected':'')+'>'+esc(v.name)+' \u00b7 '+v.courts+' courts</option>'; }).join("")+'</select>'
         +'<label style="font-size:12px;color:#7a6658">Court from '+inp("nsqOopACf","1",a.court_from||1,"number","width:100%")+'</label><label style="font-size:12px;color:#7a6658">Court to '+inp("nsqOopACt","",a.court_to||"","number","width:100%")+'</label>'
-        +'<label style="font-size:12px;color:#7a6658">First day '+inp("nsqOopADay","",a.play_day||"","date","width:100%")+'</label><label style="font-size:12px;color:#7a6658">Last day (blank = one day) '+inp("nsqOopALast","",a.last_day||"","date","width:100%")+'</label>'
+        +'<label style="font-size:12px;color:#7a6658">First day '+inp("nsqOopADay","",a.play_day||"","date","width:100%",'onchange="nsqOopPlanRows()"')+'</label><label style="font-size:12px;color:#7a6658">Last day (blank = one day) '+inp("nsqOopALast","",a.last_day||"","date","width:100%",'onchange="nsqOopPlanRows()"')+'</label>'
         +'<label style="font-size:12px;color:#7a6658">Rounds per day '+inp("nsqOopARpd","1",a.rounds_per_day||1,"number","width:100%")+'</label><label style="font-size:12px;color:#7a6658">Start time each day '+inp("nsqOopAStart","",a.start_time?hhmm(a.start_time):"","time","width:100%")+'</label>'
         +'<label style="font-size:12px;color:#7a6658">Minutes per match '+inp("nsqOopASlot","60",a.slot_minutes||"","number","width:100%")+'</label><label style="font-size:12px;color:#7a6658">Last start (optional) '+inp("nsqOopAEnd","",a.end_time?hhmm(a.end_time):"","time","width:100%")+'</label>'
         +'<div style="grid-column:1/3;font-size:11.5px;color:#7a6658">Round 1 is played on the first day, round 2 on the next, and so on \u2014 or more rounds a day if you say so. Later rounds of a Swiss or knockout are placed when their pairings exist: press Generate again.</div>'
+        +'<div style="grid-column:1/3;font-weight:800;font-size:13px;margin-top:6px">Day plan <span style="font-weight:600;color:#888;font-size:11px">(optional \u2014 replaces \u201crounds per day\u201d)</span></div>'
+        +'<div style="grid-column:1/3;font-size:11.5px;color:#7a6658">For each day, the rounds played: <b>1</b> = round 1 \u00b7 <b>2a</b> and <b>2b</b> = round 2 split over two days (every pair plays one of them) \u00b7 <b>SF</b> = semi-finals \u00b7 <b>F</b> = final \u00b7 more than one: <b>2b, 3</b>. Leave a day blank for no play.</div>'
+        +'<div id="nsqOopPlanBox" style="grid-column:1/3">'+planRows(a)+'</div>'
         +'<div style="grid-column:1/3;display:flex;gap:8px">'+dbtn("Save allocation","nsqOopAllocSave",d,"flex:1")+btn("Cancel","nsqOopAllocEdit(null)")+'</div></div>';
     };
     var editForm=function(x){
@@ -20721,7 +20774,8 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     W.nsqOopAllocEdit=function(d){ UI.allocEdit=d; render(); setTimeout(W.nsqOopAllocVenue,0); };
     W.nsqOopAllocVenue=function(){ try{ var s=document.getElementById("nsqOopAVenue"), ct=document.getElementById("nsqOopACt"); if(!s||!ct) return; var v=venueOf(s.value); if(v && !ct.value) ct.value=v.courts; }catch(e){} };
     W.nsqOopAllocSave=function(d){ if(!pinOk()) return; var g=function(id){ return (document.getElementById(id)||{}).value||""; };
-      act({action:"oop_save_alloc",admin_pin:UI.pin,tournament:D.tour,division:d,venue_id:g("nsqOopAVenue"),court_from:g("nsqOopACf"),court_to:g("nsqOopACt"),play_day:g("nsqOopADay"),last_day:g("nsqOopALast"),rounds_per_day:g("nsqOopARpd"),start_time:g("nsqOopAStart"),slot_minutes:g("nsqOopASlot"),end_time:g("nsqOopAEnd")})
+      act({action:"oop_save_alloc",admin_pin:UI.pin,tournament:D.tour,division:d,venue_id:g("nsqOopAVenue"),court_from:g("nsqOopACf"),court_to:g("nsqOopACt"),play_day:g("nsqOopADay"),last_day:g("nsqOopALast"),rounds_per_day:g("nsqOopARpd"),start_time:g("nsqOopAStart"),slot_minutes:g("nsqOopASlot"),end_time:g("nsqOopAEnd"),
+        day_plan:Array.prototype.map.call(document.querySelectorAll("#nsqOopPlanBox input[data-day]"),function(x){ return {day:x.dataset.day, rounds:String(x.value||"").trim()}; }).filter(function(p){ return p.rounds; })})   /* q164 */
         .then(function(j){ if(!j.ok){ alert(j.error||"Not saved."); return; } UI.allocEdit=null; draw(true); }); };
     W.nsqOopAllocRemove=function(d){ if(!pinOk()) return; if(!confirm("Remove the allocation for "+divLabel(d)+"? Its scheduled matches are removed from the schedule too.")) return;
       act({action:"oop_remove_alloc",admin_pin:UI.pin,tournament:D.tour,division:d}).then(function(j){ if(!j.ok){ alert(j.error||"Not removed."); return; } draw(true); }); };
