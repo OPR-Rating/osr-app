@@ -3600,7 +3600,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q155";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q156";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -8238,12 +8238,12 @@ async function loadTournamentSheet(tournament, division) {
     // COMBINED KNOCKOUT (snake): top teams from every group cross into one bracket.
     // ============================================================
     // choose advancement
-    const maxAdv = Math.min(2, minGroupSize);
+    const maxAdv = Math.min(4, minGroupSize);   /* q156: up to 4 per group (quarter-finals) */
     let adv = 1;
     if(maxAdv >= 2){
-      const ans = prompt('How many teams advance from EACH group?\n\n  1  = group winners only ('+groupLabels.length+' teams → '+(groupLabels.length<=2?'final':(groupLabels.length<=4?'semi-finals':'knockout'))+')\n  2  = top two per group ('+(groupLabels.length*2)+' teams → knockout)\n\nEnter 1 or 2:', '2');
+      const ans = prompt('How many teams advance from EACH group?\n\n  1  = group winners only ('+groupLabels.length+' teams → '+(groupLabels.length<=2?'final':(groupLabels.length<=4?'semi-finals':'knockout'))+')\n  2  = top two per group ('+(groupLabels.length*2)+' teams → '+(groupLabels.length*2<=4?'semi-finals':'quarter-finals')+')'+(maxAdv>=4?('\n  4  = top four per group ('+(groupLabels.length*4)+' teams → '+(groupLabels.length*4<=8?'quarter-finals':'knockout')+')'):'')+'\n\nEnter 1, 2'+(maxAdv>=4?' or 4':'')+':', '2');
       if(ans===null) return;
-      adv = (ans.trim()==='1') ? 1 : 2;
+      adv = (ans.trim()==='1') ? 1 : ((ans.trim()==='4' && maxAdv>=4) ? 4 : 2);   /* q156 */
     }
     const qualifiers = groupLabels.length * adv;
     if(qualifiers < 2){ alert('Not enough qualifiers for a knockout.'); return; }
@@ -8259,7 +8259,7 @@ async function loadTournamentSheet(tournament, division) {
     // intact, so if every favourite wins you get A1 vs B1 in the final.
     const winners = groupLabels.map(L=> rankInGroup[L][0]);          // seeds 1..G
     const playoffTeams = winners.slice();
-    if(adv >= 2){ groupLabels.forEach(L=> playoffTeams.push(rankInGroup[L][1])); }  // G+1..2G
+    for(let k=1;k<adv;k++){ groupLabels.forEach(L=> playoffTeams.push(rankInGroup[L][k])); }  // q156: runners-up, then 3rds, 4ths
     // playoffTeams[i] is the (i+1)-th playoff seed. Now arrange into bracket slot order
     // so seed 1 and seed 2 are kept apart, using the KO bracketOrder on Q (padded to 2^n).
     const Q = playoffTeams.length;
@@ -8646,7 +8646,7 @@ async function renderEnterScreen(){
       genCard += '<div style="padding:12px;background:rgba(211,84,0,.05);border:1px solid #e6e3ec;border-radius:10px;margin-bottom:10px;">'
         + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><b>' + d + '</b> <span style="font-size:11px;color:#888;">' + cnt + ' teams</span></div>';
       if(cnt < 4){ genCard += '<div class="sub" style="margin:0;">Needs at least 4 teams to draw.</div>'; }
-      else if(window._etTourFormat==='round_robin'){
+      else if(window._etTourFormat==='round_robin' || (window.__nsqDivRR && window.__nsqDivRR(d))){   /* q156: or this section chose it */
         // Round robin (Piece 2a): choose ONE big group, or split into groups.
         // The split choice is made HERE, at generation, when the field size is final.
         // A split then asks the OUTCOME (separate tier winners, or groups -> knockout),
@@ -8727,7 +8727,9 @@ function etGroupConfigHTML(d, cnt){
   const de = d.replace(/'/g,"\\'");
   let h = '<div style="margin-bottom:8px;font-size:12px;color:#6b6b76;">Format: '
     + '<b style="color:var(--purple,#D35400);">Round Robin</b>'
-    + ' <span style="color:#aaa;">(set when the tournament was created)</span></div>';
+    + ((window.__nsqDivRR && window.__nsqDivRR(d) && window._etTourFormat!=='round_robin')
+        ? ' <span style="color:#aaa;">(chosen for this section)</span> <button class="ac-btn ac-btn-ghost" style="padding:3px 9px;font-size:11px;margin-left:6px" onclick="nsqDivRRSet(\'' + de + '\',false)">\u2190 back to Swiss</button></div>'
+        : ' <span style="color:#aaa;">(set when the tournament was created)</span></div>');   /* q156 */
 
   // If the field is too small to split (no valid splits), it's single-group only.
   if(!splits.length){
@@ -9020,7 +9022,7 @@ async function etGenerateDiv(division){
   const existing = await tmLoadFixtures(tournament, division);
   if(existing.length && !confirm(division+' already has a draw. Regenerate it? (This replaces the existing '+division+' fixtures.)')) return;
   TM_ADMIN_PIN = pin;
-  const fmt = window._etTourFormat || (window._etFmt && window._etFmt[division]) || 'swiss';
+  const fmt = (window.__nsqDivRR && window.__nsqDivRR(division)) ? 'round_robin' : (window._etTourFormat || (window._etFmt && window._etFmt[division]) || 'swiss');   /* q156 */
   if(fmt==='knockout'){
     gmsg.textContent = 'Generating '+division+' knockout draw…';
     await tmGenerateKnockoutDraw(tournament, division);
@@ -20088,7 +20090,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         /* q128 (Andre): each division's draw block sits UNDER that division in the list, this category only; the other
            categories' blocks stay hidden until their tab is opened. The admin code card moves above the list. */
         if(gen){ var blocks=Array.prototype.filter.call(gen.children,function(x){ var bb=x.querySelector&&x.querySelector("b"); return bb && /^(Men's|Ladies|Mixed|All Sorts)( - |$)/.test((bb.textContent||"").trim()); });
-          blocks.forEach(function(x){ var bb=x.querySelector("b"), t=bb.textContent.trim(); if(secOf(t)) bb.textContent=W.tmDivLabel(t);
+          blocks.forEach(function(x){ var bb=x.querySelector("b"), t=(bb.dataset.nsqSec||bb.textContent).trim(); bb.dataset.nsqSec=t; if(secOf(t)) bb.textContent=W.tmDivLabel(t);   /* q156: keep the real name */
             var slot=list?list.querySelector('.nsqDivGen[data-sec="'+t.replace(/"/g,'&quot;')+'"]'):null;
             if(slot && baseOf(t)===base){ x.style.display=""; x.style.marginTop="6px"; slot.appendChild(x);
               /* q129 (Andre): the admin code is typed right where the draw is generated — each block has its own box, kept in
@@ -20909,6 +20911,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var LS=function(d){ try{ return "nsqSwissOpen|"+(W._etTournament||"")+"|"+d; }catch(e){ return "nsqSwissOpen|"+d; } };
     var isOpen=function(d){ if(OPEN[d]!=null) return OPEN[d]; try{ return localStorage.getItem(LS(d))==="1"; }catch(e){ return false; } };
     W.nsqSwissOpenSet=function(d,on){ OPEN[d]=!!on; try{ localStorage.setItem(LS(d),on?"1":"0"); }catch(e){} if(W.renderEnterScreen) W.renderEnterScreen(); };
+    /* q156: a section may be drawn as a round robin instead (kept on this device until the draw is made; then the fixtures say rr) */
+    var LSR=function(d){ return "nsqDivRR|"+(W._etTournament||"")+"|"+d; }, RR={};
+    W.__nsqDivRR=function(d){ if(RR[d]!=null) return RR[d]; try{ return localStorage.getItem(LSR(d))==="1"; }catch(e){ return false; } };
+    W.nsqDivRRSet=function(d,on){ RR[d]=!!on; try{ localStorage.setItem(LSR(d),on?"1":"0"); }catch(e){} if(on){ OPEN[d]=false; try{ localStorage.setItem(LS(d),"0"); }catch(e){} } if(W.renderEnterScreen) W.renderEnterScreen(); };
 
     /* ---- the pairing: pure, tested on its own (node) ----
        order   : every seed, best record first (the standings order)
@@ -20977,7 +20983,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     (function(){ var g0=W.etGenerateDiv; if(typeof g0!=="function") return;
       W.etGenerateDiv=async function(division){
         var fmt=W._etTourFormat || (W._etFmt && W._etFmt[division]) || "swiss";
-        if(fmt!=="swiss" || !isOpen(division)) return g0.apply(this, arguments);
+        if(fmt!=="swiss" || !isOpen(division) || (W.__nsqDivRR && W.__nsqDivRR(division))) return g0.apply(this, arguments);
         var tournament=W._etTournament, pin=((document.getElementById("etPin")||{}).value||"").trim(), gmsg=document.getElementById("etGenMsg");
         if(!pin){ gmsg.innerHTML='<span style="color:#c0392b;">Enter the admin PIN first.</span>'; return; }
         var entries=TM.seedEntries(await W.tmLoadEntries(tournament, division)), N=entries.length;
@@ -21006,6 +21012,16 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       Array.prototype.forEach.call(scr.querySelectorAll("table.fxtbl"),function(t){ if(t.dataset.nsqBand===(trueSwiss?"off":"on")) return; t.dataset.nsqBand=trueSwiss?"off":"on";
         Array.prototype.forEach.call(t.querySelectorAll("tr"),function(tr){ var c=tr.children[2]; if(c) c.style.display=trueSwiss?"none":""; }); });
     }catch(e){} }, 600);
+    /* q156: an odd section cannot be a Swiss — offer the round robin right there (byes rotate) */
+    setInterval(function(){ try{
+      if(!W._etTournament || W._etTourFormat!=="swiss") return;
+      var body=document.getElementById("etBody"); if(!body) return;
+      Array.prototype.forEach.call(body.querySelectorAll("div.sub"),function(m){ if(m.dataset.nsqOddRR || !/^Odd number \(\d+\)/.test((m.textContent||"").trim())) return; m.dataset.nsqOddRR="1";
+        var blk=m.parentNode, b=blk&&blk.querySelector("b"); var d=b?(b.dataset.nsqSec||b.textContent||"").trim():""; if(!d) return;
+        var btn=document.createElement("button"); btn.className="ac-btn ac-btn-ghost"; btn.style.cssText="margin-top:8px;width:100%;text-align:left";
+        btn.innerHTML="\u25cb <b>Play it as a round robin</b> \u2014 an odd field works: one team has a bye each round";
+        btn.addEventListener("click",function(){ W.nsqDivRRSet(d,true); }); m.parentNode.insertBefore(btn, m.nextSibling); });
+    }catch(e){} }, 600);
     /* the switch sits above each Swiss division's rounds slider (the page is rebuilt often; add once per build) */
     setInterval(function(){ try{
       if(!W._etTournament || W._etTourFormat!=="swiss") return;
@@ -21014,9 +21030,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var blk=sl.parentNode&&sl.parentNode.parentNode; if(!blk || blk.querySelector(".nsqSwissSw")) return;
         var m=String(sl.getAttribute("oninput")||"").match(/etSetDivRounds\('((?:[^'\\]|\\.)*)'/); if(!m) return; var d=m[1].replace(/\\'/g,"'"), on=isOpen(d);
         var row=document.createElement("div"); row.className="nsqSwissSw"; row.style.cssText="margin:0 0 8px";
-        row.innerHTML='<div style="font-size:12px;font-weight:700;color:#5aa98d;margin:0 0 6px">How does the Swiss open?</div>'
+        row.innerHTML='<div style="font-size:12px;font-weight:700;color:#5aa98d;margin:0 0 6px">How is this section played?</div>'
           +'<div style="display:flex;flex-direction:column;gap:6px"><button class="ac-btn '+(on?'ac-btn-ghost':'ac-btn-primary')+'" data-on="0" style="text-align:left;line-height:1.35">'+(on?'○ ':'● ')+'<b>Banded</b> — 3 fixed rounds inside the bands, then Swiss rounds</button>'
           +'<button class="ac-btn '+(on?'ac-btn-primary':'ac-btn-ghost')+'" data-on="1" style="text-align:left;line-height:1.35">'+(on?'● ':'○ ')+'<b>Seeded, true Swiss</b> — round 1 is 1 v last, 2 v second-last …; every round after that pairs teams on the same record, no rematches. Generate each round from the Rounds tab; stop when enough are played.</button></div>';
+        row.querySelector("div[style*='flex-direction:column']").insertAdjacentHTML("beforeend",'<button class="ac-btn ac-btn-ghost" data-rr="1" style="text-align:left;line-height:1.35">\u25cb <b>Round robin</b> \u2014 everyone plays everyone, in one group or split into groups (e.g. two boxes of 4), with a knockout after if wanted</button>');   /* q156 */
+        row.querySelector("button[data-rr]").addEventListener("click",function(){ W.nsqDivRRSet(d,true); });
         Array.prototype.forEach.call(row.querySelectorAll("button[data-on]"),function(b){ b.addEventListener("click",function(){ W.nsqSwissOpenSet(d, b.dataset.on==="1"); }); });
         var sliderRow=sl.parentNode; sliderRow.parentNode.insertBefore(row, sliderRow);
         if(on){ sliderRow.style.display="none"; var fl=sliderRow.nextElementSibling; if(fl && /Format:/.test(fl.textContent||"")) fl.innerHTML='Format: <b style="color:var(--purple,#D35400);">True Swiss</b> <span style="color:#aaa;">(seeded opening, paired on results)</span>'; }
