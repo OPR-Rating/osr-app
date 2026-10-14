@@ -1904,7 +1904,7 @@ function showScreen(id) {
 // preload: optional {t1:[a,b], t2:[c,d], cat, tournament, division} to launch
 // pre-filled from a tournament fixture (used by the future Rounds "Marker" btn).
 // ============================================================================
-const MK = { players:{t1p1:null,t1p2:null,t2p1:null,t2p2:null}, fmt:5, cat:"Men's", event:"",
+const MK = { players:{t1p1:null,t1p2:null,t2p1:null,t2p2:null}, fmt:5, cat:"Men's", event:"", target:11, allPlay:false,
   format:'doubles',
   firstServe:1, gp:[0,0], games:[0,0], scores:[], server:1, box:'R', history:[],
   over:false, view:'setup', preload:null, pickSlot:null };
@@ -1932,7 +1932,7 @@ function mkOpen(preload){
   if(typeof liveFinish==='function' && typeof LIVE!=='undefined' && LIVE.active) liveFinish('abandoned');
   MK.preload = preload || null;
   MK.players={t1p1:null,t1p2:null,t2p1:null,t2p2:null};
-  MK.fmt=5; MK.cat="Men's"; MK.format='doubles'; MK.firstServe=1; MK.view='setup'; MK.event="";
+  MK.fmt=5; MK.cat="Men's"; MK.format='doubles'; MK.firstServe=1; MK.view='setup'; MK.event=""; MK.target=11; MK.allPlay=false;
   MK.returnToEntry=false;   // home-launched marker self-submits. markerFromEntry() sets this true.
   if(typeof loadPlayers==='function'){ loadPlayers(); }   // ODR: refresh individuals for the pickers
   if(preload){
@@ -1991,7 +1991,7 @@ function mkRenderSetup(){
   document.getElementById('mkContent').innerHTML = `
   <div class="mk-setup">
     <h2>Live Marker</h2>
-    <div class="mk-sub">International squash · PAR 11 · tap the ${sing?'player':'team'} that wins each rally</div>
+    <div class="mk-sub">International squash · PAR ${MK.target||11} · tap the ${sing?'player':'team'} that wins each rally</div>
     <div class="mk-grp">
       <h3>Event</h3>
       <select id="mkSetupEvent" onchange="mkSetupEventChanged(this.value)" style="width:100%;padding:12px;border:1.5px solid rgba(255,160,60,.3);border-radius:10px;font-size:15px;background:#241509;color:#fff;box-sizing:border-box;"><option value="">Choose event…</option></select>
@@ -2002,8 +2002,7 @@ function mkRenderSetup(){
     </div>
     <div class="mk-grp">
       <h3>Match</h3>
-      <div style="margin-bottom:10px;"><div style="font-size:11px;color:#9a8578;margin-bottom:5px;">Games</div>
-        <div class="mk-seg"><button class="${segF(3)}" onclick="mkSetFmt(3)">Best of 3</button><button class="${segF(5)}" onclick="mkSetFmt(5)">Best of 5</button></div></div>
+      ${mkMatchRows()}
       <div><div style="font-size:11px;color:#9a8578;margin-bottom:5px;">Category</div>
         <div class="mk-seg">${catBtns}</div></div>
     </div>
@@ -2041,7 +2040,19 @@ function mkSideNameStacked(side){
   if(MK.format==='singles') return side===1 ? p.t1p1 : p.t2p1;
   return side===1 ? (p.t1p1+'<br>'+p.t1p2) : (p.t2p1+'<br>'+p.t2p2);
 }
-function mkSetFmt(v){ MK.fmt=v; mkRenderSetup(); }
+function mkSetFmt(v){ if(v==='3all'){ MK.fmt=3; MK.allPlay=true; } else { MK.fmt=v; MK.allPlay=false; } if(MK.view==='serve') mkServePrompt(); else mkRenderSetup(); }
+function mkSetTarget(v){ MK.target=(v===15?15:11); if(MK.view==='serve') mkServePrompt(); else mkRenderSetup(); }
+/* q155: the match is over when a side has won the games it needs (best of), or when every game is played (all played) */
+function mkMatchOver(games){ return MK.allPlay ? ((games[0]+games[1])>=MK.fmt) : (Math.max(games[0],games[1])>=(MK.fmt===5?3:2)); }
+function mkFmtLabel(){ return (MK.allPlay?(MK.fmt+' games'):('Best of '+MK.fmt))+' \u00b7 to '+(MK.target||11); }
+function mkMatchRows(){
+  var on=function(c){ return c?'on':''; };
+  return '<div style="margin-bottom:10px;"><div style="font-size:11px;color:#9a8578;margin-bottom:5px;">Games</div>'
+    +'<div class="mk-seg"><button class="'+on(!MK.allPlay&&MK.fmt===3)+'" onclick="mkSetFmt(3)">Best of 3</button><button class="'+on(!MK.allPlay&&MK.fmt===5)+'" onclick="mkSetFmt(5)">Best of 5</button><button class="'+on(MK.allPlay)+'" onclick="mkSetFmt(&quot;3all&quot;)">3 games, all played</button></div></div>'
+    +'<div style="margin-bottom:10px;"><div style="font-size:11px;color:#9a8578;margin-bottom:5px;">Points to win a game (first to, no 2-point margin)</div>'
+    +(MK.handicap?'<div style="font-size:12px;color:#9a8578">11 \u2014 a handicap match is played to 11</div>'
+      :'<div class="mk-seg"><button class="'+on((MK.target||11)===11)+'" onclick="mkSetTarget(11)">11</button><button class="'+on(MK.target===15)+'" onclick="mkSetTarget(15)">15</button></div>')+'</div>';
+}
 function mkSetCat(v){
   MK.cat=v;
   // If narrowing to Men's/Ladies, drop any picked player who's no longer eligible.
@@ -2193,15 +2204,15 @@ function mkRally(t){
 function mkStroke(t){ if(MK.over)return; mkFlash('Stroke to Team '+t); mkRally(t); }
 function mkLet(){ if(MK.over)return; mkSnap(); mkFlash('Yes, let'); }
 function mkCheckGame(){
-  const target=11; const [a,b]=MK.gp;             // to 11, NO win-by-2 (intl doubles)
+  const target=(MK.hcTeam?11:(MK.target||11)); const [a,b]=MK.gp;   // q155: to 11 or 15, NO win-by-2
   if(a>=target||b>=target){
     const w=a>b?1:2;
     // Freeze the completed game, then show the GAME/SET banner (OPR parity). The actual
     // advance (record score, reset to the NEXT game's head-start, swap server) happens on the
     // tap in mkBannerTap — giving one clean moment to compute the next game's alternating start.
     MK._pending = { winner:w, scoreA:a, scoreB:b };
-    const need=MK.fmt===5?3:2;
-    const willFinish = (MK.games[w-1]+1) >= need;
+    const _g=MK.games.slice(); _g[w-1]++;
+    const willFinish = mkMatchOver(_g);   // q155
     mkShowBanner(willFinish?'set':'game', w);
   }
 }
@@ -2230,8 +2241,7 @@ function mkAdvanceGame(){
   const p=MK._pending; MK._pending=null; if(!p) return;
   const w=p.winner;
   MK.games[w-1]++; MK.scores.push(p.scoreA+'-'+p.scoreB);
-  const need=MK.fmt===5?3:2;
-  if(MK.games[w-1]>=need){ MK.over=true; mkRenderScore(); return; }
+  if(mkMatchOver(MK.games)){ MK.over=true; mkRenderScore(); return; }   // q155
   MK.gp=mkNewGamePts(); MK.server=w; MK.box='R';   // next game's alternating head-start
   mkRenderScore();
 }
@@ -2253,7 +2263,7 @@ function mkOpenConduct(){
   document.getElementById('mkOv').classList.add('on');
 }
 function mkConductStroke(t){ if(MK.over)return; mkSnap(); mkFlash('Conduct stroke → Team '+t); MK.gp[t-1]++; mkCheckGame(); mkRenderScore(); }
-function mkConductGame(t){ if(MK.over)return; mkSnap(); mkFlash('Conduct game → Team '+t); MK._pending={winner:t, scoreA:MK.gp[0], scoreB:MK.gp[1]}; const need=MK.fmt===5?3:2; const willFinish=(MK.games[t-1]+1)>=need; mkShowBanner(willFinish?'set':'game', t); }
+function mkConductGame(t){ if(MK.over)return; mkSnap(); mkFlash('Conduct game → Team '+t); MK._pending={winner:t, scoreA:MK.gp[0], scoreB:MK.gp[1]}; const _g=MK.games.slice(); _g[t-1]++; const willFinish=mkMatchOver(_g);   /* q155 */ mkShowBanner(willFinish?'set':'game', t); }
 
 // ---------- render ----------
 function mkRenderLive(){
@@ -2270,7 +2280,7 @@ function mkRenderLive(){
       </div>
     </div>
     <div class="mk-top">
-      <div class="mk-fmt" id="mkFmt">Best of ${MK.fmt} · ${MK.cat}</div>
+      <div class="mk-fmt" id="mkFmt">${mkFmtLabel()} · ${MK.cat}</div>
       <div class="mk-gnum" id="mkGnum">Game 1</div>
       <div class="mk-gtot" id="mkGtot">0 – 0</div>
     </div>
@@ -2305,7 +2315,7 @@ function mkRenderScore(){
   document.getElementById('mkG1').textContent='Games: '+MK.games[0];
   document.getElementById('mkG2').textContent='Games: '+MK.games[1];
   document.getElementById('mkGtot').textContent=MK.games[0]+' – '+MK.games[1];
-  const gnum=Math.min(MK.games[0]+MK.games[1]+1, MK.fmt);
+  const gnum=Math.min(MK.games[0]+MK.games[1]+1, MK.fmt);   /* q155: all-played runs to MK.fmt games too */
   document.getElementById('mkGnum').textContent='Game '+gnum;
   document.getElementById('mkSide1').classList.toggle('serving',MK.server===1&&!MK.over);
   document.getElementById('mkSide2').classList.toggle('serving',MK.server===2&&!MK.over);
@@ -2334,7 +2344,7 @@ function mkEnd(){
       <div class="mk-rt ${win===1?'win':''}"><span class="mk-rn">${t1}</span><span class="mk-rg">${g1}</span></div>
       <div class="mk-rt ${win===2?'win':''}"><span class="mk-rn">${t2}</span><span class="mk-rg">${g2}</span></div>
       <div class="mk-rgames">${MK.scores.length?MK.scores.join('  '):'no completed games'}</div>
-      <div class="mk-rmeta">${sing?'Singles':'Doubles'} \u00b7 ${MK.cat} \u00b7 Best of ${MK.fmt} \u00b7 ${win?((sing?'Player ':'Team ')+win+' win'):'unfinished'}</div>
+      <div class="mk-rmeta">${sing?'Singles':'Doubles'} \u00b7 ${MK.cat} \u00b7 ${mkFmtLabel()} \u00b7 ${win?((sing?'Player ':'Team ')+win+' win'):'unfinished'}</div>
     </div>
     <div style="background:var(--mk-char2);border:1px solid rgba(255,160,60,.18);border-radius:14px;padding:16px;margin-bottom:12px;">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--mk-am);font-weight:800;margin-bottom:10px;">Where does this match go?</div>
@@ -3590,7 +3600,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q154";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q155";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -5526,6 +5536,8 @@ function markerFromEntry(){
   MK.cat    = entryData.type || "Men's";
   MK.event  = entryData.event || 'Social';
   MK.fmt    = parseInt(entryData.sets) || 5;   // games-played chosen on entry (label/display only)
+  MK.allPlay = !(MK.fmt===3 || MK.fmt===5);     // q155: 1, 2 or 4 games chosen on the sheet = that many, all played
+  if(!MK.target) MK.target=11;
   MK.firstServe=1; MK.eventLocked=null; MK.preload=null;
   MK.returnToEntry = true;                      // finish -> return to Step 3, don't self-submit
   MK.handicap = undefined;                      // unknown here; mkStart resolves it before play
@@ -5547,11 +5559,12 @@ function mkServePrompt(){
   document.getElementById('mkContent').innerHTML = `
   <div class="mk-setup">
     <div class="mk-grp" style="text-align:center;">
-      <div style="font-size:12px;color:#9a8578;margin-bottom:4px;">${MK.event||'Social'} · ${MK.cat} · ${sing?'Singles':'Doubles'} · Best of ${MK.fmt}</div>
+      <div style="font-size:12px;color:#9a8578;margin-bottom:4px;">${MK.event||'Social'} · ${MK.cat} · ${sing?'Singles':'Doubles'} · ${mkFmtLabel()}</div>
       <div style="font-size:15px;color:#FFA033;font-weight:700;margin-bottom:2px;">${lbl1}</div>
       <div style="font-size:12px;color:#9a8578;">vs</div>
       <div style="font-size:15px;color:#FFA033;font-weight:700;margin-top:2px;">${lbl2}</div>
     </div>
+    <div class="mk-grp">${mkMatchRows()}</div>
     <div class="mk-grp">
       <h3>Who serves first?</h3>
       <div class="mk-seg">
@@ -17841,7 +17854,7 @@ W.nhOpenPair=function(name){
     + step(2,'Say what the match was','The event (<b>Social</b>, <b>Ladder Match</b> or a tournament), the date, Men’s / Ladies / Mixed / All Sorts, and how many games were played.')
     + step(3,'Pick the four players','Tap each slot and choose the name. In a <b>Mixed</b> match, once player 1 is chosen, the partner list shows only the other gender. '
       + 'For a <b>Ladder Match</b> you pick the two ladder <b>teams</b> instead.')
-    + step(4,'Put in the score, game by game','Each game is played to <b>11 points</b> (win by two at 10–all). Enter the points of every game — for example '
+    + step(4,'Put in the score, game by game','Each game is played to <b>11 points</b> (or <b>15</b> where the event says so) — first to the target wins, no two-point margin. Enter the points of every game — for example '
       + '<b>11–7, 9–11, 11–5, 11–8</b> — and the app counts the games: that match is <b>3–1</b>. A match is usually best of five, first to three games.')
     + step(5,'Save','The division is worked out from the players’ ratings, and all four ratings move the moment it is saved.')
 
@@ -17892,7 +17905,7 @@ W.nhOpenPair=function(name){
       + s('National · Province · Club · Division', q('National holds every player. Provinces hold their clubs; clubs hold their divisions. '
         + 'Divisions are set nationally by rating, and players are placed in them automatically — nobody chooses a division.'))
       + s('How Ratings Work', q('Every match updates the four players’ ratings. The winners go up and the losers go down; how far depends on how surprising the result was '
-        + 'and how convincing — games first, points second, every game counting. Games are played to 11 points.'))
+        + 'and how convincing — games first, points second, every game counting. Games are played to 11 points (or 15), first to the target.'))
       + s('Match Types', '<div><span class="about-badge">Men’s</span> <span class="about-badge">Ladies</span> <span class="about-badge">Mixed</span> <span class="about-badge">All Sorts</span></div>'
         + '<p style="margin-top:8px;">Any doubles combination. A pair’s rating is 60% its stronger player and 40% the other; men and ladies are on one scale.</p>')
       + s('Your Level', q('Your Level is your rating divided by 200 — 1700 is Level 8.5. One simple number for your standard.'));
