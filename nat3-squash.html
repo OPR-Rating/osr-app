@@ -3600,7 +3600,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q161";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q162";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -20544,8 +20544,38 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     };
     var venueOf=function(id){ return D.venues.filter(function(v){ return +v.id===+id; })[0]||null; };
     var pairName=function(div,seed){ var e=D.ents[div+"|"+seed]; return e?(e.p1+(e.p2?" & "+e.p2:"")):("Seed "+seed); };
-    var rowView=function(r){ var f=D.fx[r.fixture_id]||{}; var a=pairName(f.division||r.division,f.seed_a), b=pairName(f.division||r.division,f.seed_b);
+    var rowView=function(r){ var f=D.fx[r.fixture_id]||{}; var a=(f.seed_a?"["+f.seed_a+"] ":"")+pairName(f.division||r.division,f.seed_a), b=(f.seed_b?"["+f.seed_b+"] ":"")+pairName(f.division||r.division,f.seed_b);   /* q162: the seed in front of each pair */
       var played=f.sets_a!=null, score=played?(f.sets_a+"-"+f.sets_b):""; return {r:r,f:f,a:a,b:b,played:played,score:score,label:divLabel(r.division)}; };
+
+    /* ---------- q162: PROVISIONAL SLOTS (Andre) — a Swiss section's later rounds have no pairings until the results are in,
+       but the courts and days are known: each round still to come (up to log2 of the field: 16 pairs = 4 rounds, as the
+       committee plays it) is laid on its day's courts after what is really scheduled, marked "pairs to follow".
+       Display only — nothing is saved; Generate places the real matches when the round exists. ---------- */
+    var addDays=function(iso,n){ var m=String(iso||"").match(/^(\d{4})-(\d{2})-(\d{2})/); if(!m) return iso; var d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3]+n)); return d.toISOString().slice(0,10); };
+    var provRows=function(){
+      var out=[], used={};
+      D.rows.forEach(function(r){ used[r.venue_id+"|"+r.play_day+"|"+tmin(r.start_time)+"|"+r.court]=1; });
+      D.allocs.slice().sort(function(a,b){ return String(a.division).localeCompare(String(b.division)); }).forEach(function(a){
+        var d=a.division, fxs=Object.keys(D.fx).map(function(k){ return D.fx[k]; }).filter(function(f){ return f.division===d; });
+        if(!fxs.length || fxs.some(function(f){ return f.round_type==="rr" || f.round_type==="ko"; })) return;          /* Swiss sections only */
+        var N=Object.keys(D.ents).filter(function(k){ return k.indexOf(d+"|")===0; }).length; if(N<4) return;
+        var planned=Math.ceil(Math.log(N)/Math.LN2), have=0; fxs.forEach(function(f){ if(Number(f.round)<90 && Number(f.round)>have) have=Number(f.round); });
+        var rpd=Math.max(1,Number(a.rounds_per_day||1)), first=String(a.play_day), last=a.last_day?String(a.last_day):first, slot=Number(a.slot_minutes||60), st=tmin(a.start_time), endAt=a.end_time?tmin(a.end_time):NaN;
+        for(var r=have+1; r<=planned; r++){
+          var day=addDays(first, Math.floor((r-1)/rpd)); if(day>last) day=last;
+          var brk=D.breaks.filter(function(k){ return +k.venue_id===+a.venue_id && k.play_day===day; }).map(function(k){ var s0=tmin(k.start_time); return [s0, s0+Number(k.minutes||30)]; });
+          var m=1, t=st, guard=0;
+          while(m<=Math.floor(N/2) && guard++<400){
+            if(!isNaN(endAt) && t>endAt) break;
+            if(brk.some(function(b){ return t<b[1] && t+slot>b[0]; })){ t+=slot; continue; }
+            for(var c=Number(a.court_from); c<=Number(a.court_to) && m<=Math.floor(N/2); c++){ var key=a.venue_id+"|"+day+"|"+t+"|"+c; if(used[key]) continue; used[key]=1;
+              out.push({prov:true, r:{id:"p"+d+r+m, play_day:day, venue_id:a.venue_id, start_time:("0"+Math.floor(t/60)).slice(-2)+":"+("0"+(t%60)).slice(-2), court:c, division:d, status:""},
+                a:"Round "+r+" \u00b7 match "+m+" \u2014 pairs to follow", b:"", played:false, score:"", label:divLabel(d)+" \u00b7 provisional"}); m++; }
+            t+=slot; }
+        }
+      });
+      return out;
+    };
 
     /* ---------- the screen ---------- */
     var ensure=function(){
@@ -20571,7 +20601,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
     var render=function(){
       var b=document.getElementById("nsqOopBody"); if(!b) return;
-      var tour=D.tour, rows=D.rows.map(rowView);
+      var tour=D.tour, rows=D.rows.map(rowView).concat(provRows());   /* q162 */
       var days=[]; rows.forEach(function(x){ if(days.indexOf(x.r.play_day)<0) days.push(x.r.play_day); }); days.sort();
       if(!UI.day || days.indexOf(UI.day)<0){ var t=todayISO(); UI.day=days.filter(function(d){ return d>=t; })[0]||days[days.length-1]||""; }
       var h='<div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#7a6658;margin:14px 0 8px">'+esc(tour)+'</div>';
@@ -20605,10 +20635,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
             if(t!==lastT){
               brks.forEach(function(k){ var ks=tmin(k.start_time); if(lastT!=null && ks>=tmin(lastT) && ks<tmin(t)) h+='<div style="margin:10px 0 2px;font-size:12px;color:#7a6658;font-weight:700">\u2014 '+esc(k.label||"Break")+' '+hhmm(k.start_time)+' \u00b7 '+k.minutes+' min \u2014</div>'; });
               h+='<div style="margin:10px 0 4px;font-size:15px;font-weight:800;color:#1f1a2b">'+t+'</div>'; lastT=t; }
-            var canTap=UI.admin;
-            h+='<div '+(canTap?'onclick="nsqOopEdit('+x.r.id+')" style="cursor:pointer;"':'style="')+'display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid #ece7f2;border-radius:10px;margin:4px 0;background:'+(x.played?'#f4f9f4':'#fff')+'">'
+            var canTap=UI.admin && !x.prov;
+            h+='<div '+(canTap?'onclick="nsqOopEdit('+x.r.id+')" style="cursor:pointer;"':'style="')+'display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px '+(x.prov?'dashed #d9cfc6':'solid #ece7f2')+';border-radius:10px;margin:4px 0;opacity:'+(x.prov?'.75':'1')+';background:'+(x.played?'#f4f9f4':(x.prov?'#faf8f6':'#fff'))+'">'
               +'<span style="flex:none;min-width:54px;font-size:11px;font-weight:800;color:#D35400;text-transform:uppercase;letter-spacing:.06em">Court '+x.r.court+'</span>'
-              +'<span style="flex:1;min-width:0"><b style="display:block;font-size:14px;color:#1f1a2b">'+esc(x.a)+' <span style="color:#9a8578;font-weight:600">v</span> '+esc(x.b)+'</b>'
+              +'<span style="flex:1;min-width:0"><b style="display:block;font-size:14px;color:'+(x.prov?'#7a6658':'#1f1a2b')+'">'+esc(x.a)+(x.prov?'':' <span style="color:#9a8578;font-weight:600">v</span> '+esc(x.b))+'</b>'
               +'<span style="font-size:11.5px;color:#7a6658">'+esc(x.label)+(x.r.status==="moved"?' \u00b7 moved':'')+'</span></span>'
               +(x.played?'<span style="flex:none;font-weight:800;color:#1e8449">'+esc(x.score)+'</span>':'')+'</div>';
             if(UI.editing===x.r.id) h+=editForm(x);
@@ -20709,11 +20739,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       act({action:"oop_move",admin_pin:UI.pin,oop_id:id,venue_id:g("nsqOopMVenue"),court:g("nsqOopMCourt"),play_day:g("nsqOopMDay"),start_time:g("nsqOopMTime")}).then(function(j){ if(!j.ok){ msg("nsqOopMoveMsg",j.error||"Not moved.",true); return; } UI.editing=null; draw(true); }); };
 
     /* ---------- print and Excel ---------- */
-    var listForExport=function(){ return D.rows.map(rowView).slice().sort(function(p,q){ return (p.r.play_day<q.r.play_day?-1:p.r.play_day>q.r.play_day?1:0)||(+p.r.venue_id-+q.r.venue_id)||(tmin(p.r.start_time)-tmin(q.r.start_time))||(p.r.court-q.r.court); }); };
+    var listForExport=function(){ return D.rows.map(rowView).concat(provRows()).sort(function(p,q){ return (p.r.play_day<q.r.play_day?-1:p.r.play_day>q.r.play_day?1:0)||(+p.r.venue_id-+q.r.venue_id)||(tmin(p.r.start_time)-tmin(q.r.start_time))||(p.r.court-q.r.court); }); };
     W.nsqOopPrint=function(){ var L=listForExport(); if(!L.length) return; var w=window.open("","_blank"); if(!w) return;
       var h='<html><head><title>Order of Play \u2014 '+esc(D.tour)+'</title><style>body{font-family:Arial,sans-serif;font-size:12px;margin:18px}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:16px 0 6px;border-bottom:2px solid #D35400;padding-bottom:2px}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ddd;padding:6px 6px;text-align:left;vertical-align:middle}th{background:#f3eee9;font-size:11px;text-transform:uppercase;letter-spacing:.04em}tr:nth-child(even) td{background:#faf7f3}td.t{font-weight:bold;font-size:13px;width:33%}td.v{color:#999;text-align:center;width:20px}td.n{white-space:nowrap;color:#444}td.d{color:#7E3200;font-size:11px;white-space:nowrap}td.sc{text-align:right;font-weight:bold;width:52px}@media print{h2{page-break-after:avoid}tr{page-break-inside:avoid}}</style></head><body><h1>Order of Play \u2014 '+esc(D.tour)+'</h1>';
       var key=""; L.forEach(function(x){ var vv=venueOf(x.r.venue_id), k=x.r.play_day+"|"+x.r.venue_id; if(k!==key){ if(key) h+='</table>'; key=k; h+='<h2>'+esc(vv?vv.name:"Venue")+' \u00b7 '+esc(fmtDay(x.r.play_day))+'</h2><table><tr><th>Time</th><th>Court</th><th>Division</th><th>Team A</th><th></th><th>Team B</th><th>Score</th></tr>'; }
-        h+='<tr><td class="n"><b>'+hhmm(x.r.start_time)+'</b></td><td class="n">'+x.r.court+'</td><td class="d">'+esc(x.label)+'</td><td class="t">'+esc(x.a)+'</td><td class="v">v</td><td class="t">'+esc(x.b)+'</td><td class="sc">'+esc(x.score)+'</td></tr>'; });   /* q140: a column per team, names bold, striped rows */
+        h+='<tr><td class="n"><b>'+hhmm(x.r.start_time)+'</b></td><td class="n">'+x.r.court+'</td><td class="d">'+esc(x.label)+'</td><td class="t">'+esc(x.a)+'</td><td class="v">'+(x.prov?'':'v')+'</td><td class="t">'+esc(x.b)+'</td><td class="sc">'+esc(x.score)+'</td></tr>'; });   /* q140: a column per team, names bold, striped rows */
       h+='</table></body></html>'; w.document.write(h); w.document.close(); setTimeout(function(){ try{ w.print(); }catch(e){} },400); };
     W.nsqOopCsv=function(){ var L=listForExport(); if(!L.length) return; var q=function(s){ return '"'+String(s==null?"":s).replace(/"/g,'""')+'"'; };
       var lines=["Day,Venue,Time,Court,Division,Pair A,Pair B,Score"]; L.forEach(function(x){ var vv=venueOf(x.r.venue_id); lines.push([x.r.play_day,vv?vv.name:"",hhmm(x.r.start_time),x.r.court,x.label,x.a,x.b,x.score].map(q).join(",")); });
