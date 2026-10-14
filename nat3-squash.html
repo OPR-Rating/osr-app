@@ -3600,7 +3600,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q158";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q159";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -20072,7 +20072,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           secs.forEach(function(s){
             var rows=(W.__nsqSeedOrder?W.__nsqSeedOrder(by[s]):by[s].slice().sort(function(x,y){ return (y.seed_rating||0)-(x.seed_rating||0); })), dl=locked.has(s), lab=secOf(s), above=bandAbove(lab), manual=!!(W.__nsqSeedManual&&W.__nsqSeedManual(by[s]));   /* q154: the organiser's seed order */
             h+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin:10px 0 4px"><b style="font-size:14px">'+esc(lab)+'</b><span style="font-size:11px;color:#888">'+rows.length+' team'+(rows.length!==1?'s':'')+(dl?' \u00b7 draw done':'')+'</span></div>';
-            if(!dl && rows.length>1) h+='<div class="sub" style="margin:0 0 4px;font-size:11.5px">'+(manual?'Seeds set by the organiser \u2014 the draw follows this order. Adding, removing or moving a pair puts the section back to rating order.':'Seeded by pair rating. Use \u25b2\u25bc to change the order before the draw (admin code).')+'</div>';   /* q154 */
+            if(!dl && rows.length>1) h+='<div class="sub" style="margin:0 0 4px;font-size:11.5px">'+(manual?'Seeds set by the organiser \u2014 the draw follows this order. Adding, removing or moving a pair puts the section back to rating order.':'Seeded by pair rating. Tap a seed number to move a pair to any seed, or use \u25b2\u25bc for one place (admin code once).')+'</div>';   /* q154 */
             h+='<table style="margin-bottom:8px"><thead><tr><th class="num">Seed</th><th>Team</th><th class="num">Rating</th><th></th></tr></thead><tbody>';
             rows.forEach(function(r,i){
               var nat=(W.__nsqTeamBand&&W.__nsqTeamBand(r.p1,r.p2,base))||null, natSec=nat?(base+" - "+nat.label):null, below=bandBelow(lab);
@@ -20085,7 +20085,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
                 if(r.played_up && natSec && natSec!==s && !locked.has(natSec)) acts+='<button onclick="nsqMoveEntry('+Number(r.id)+',\''+esc(natSec.replace(/'/g,"\\'"))+'\',false)" style="background:none;border:1px solid #c9c4d4;border-radius:6px;color:#555;cursor:pointer;font-size:11px;padding:2px 6px;margin-left:4px;white-space:nowrap" title="Back to '+esc(nat.label)+'">\u2193 Back</button>';
               }
               var sa=(!dl&&rows.length>1)?('<span style="display:inline-flex;flex-direction:column;vertical-align:middle;margin-left:4px">'+(i>0?'<button onclick="nsqSeedSwap(\''+esc(s.replace(/'/g,"\\'"))+'\','+i+','+(i-1)+')" title="Seed one higher" style="background:none;border:none;color:#B8480A;cursor:pointer;font-size:14px;line-height:1;padding:3px 6px">\u25b2</button>':'')+(i<rows.length-1?'<button onclick="nsqSeedSwap(\''+esc(s.replace(/'/g,"\\'"))+'\','+i+','+(i+1)+')" title="Seed one lower" style="background:none;border:none;color:#B8480A;cursor:pointer;font-size:14px;line-height:1;padding:3px 6px">\u25bc</button>':'')+'</span>'):'';   /* q154 */
-              h+='<tr><td class="num" style="white-space:nowrap"><span class="seed'+(i===0?' s1':'')+'">'+(i+1)+'</span>'+sa+'</td><td><b>'+esc(r.p1+" / "+r.p2)+'</b>'+(r.played_up?' <span style="font-size:10px;font-weight:800;color:#b9770e;background:#fff3dc;border-radius:5px;padding:1px 5px;white-space:nowrap">playing up</span>':(nat&&bandSort(nat.label)<bandSort(lab)?' <span style="font-size:10px;font-weight:800;color:#1f6fbf;background:#e7f0fb;border-radius:5px;padding:1px 5px;white-space:nowrap">playing down</span>':''))+'</td><td class="num">'+Math.round(r.seed_rating||0)+'</td><td class="num" style="white-space:nowrap">'+acts+'</td></tr>';
+              h+='<tr><td class="num" style="white-space:nowrap"><span class="seed'+(i===0?' s1':'')+'"'+((!dl&&rows.length>1)?(' onclick="nsqSeedTo(\''+esc(s.replace(/'/g,"\\'"))+'\','+i+')" title="Tap to move to any seed" style="cursor:pointer"'):'')+'>'+(i+1)+'</span>'+sa+'</td><td><b>'+esc(r.p1+" / "+r.p2)+'</b>'+(r.played_up?' <span style="font-size:10px;font-weight:800;color:#b9770e;background:#fff3dc;border-radius:5px;padding:1px 5px;white-space:nowrap">playing up</span>':(nat&&bandSort(nat.label)<bandSort(lab)?' <span style="font-size:10px;font-weight:800;color:#1f6fbf;background:#e7f0fb;border-radius:5px;padding:1px 5px;white-space:nowrap">playing down</span>':''))+'</td><td class="num">'+Math.round(r.seed_rating||0)+'</td><td class="num" style="white-space:nowrap">'+acts+'</td></tr>';
             });
             h+='</tbody></table><div class="nsqDivGen" data-sec="'+esc(s)+'"></div>';   /* q128: that division's draw block lands here */
           });
@@ -21275,22 +21275,40 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     /* every draw generator seeds through TM.seedEntries */
     (function(){ try{ if(typeof TM!=="object" || typeof TM.seedEntries!=="function") return; }catch(e){ return; } var f0=TM.seedEntries;
       TM.seedEntries=function(entries){ if(!manual(entries)) return f0.apply(this, arguments); return order(entries).map(function(e,i){ return Object.assign({}, e, {seed:i+1}); }); }; })();
-    var pinOf=function(){ var p=(document.getElementById("etPin")||{}).value||""; if(!p){ var d=document.querySelector(".nsqDivPin"); p=d?d.value:""; } p=String(p||"").trim();
-      if(!p){ p=(W.prompt("Admin code to change the seeding:")||"").trim(); if(p){ var pe=document.getElementById("etPin"); if(pe) pe.value=p; } } return p; };
+    /* q159: the code is asked ONCE — remembered (this app session only) after the server accepts it */
+    var KEEP="nsqSeedPin";
+    var pinOf=function(){ var p=(document.getElementById("etPin")||{}).value||""; if(!p){ var d=document.querySelector(".nsqDivPin"); p=d?d.value:""; }
+      if(!p){ try{ p=sessionStorage.getItem(KEEP)||""; }catch(e){} }
+      p=String(p||"").trim();
+      if(!p){ p=(W.prompt("Admin code to change the seeding:")||"").trim(); }
+      if(p){ var pe=document.getElementById("etPin"); if(pe && !pe.value) pe.value=p; } return p; };
+    var save=function(section, rows, pin){
+      var seeds=rows.map(function(r,k){ return {id:r.id, seed:k+1}; });
+      return fetch(SB_URL+"/functions/v1/tournament",{method:"POST",headers:{apikey:SB_ANON,Authorization:"Bearer "+SB_ANON,"Content-Type":"application/json"},
+        body:JSON.stringify({action:"save_seeds",club_id:CLUB_ID,admin_pin:pin,seeds:seeds})})
+        .then(function(x){ return x.json().catch(function(){ return {}; }).then(function(res){
+          if(!(x.ok && res && res.ok)){ try{ sessionStorage.removeItem(KEEP); }catch(e){} W.alert((res&&res.error)||("Seeds not saved ("+x.status+")")); return; }
+          try{ sessionStorage.setItem(KEEP,pin); }catch(e){}
+          W.__nsqLastPlaced={at:Date.now(), html:'<span style="color:#1e8449;font-weight:800">Seeds saved for '+String(section).replace(/^.* - /,"")+'.</span>'};
+          try{ W.renderEnterScreen(); }catch(e){} }); });
+    };
+    var load=function(section){ return sbGet("tournament_entries?select=id,seed,seed_rating,p1,p2&club_id=eq."+CLUB_ID+"&tournament=eq."+encodeURIComponent(W._etTournament)+"&category=eq."+encodeURIComponent(section)).then(function(rows){ return order(Array.isArray(rows)?rows:[]); }); };
+    /* q159: tap a seed number → move that pair straight to any seed (the pairs in between shift one place) */
+    W.nsqSeedTo=function(section,i){
+      if(!W._etTournament) return;
+      load(section).then(function(rows){ if(i<0||i>=rows.length) return; var r=rows[i];
+        var ans=W.prompt("Move "+r.p1+" / "+r.p2+" (seed "+(i+1)+") to which seed? 1 to "+rows.length,""); if(ans===null) return;
+        var to=parseInt(String(ans).trim(),10); if(!(to>=1 && to<=rows.length)){ W.alert("Type a seed from 1 to "+rows.length+"."); return; }
+        if(to===i+1) return;
+        var pin=pinOf(); if(!pin) return;
+        rows.splice(i,1); rows.splice(to-1,0,r); return save(section, rows, pin);
+      }).catch(function(){ W.alert("Connection problem \u2014 the seeding was not changed."); });
+    };
     W.nsqSeedSwap=function(section,i,j){
-      var pin=pinOf(); if(!pin) return;
-      var tour=W._etTournament; if(!tour) return;
-      sbGet("tournament_entries?select=id,seed,seed_rating,p1,p2&club_id=eq."+CLUB_ID+"&tournament=eq."+encodeURIComponent(tour)+"&category=eq."+encodeURIComponent(section)).then(function(rows){
-        rows=order(Array.isArray(rows)?rows:[]); if(i<0||j<0||i>=rows.length||j>=rows.length) return;
-        var t=rows[i]; rows[i]=rows[j]; rows[j]=t;
-        var seeds=rows.map(function(r,k){ return {id:r.id, seed:k+1}; });
-        return fetch(SB_URL+"/functions/v1/tournament",{method:"POST",headers:{apikey:SB_ANON,Authorization:"Bearer "+SB_ANON,"Content-Type":"application/json"},
-          body:JSON.stringify({action:"save_seeds",club_id:CLUB_ID,admin_pin:pin,seeds:seeds})})
-          .then(function(x){ return x.json().catch(function(){ return {}; }).then(function(res){
-            if(!(x.ok && res && res.ok)){ W.alert((res&&res.error)||("Seeds not saved ("+x.status+")")); return; }
-            W.__nsqLastPlaced={at:Date.now(), html:'<span style="color:#1e8449;font-weight:800">Seeds saved for '+String(section).replace(/^.* - /,"")+'.</span>'};
-            try{ W.renderEnterScreen(); }catch(e){} }); });
-      }).catch(function(){ W.alert("Connection problem — the seeding was not changed."); });
+      var pin=pinOf(); if(!pin) return; if(!W._etTournament) return;
+      load(section).then(function(rows){ if(i<0||j<0||i>=rows.length||j>=rows.length) return;
+        var t=rows[i]; rows[i]=rows[j]; rows[j]=t; return save(section, rows, pin);
+      }).catch(function(){ W.alert("Connection problem \u2014 the seeding was not changed."); });
     };
   })();
   /* q158 (Andre): tidy the team lists — the column headings were grey on dark brown (unreadable) and stuck to the top while
