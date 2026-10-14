@@ -3600,7 +3600,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q173";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q174";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -10554,6 +10554,9 @@ async function clRemove(id, label){
       var myClub=me?(me.parent_id?Number(me.parent_id):Number(me.id)):0;   /* q173: the club you are standing in */
       if(par && par.parent_id && (wide || Number(par.id)!==myClub)) return par.name+" \u00b7 "+c.name; }catch(e){}
     return c.name; }
+  function nhFullBoardName(id){ var cs=W.PLAT.clubs||[], c=cs.find(function(x){ return Number(x.id)===Number(id); }); if(!c) return "";
+    var par=c.parent_id?cs.find(function(x){ return Number(x.id)===Number(c.parent_id); }):null;
+    return (par && par.parent_id) ? (par.name+" \u00b7 "+c.name) : c.name; }   /* q174: a division always names its club */
   function nhInk(hex){
     /* n187: THE INTERFACE WORKS IN A READABLE INK. --nhc drives headings, links, numbers and pills, so a pale club
        colour has to be darkened until it reads on white; --nhraw keeps the club's true colour for anything that is
@@ -11981,7 +11984,7 @@ W.mePair=function(name,col){
           var gc=clubPal(id)[0], v=by[id], n=st.boards[id]||0;
           return '<div class="row">'
             +'<span style="width:10px;height:10px;border-radius:50%;background:'+gc+';flex:0 0 10px;margin:0 6px 0 2px"></span>'
-            +'<span class="nm"><b style="color:'+gc+'">'+esc(nhBoardName(id)||"another region")+'</b>'
+            +'<span class="nm"><b style="color:'+gc+'">'+esc(nhFullBoardName(id)||"another region")+'</b>'
             +'<span>'+n+' match'+(n===1?"":"es")+' here</span></span>'
             +'<span class="val"><b class="'+(v>=0?"up":"dn")+'">'+fmt(v)+'</b><span>move</span></span></div>';
         }).join("")
