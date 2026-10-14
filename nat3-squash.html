@@ -3600,7 +3600,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q156";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q158";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -16932,7 +16932,7 @@ W.nhOpenPair=function(name){
       return false;
     }
     var search="?"+p.q.toString()+(p.hash?("#"+p.hash):"");
-    if(search===String(location.search||"")+String(location.hash||"") && !opts.force){ try{ window.scrollTo(0,0); }catch(e){} return false; }
+    if(search===String(location.search||"")+String(location.hash||"") && !opts.force){ var _tv=W.__nhTrail&&W.__nhTrail[W.__nhTrail.length-1]; if(!(_tv && _tv.page && _tv.search===String(location.search||""))){ try{ window.scrollTo(0,0); }catch(e){} return false; } try{ W.__nhTrail.pop(); }catch(e){} opts.force=true; opts.replace=true; }   /* q156b: on a view (Admin Control) the same address means "the page itself" */
     try{
       if(opts.replace){ history.replaceState({nat3:1},"",location.pathname+search); var t=nhCrumbs(); t.pop(); nhCrumbsSave(t); nhCrumbPush("?"+p.q.toString()); }
       else { history.pushState({nat3:1},"",location.pathname+search); nhCrumbPush("?"+p.q.toString()); }
@@ -17494,6 +17494,7 @@ W.nhOpenPair=function(name){
     var prev=t[t.length-1];
     W.__nhTrailHold=true;
     var open=function(){ try{
+        if(prev.screen==="homeScreen" && !prev.page && _left && _left.page && W.nhNav){ W.__nhTrailHold=false; W.nhNav(PAGE+String(location.search||""),{replace:true,force:true}); return; }   /* q156b: from a view back to the door: redraw it */
         if(prev.screen==="homeScreen"){ goHome(); if(prev.page==="admin" && !document.querySelector("#nh .band") ) W.nhAdminPage(); }
         else if(prev.screen==="ladderScreen" && W.__nhLadderArgs && typeof loadLadder==="function"){ loadLadder.apply(null, W.__nhLadderArgs); try{ if(W.__nhLadRestore) W.__nhLadRestore(); }catch(e){} }   /* n351: the table you left, at once */   /* n328: the TABLE you were on, not the menu */
         else W.showScreen(prev.screen);
@@ -19954,10 +19955,15 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
                 var d=ok && W.__nsqTeamBand ? W.__nsqTeamBand(en.p1,en.p2,base) : null;   /* q134: All Sorts may use the organiser's cut-offs */
                 if(!d){ var why="Could not work out this pair's division"+(ok?" (is each player on the register with a rating?)":" — the divisions are still loading, try again in a moment")+".";
                   showMsg('<span style="color:#c0392b">'+esc(why)+'</span>'); return jresp({ok:false,error:why},400); }
+                /* q157: a player already in that division → the pair goes to the next division down, and the message says so */
+                var _inD=function(L){ var sc=base+" - "+L, who=null; all.forEach(function(r){ if(r.category!==sc) return; [en.p1,en.p2].forEach(function(nm){ var k=String(nm).toLowerCase(); if(!who && (String(r.p1).toLowerCase()===k || String(r.p2||"").toLowerCase()===k)) who=nm; }); }); return who; };
+                var _c=_inD(d.label), _from=d.label, _mv="";
+                while(_c){ var _nx=bandBelow(d.label); if(!_nx){ var why2=_c+" is already in "+_from+" and there is no division below it."; showMsg('<span style="color:#c0392b">'+esc(why2)+'</span>'); return jresp({ok:false,error:why2},400); }
+                  _mv=_c+" is already in "+_from+" \u2014 placed in "+_nx+" instead."; d={label:_nx, sort:bandSort(_nx)}; _c=_inD(_nx); }
                 var sec=base+" - "+d.label; en.category=sec; var i2={}; for(var k in init) i2[k]=init[k]; i2.body=JSON.stringify(b);
                 return _f.call(W,u,i2).then(function(r){
                   r.clone().json().then(function(j){
-                    if(r.ok && j && j.ok!==false){ W.__nsqLastPlaced={at:Date.now(), html:'<span style="color:#1e8449;font-weight:800">'+esc(en.p1+" / "+en.p2)+' placed in '+esc(d.label)+'</span> <span style="color:#6b6b76">'+esc(d.open?d.why:"\u2014 the higher player\u2019s division.")+'</span>'}; }
+                    if(r.ok && j && j.ok!==false){ W.__nsqLastPlaced={at:Date.now(), html:'<span style="color:#1e8449;font-weight:800">'+esc(en.p1+" / "+en.p2)+' placed in '+esc(d.label)+'</span> <span style="color:#6b6b76">'+esc(_mv?_mv:(d.open?d.why:"\u2014 the higher player\u2019s division."))+'</span>'}; }
                     else showMsg('<span style="color:#c0392b">'+esc((j&&j.error)||("Not saved ("+r.status+")"))+'</span>');
                   }).catch(function(){});
                   return r; });
@@ -20206,24 +20212,30 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var d=W.__nsqTeamBand?W.__nsqTeamBand(a,b,cat):null, why="";
         if(a===b) why="the same name twice";
         else if(!d) why="no division (is each player rated?)";
-        var sec=cat+" - "+(d?d.label:"");                                                      /* q136: twice in the same DIVISION is refused; another division is fine */
-        if(!why && (seen[sec+"|"+a.toLowerCase()]||seen[sec+"|"+b.toLowerCase()])) why="a name is already in another "+sec+" pair on this list";
-        else if(!why && inCat[sec]&&(inCat[sec][a.toLowerCase()]||inCat[sec][b.toLowerCase()])) why="already entered in "+sec;
+        /* q157 (Andre): a player is never twice in one division. When this pair's division already has one of its players
+           (on this list, or entered before), it goes to the NEXT division down and the line says so — never silently left out. */
+        var lab=d?d.label:"", moved="", taken=function(L){ var sc=cat+" - "+L, who=null;
+          [a,b].forEach(function(n){ var k=n.toLowerCase(); if(!who && (seen[sc+"|"+k] || (inCat[sc]&&inCat[sc][k]))) who=n; }); return who; };
+        if(!why){ var clash=taken(lab), first=lab;
+          while(clash){ var nx=bandBelow(lab); if(!nx){ why=clash+" is already in "+first+" and there is no division below it"; break; }
+            moved=clash+" is already in "+first+" \u2014 placed in "+nx+" instead"; lab=nx; clash=taken(lab); } }
+        if(d && lab!==d.label) d={label:lab, sort:bandSort(lab)};
+        var sec=cat+" - "+lab;
         if(!why){ seen[sec+"|"+a.toLowerCase()]=1; seen[sec+"|"+b.toLowerCase()]=1; }
         var hi=(blkRate(pa)>=blkRate(pb))?[a,b]:[b,a];
-        rows.push({p1:hi[0],p2:hi[1],category:cat+" - "+(d?d.label:""),base:cat,div:d?d.label:"",seed_rating:(typeof TM!=="undefined"&&TM.pairRating)?TM.pairRating(blkRate(pa),blkRate(pb),cat):Math.round(Math.max(blkRate(pa),blkRate(pb))*0.6+Math.min(blkRate(pa),blkRate(pb))*0.4),why:why,r1:blkRate(pa),r2:blkRate(pb)});
+        rows.push({moved:moved,p1:hi[0],p2:hi[1],category:cat+" - "+(d?d.label:""),base:cat,div:d?d.label:"",seed_rating:(typeof TM!=="undefined"&&TM.pairRating)?TM.pairRating(blkRate(pa),blkRate(pb),cat):Math.round(Math.max(blkRate(pa),blkRate(pb))*0.6+Math.min(blkRate(pa),blkRate(pb))*0.4),why:why,r1:blkRate(pa),r2:blkRate(pb)});
       }
       BLK.rows=rows.filter(function(r){ return !r.why; });
       var h='';
       if(missing.length) h+='<p class="sub" style="color:#c0392b"><b>Not on the register:</b> '+esc(missing.join(", "))+'. Nothing is saved until the list is clean.</p>';
       if(rows.length){
         h+='<table style="margin:6px 0"><thead><tr><th>Pair</th><th>Category</th><th>Division</th><th class="num">Rating</th></tr></thead><tbody>';
-        rows.forEach(function(r){ h+='<tr'+(r.why?' style="color:#b9770e"':'')+'><td><b>'+esc(r.p1+" & "+r.p2)+'</b>'+(r.why?'<div style="font-size:11px">'+esc(r.why)+'</div>':'')+'</td><td>'+esc(r.base)+'</td><td>'+esc(r.div)+'</td><td class="num">'+Math.round(r.seed_rating)+'</td></tr>'; });
+        rows.forEach(function(r){ h+='<tr'+(r.why?' style="color:#c0392b"':(r.moved?' style="color:#1f6fbf"':''))+'><td><b>'+esc(r.p1+" & "+r.p2)+'</b>'+(r.why?'<div style="font-size:11px">NOT ENTERED \u2014 '+esc(r.why)+'</div>':(r.moved?'<div style="font-size:11px">'+esc(r.moved)+'</div>':''))+'</td><td>'+esc(r.base)+'</td><td>'+esc(r.div)+'</td><td class="num">'+Math.round(r.seed_rating)+'</td></tr>'; });
         h+='</tbody></table>';
       }
       if(!missing.length && BLK.rows.length){
         var skip=rows.length-BLK.rows.length;
-        h+='<p class="sub">'+BLK.rows.length+' pair'+(BLK.rows.length!==1?'s':'')+' ready'+(skip?(' \u00b7 '+skip+' skipped (see the notes)'):'')+'. The admin code is needed to enter them.</p>'
+        h+='<p class="sub">'+BLK.rows.length+' pair'+(BLK.rows.length!==1?'s':'')+' will be entered'+(function(){ var mv=BLK.rows.filter(function(r){ return r.moved; }).length; return mv?(' ('+mv+' moved down a division \u2014 blue lines)'):''; })()+'.'+(skip?(' <b style="color:#c0392b">'+skip+' pair'+(skip!==1?'s':'')+' will NOT be entered \u2014 red lines; fix and enter '+(skip!==1?'them':'it')+' separately.</b>'):'')+' Type the admin code and press Enter to save.</p>'
           +'<div style="display:flex;gap:8px"><input id="nsqBlkPin" type="password" placeholder="Admin code" style="flex:1;padding:10px;border:1.5px solid #B8480A;border-radius:8px;font-size:15px"><button class="btn btn-primary" onclick="nsqBlkSave()" style="flex:1">Enter '+BLK.rows.length+' pair'+(BLK.rows.length!==1?'s':'')+'</button></div><div id="nsqBlkMsg" class="sub"></div>';
       }
       out.innerHTML=h||'<p class="sub">Nothing read.</p>';
@@ -21281,6 +21293,13 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       }).catch(function(){ W.alert("Connection problem — the seeding was not changed."); });
     };
   })();
+  /* q158 (Andre): tidy the team lists — the column headings were grey on dark brown (unreadable) and stuck to the top while
+     the names scrolled up behind them; the section-format buttons were heavy. */
+  (function(){ try{ if(document.getElementById("nsqTidyCss")) return; var st=document.createElement("style"); st.id="nsqTidyCss";
+    st.textContent="#etBody table thead th{color:#fff!important;position:static!important;top:auto!important;font-weight:700}"
+      +"#etBody .nsqSwissSw .ac-btn,#etBody .nsqDivGen .ac-btn-ghost,#etBody .nsqDivGen .ac-btn[onclick^=\"etGroupSet\"],#etBody .nsqDivGen .ac-btn[onclick^=\"etRRFinishSet\"]{font-size:13px!important;font-weight:400!important;padding:9px 12px!important;line-height:1.4!important}"
+      +"#etBody .nsqSwissSw .ac-btn b,#etBody .nsqDivGen .ac-btn b{font-weight:700}";
+    document.head.appendChild(st); }catch(e){} })();
 
 })();</script>
 </body>
