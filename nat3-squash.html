@@ -3600,7 +3600,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q159";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q161";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17357,7 +17357,7 @@ W.nhOpenPair=function(name){
     tn=String(tn).trim(); if(!tn || typeof W.sbGet!=="function") return Promise.resolve(null);
     var C=W.PLAT.tourClub||W.PLAT.cid, enc=encodeURIComponent(tn);
     return Promise.all([
-      W.sbGet("tournament_entries?select=category,seed,p1,p2&club_id=eq."+C+"&tournament=eq."+enc),
+      W.sbGet("tournament_entries?select=category,seed,p1,p2,grp&club_id=eq."+C+"&tournament=eq."+enc),
       W.sbGet("tournament_fixtures?select=id,match_id,division,round,round_type,seed_a,seed_b,sets_a,sets_b,games_a,games_b,band&club_id=eq."+C+"&tournament=eq."+enc+"&order=round.asc"),
       W.sbGet("plat_squash_order_of_play?select=fixture_id,venue_id,court,play_day,start_time&club_id=eq."+C+"&tournament=eq."+enc).catch(function(){ return []; }),   /* q140 */
       W.sbGet("plat_squash_venues?select=id,name&pool_id=eq."+Number(W.PLAT.pool||0)).catch(function(){ return []; })
@@ -17375,7 +17375,7 @@ W.nhOpenPair=function(name){
       return pts.then(function(ms){ var SS={}; (ms||[]).forEach(function(m){ if(m.set_scores) SS[m.id]=String(m.set_scores).split(",").map(function(x){ return x.trim().replace("-","/"); }).filter(Boolean).join("  "); });
         fx.forEach(function(f){ f._pts=(f.match_id&&SS[f.match_id])||""; });
         return fx; }).then(function(fx){
-      ents.forEach(function(e2){ var d=e2.category||""; (divs[d]=divs[d]||{teams:{},rounds:{}}).teams[e2.seed]=[e2.p1,e2.p2].filter(Boolean).join(" & "); });
+      ents.forEach(function(e2){ var d=e2.category||""; (divs[d]=divs[d]||{teams:{},rounds:{}}).teams[e2.seed]=[e2.p1,e2.p2].filter(Boolean).join(" & "); if(e2.grp){ (divs[d].grp=divs[d].grp||{})[e2.seed]=e2.grp; } });   /* q161: the group each seed plays in */
       fx.forEach(function(f){ var d=f.division||""; divs[d]=divs[d]||{teams:{},rounds:{}}; var k=f.round+"|"+(f.round_type||"rr"); (divs[d].rounds[k]=divs[d].rounds[k]||[]).push(f); });
       return {name:tn, divs:divs};
       });
@@ -17397,7 +17397,7 @@ W.nhOpenPair=function(name){
       var club=""; try{ var c=(W.PLAT.clubs||[]).filter(function(x){ return Number(x.id)===Number(W.PLAT.tourClub||W.PLAT.cid); })[0]; club=c?c.name:""; }catch(e){}
       var h='<h1>'+esc(D.name)+'</h1><div class="sub">'+esc(club)+' \u00b7 full schedule \u00b7 '+names.length+' division'+(names.length===1?'':'s')+'</div>';
       names.forEach(function(dn){ var d=D.divs[dn], seeds=Object.keys(d.teams).map(Number).sort(function(a,b){ return a-b; });
-        h+='<section><h2>'+esc(dn||"Division")+'</h2><div class="teams">'+seeds.map(function(s){ return '<span><b>'+s+'</b> '+esc(d.teams[s])+'</span>'; }).join("")+'</div>';
+        h+='<section><h2>'+esc(dn||"Division")+'</h2>'+(d.grp?Object.keys(d.grp).map(function(s){ return d.grp[s]; }).filter(function(g,i,a){ return a.indexOf(g)===i; }).sort().map(function(G){ return '<div class="teams"><span><b>Group '+esc(G)+':</b></span>'+seeds.filter(function(s){ return d.grp[s]===G; }).map(function(s){ return '<span><b>'+s+'</b> '+esc(d.teams[s])+'</span>'; }).join("")+'</div>'; }).join(""):('<div class="teams">'+seeds.map(function(s){ return '<span><b>'+s+'</b> '+esc(d.teams[s])+'</span>'; }).join("")+'</div>'));   /* q161: by group */
         Object.keys(d.rounds).sort(function(a,b){ var x=a.split("|"), y=b.split("|"); var o={rr:0,ko:1,plate:2,final:3}; return (o[x[1]]||0)-(o[y[1]]||0) || (+x[0])-(+y[0]); }).forEach(function(k){
           h+='<div class="rd"><h3>'+esc(nhRoundName(k, d.rounds[k], Object.keys(d.rounds).some(function(x){ return +x.split('|')[0]>10; })))+'</h3><table>'+d.rounds[k].map(function(f){ var L=nhFxLine(f,d.teams);
             return '<tr><td><b>'+esc(L.a)+'</b></td><td class="v">v</td><td><b>'+esc(L.b)+'</b></td><td class="s">'+esc(L.s)+(L.g?'<div style="font-weight:normal;font-size:11px;color:#444">'+esc(L.g)+'</div>':'')+'</td></tr>'+(L.w?'<tr class="w"><td colspan="4">'+esc(L.w)+'</td></tr>':''); }).join("")+'</table></div>'; });
@@ -17417,7 +17417,7 @@ W.nhOpenPair=function(name){
     nhSchedData().then(function(D){
       if(!D) return;
       var out=["\ud83c\udfc6 "+D.name+" \u2014 full schedule"];
-      Object.keys(D.divs).sort().forEach(function(dn){ var d=D.divs[dn]; out.push("", "*"+(dn||"Division")+"*");
+      Object.keys(D.divs).sort().forEach(function(dn){ var d=D.divs[dn]; out.push("", "*"+(dn||"Division")+"*"); if(d.grp){ var _sd=Object.keys(d.teams).map(Number).sort(function(a,b){ return a-b; }); Object.keys(d.grp).map(function(s){ return d.grp[s]; }).filter(function(g,i,a){ return a.indexOf(g)===i; }).sort().forEach(function(G){ out.push("Group "+G+": "+_sd.filter(function(s){ return d.grp[s]===G; }).map(function(s){ return s+" "+d.teams[s]; }).join(", ")); }); }   /* q161 */
         Object.keys(d.rounds).sort(function(a,b){ return (+a.split("|")[0])-(+b.split("|")[0]); }).forEach(function(k){ out.push(nhRoundName(k, d.rounds[k], Object.keys(d.rounds).some(function(x){ return +x.split('|')[0]>10; }))+":");
           d.rounds[k].forEach(function(f){ var L=nhFxLine(f,d.teams); out.push("  "+L.a+" v "+L.b+" \u2014 "+L.s+(L.g?(" ("+L.g+")"):"")+(L.w?("  ("+L.w+")"):"")); }); }); });
       var t=out.join("\n");
@@ -20025,7 +20025,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         body:JSON.stringify({action:"move_entry",club_id:cid(),admin_pin:pin,entry_id:id,to_category:to,played_up:!!up})})
         .then(function(x){ return x.json().catch(function(){ return {}; }).then(function(j){
           if(x.ok && j && j.ok){ W.__nsqLastPlaced={at:Date.now(), html:'<span style="color:#1e8449;font-weight:800">Moved to '+esc(secOf(to))+'.</span>'}; W.renderEnterScreen(); }
-          else alert((j&&j.error)||("Not moved ("+x.status+")")); }); })
+          else { if(x.status===401 && W.__nsqPinRefused) j=W.__nsqPinRefused(j); alert((j&&j.error)||("Not moved ("+x.status+")")); } }); })
         .catch(function(){ alert("Connection problem — the pair was not moved."); });
     };
 
@@ -20249,7 +20249,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var rows=BLK.rows.map(function(r){ return {p1:r.p1,p2:r.p2,category:r.category,seed_rating:r.seed_rating}; }), j={};
       try{ var x=await _f.call(W, SB_URL+"/functions/v1/tournament",{method:"POST",headers:{apikey:SB_ANON,Authorization:"Bearer "+SB_ANON,"Content-Type":"application/json"},
         body:JSON.stringify({action:"block_entry",club_id:cid(),admin_pin:pin,tournament:tour,rows:rows})}); j=await x.json().catch(function(){ return {}; }); if(!x.ok&&!j.error) j.error="Not saved ("+x.status+")"; }catch(e){ j={error:"Connection problem \u2014 nothing was entered."}; }
-      if(!j||j.ok!==true){ msg.innerHTML='<span style="color:#c0392b">'+esc((j&&j.error)||"Not saved.")+'</span>'; return; }
+      if(!j||j.ok!==true){ if(W.__nsqPinRefused && /Admin PIN required/i.test(String(j&&j.error||""))) j=W.__nsqPinRefused(j); msg.innerHTML='<span style="color:#c0392b">'+esc((j&&j.error)||"Not saved.")+'</span>'; return; }
       var h='<span style="color:#1e8449;font-weight:800">'+Number(j.added||0)+' pair'+(j.added!==1?'s':'')+' entered.</span>';
       if(j.skipped&&j.skipped.length) h+=' <span style="color:#b9770e">'+j.skipped.length+' not entered: '+esc(j.skipped.map(function(s){ return s.p1+" & "+s.p2+" ("+s.why+")"; }).join("; "))+'</span>';
       /* pre-pairs (q057): at a club (or one of its divisions) the entered pairs are created as pre-pairs so they show in Ratings;
@@ -21318,6 +21318,24 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       +"#etBody .nsqSwissSw .ac-btn,#etBody .nsqDivGen .ac-btn-ghost,#etBody .nsqDivGen .ac-btn[onclick^=\"etGroupSet\"],#etBody .nsqDivGen .ac-btn[onclick^=\"etRRFinishSet\"]{font-size:13px!important;font-weight:400!important;padding:9px 12px!important;line-height:1.4!important}"
       +"#etBody .nsqSwissSw .ac-btn b,#etBody .nsqDivGen .ac-btn b{font-weight:700}";
     document.head.appendChild(st); }catch(e){} })();
+  /* q160 (Andre): the tournament server refuses a wrong admin code with "Admin PIN required to generate the draw." — for EVERY
+     action (move a pair, seeds, entry). Say what it means, and forget the refused code so the next tap asks again. */
+  (function(){ var W=window, f0=W.fetch;
+    W.__nsqPinRefused=function(j){ j=j||{};
+      var cs=(W.PLAT&&W.PLAT.clubs)||[], me=cs.filter(function(c){ return +c.id===+(W.PLAT&&W.PLAT.cid); })[0], nm="this club";
+      try{ var lv=W.__nsqLevelOf?W.__nsqLevelOf(+W.PLAT.cid):""; if(lv==="division"&&me&&me.parent_id){ var par=cs.filter(function(c){ return +c.id===+me.parent_id; })[0]; if(par) nm=par.name; } else if(me) nm=me.name; }catch(e){}
+      j.error="That admin code was not accepted for "+nm+". Use "+nm+"’s own admin code (or the master code) and try again.";
+      try{ sessionStorage.removeItem("nsqSeedPin"); }catch(e){}
+      try{ var pe=document.getElementById("etPin"); if(pe) pe.value=""; Array.prototype.forEach.call(document.querySelectorAll(".nsqDivPin,#nsqBlkPin"),function(x){ x.value=""; }); }catch(e){}
+      return j; };
+    W.fetch=function(u,init){ var url=String(u&&u.url?u.url:u||""), p=f0.apply(this,arguments);
+      if(!/\/functions\/v1\/(tournament|plat_tournament_squash)(\?|$)/.test(url)) return p;
+      return p.then(function(r){ if(r.status!==401) return r;
+        return r.clone().json().then(function(j){ if(!j || !/Admin PIN required/i.test(String(j.error||""))) return r;
+          j=W.__nsqPinRefused(j);
+          return new Response(JSON.stringify(j),{status:401,headers:{"Content-Type":"application/json"}});
+        }).catch(function(){ return r; }); }); };
+  })();
 
 })();</script>
 </body>
