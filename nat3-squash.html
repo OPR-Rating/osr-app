@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q197";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q198";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -22110,9 +22110,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var PEND={
       key:"nsqPendingFx",
       all:function(){ try{ return JSON.parse(sessionStorage.getItem(this.key)||"{}")||{}; }catch(e){ return {}; } },
-      put:function(id, tour, div){ var m=this.all(); m[String(id)]={t:Date.now(), tour:tour, div:div}; try{ sessionStorage.setItem(this.key, JSON.stringify(m)); }catch(e){} },
+      put:function(id, tour, div){ var m=this.all(); m[String(id)]={t:Date.now(), tour:tour, div:div, n:0}; try{ sessionStorage.setItem(this.key, JSON.stringify(m)); }catch(e){} },
+      bump:function(id){ var m=this.all(), r=m[String(id)]; if(!r) return 0; r.n=(r.n||0)+1; try{ sessionStorage.setItem(this.key, JSON.stringify(m)); }catch(e){} return r.n; },
       has:function(id){ var r=this.all()[String(id)]; if(!r) return false;
-        if(Date.now()-r.t > 600000){ this.drop(id); return false; }   /* ten minutes and we stop worrying */
+        if(Date.now()-r.t > 180000){ this.drop(id); return false; }   /* three minutes and we stop worrying */
         return true; },
       drop:function(id){ var m=this.all(); delete m[String(id)]; try{ sessionStorage.setItem(this.key, JSON.stringify(m)); }catch(e){} }
     };
@@ -22131,8 +22132,27 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       });
       if(!want) return;
       var now=Date.now(); if(W.__nsqPendAt && now-W.__nsqPendAt<2500) return; W.__nsqPendAt=now;
+      /* q198 (Andre: "this page bounces and bounces — it keeps saying updating"). If the result never reaches the
+         fixture — it saved and it is rated, but it did not land on the draw — this read used to repeat every two and a
+         half seconds for TEN MINUTES, so the board sat there blinking "updating…" for as long as you watched it.
+         It tries a few times and then stops, and says plainly what happened instead of blinking at you. */
+      if(PEND.bump(want) > 6){ PEND.drop(want); stuckNote(ctx); return; }
       try{ if(typeof loadTournamentSheet==="function") loadTournamentSheet(ctx.tournament, ctx.division); }catch(e){}
     }catch(e){} }, 1200);
+
+    function stuckNote(ctx){
+      try{
+        var box=document.getElementById("tournamentSheetContent"); if(!box) return;
+        var n=document.getElementById("nsqStuck");
+        if(!n){ n=document.createElement("div"); n.id="nsqStuck";
+          n.style.cssText="margin:10px 0;padding:10px 12px;border:1.5px solid #f1c40f;background:#fff8e8;border-radius:10px;"
+            +"font-size:12.5px;color:#8a6d1a;line-height:1.5";
+          box.insertBefore(n, box.firstChild);
+        }
+        n.innerHTML="⚠️ That score <b>is saved and it counts</b> — ratings, stats and Recent matches all have it. "
+          +"It has not appeared on this fixture, though. Tap the fixture again and use <b>Organiser entry</b> to put it on the draw.";
+      }catch(e){}
+    }
 
     /* q186: where "back" goes after a result that came from a fixture — the draw it came from, not the club door */
     W.__nsqBackToDraw={on:false, club:0, tour:""};
