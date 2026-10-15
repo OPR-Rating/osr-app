@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q191";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q192";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -7167,7 +7167,14 @@ async function loadTournamentSheet(tournament, division) {
   const titleEl = document.getElementById('tournamentSheetTitle');
   if (titleEl) titleEl.textContent = tournament;
   const box = document.getElementById('tournamentSheetContent');
-  box.innerHTML = '<div class="loading">Loading tournament…</div>';
+  if((box.innerText||'').trim().length > 80){                      /* q192: keep what is on screen */
+    var _u=document.getElementById('nsqUpd');
+    if(!_u){ _u=document.createElement('div'); _u.id='nsqUpd';
+      _u.style.cssText='position:sticky;top:0;z-index:4;text-align:center;font-size:11.5px;font-weight:700;color:#B8480A;background:#fdf1e7;border-bottom:1px solid #f0dcc9;padding:4px 0';
+      _u.textContent='updating…'; box.insertBefore(_u, box.firstChild); }
+  } else {
+    box.innerHTML = '<div class="loading">Loading tournament…</div>';
+  }
 
   const divs = await tmDivisions(tournament);
   if (!divs.length) {
@@ -20263,17 +20270,21 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     setInterval(function(){ try{
       var bar=document.querySelector("#tournamentScreen.active .tm-divbar:not(.cl-divbar), .screen.active .tm-divbar:not(.cl-divbar)"); if(!bar) return;
       var tour=(W._tmCtx&&W._tmCtx.tournament)||W.TOURNAMENT_EVENT||""; if(!tour) return;
-      if(bar.dataset.nsqLiveTour===tour && Date.now()-Number(bar.dataset.nsqLiveAt||0)<20000) return;
-      liveDivs(tour).then(function(st){ if(!st) return; bar.dataset.nsqLiveTour=tour; bar.dataset.nsqLiveAt=String(Date.now());
-        Array.prototype.forEach.call(bar.querySelectorAll("button"),function(b){
-          var m=String(b.getAttribute("onclick")||"").match(/tmPickDivision\('(?:[^'\\]|\\.)*','((?:[^'\\]|\\.)*)'\)/); var d=m?m[1].replace(/\\'/g,"'"):"";
-          if(d && st[d]) b.classList.add("nsqLive"); else b.classList.remove("nsqLive"); });
+      /* q192 (Andre's bump video): the pills were tidied only after the live-draw read came back, so every render
+         showed "All Sorts · Section 1" on two lines and then snapped to "Section 1". Tidy them at once. */
+      if(!bar.dataset.nsqTrim){ bar.dataset.nsqTrim="1";
         /* q144 (Andre): the pills sit side by side — when every pill is "<category> · <section>", the category is said once
            in the key line and the pills carry just the section; tighter padding so four fit on a phone */
         try{ var bs=Array.prototype.filter.call(bar.querySelectorAll("button"),function(b){ return /tmPickDivision\(/.test(String(b.getAttribute("onclick")||"")); });
           var pre=null, ok=bs.length>1; bs.forEach(function(b){ var t=(b.dataset.nsqFull||b.textContent||"").replace(/^\u25CF\s*/,"").trim(); b.dataset.nsqFull=t; var i=t.indexOf(" \u00b7 "); var p0=i>0?t.slice(0,i):null; if(!p0){ ok=false; return; } if(pre===null) pre=p0; else if(pre!==p0) ok=false; });
           bs.forEach(function(b){ var t=b.dataset.nsqFull||""; b.textContent=(ok&&pre)?t.slice(pre.length+3):t; b.style.padding="7px 12px"; b.style.fontSize="12.5px"; });
           bar.dataset.nsqPre=(ok&&pre)?pre:""; }catch(e){}
+      }
+      if(bar.dataset.nsqLiveTour===tour && Date.now()-Number(bar.dataset.nsqLiveAt||0)<20000) return;
+      liveDivs(tour).then(function(st){ if(!st) return; bar.dataset.nsqLiveTour=tour; bar.dataset.nsqLiveAt=String(Date.now());
+        Array.prototype.forEach.call(bar.querySelectorAll("button"),function(b){
+          var m=String(b.getAttribute("onclick")||"").match(/tmPickDivision\('(?:[^'\\]|\\.)*','((?:[^'\\]|\\.)*)'\)/); var d=m?m[1].replace(/\\'/g,"'"):"";
+          if(d && st[d]) b.classList.add("nsqLive"); else b.classList.remove("nsqLive"); });
         if(!bar.querySelector(".nsqLiveKey")){ var k=document.createElement("div"); k.className="nsqLiveKey"; k.style.cssText="flex-basis:100%;font-size:11px;color:#1b5e20;padding:2px 2px 0";
           bar.appendChild(k); }
         var kk=bar.querySelector(".nsqLiveKey"); if(kk) kk.textContent=(bar.dataset.nsqPre?(bar.dataset.nsqPre+" \u2014 "):"")+"\u25CF green = draw generated \u00b7 outlined = still to be activated";
@@ -21747,6 +21758,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     setInterval(function(){ try{
       var scr=document.getElementById("tournamentSheetScreen"); if(!scr || !scr.classList.contains("active")) return;
       var box=document.getElementById("tournamentSheetContent"); if(!box) return;
+      /* q192: while the board is being read there is nothing for this to confirm — it must not be left floating
+         on a blank page (Andre's bump video) */
+      var txt=box.innerText||"";
+      if(/Loading tournament/.test(txt) || txt.trim().length<60){ var old=box.querySelector(".nsqRules"); if(old) old.remove(); return; }
       var ctx=W._tmCtx||{}, d=ctx.division||""; if(!d || !tourNow()) return;
       var have=box.querySelector(".nsqRules");
       if(have && have.dataset.sec===d) return;
