@@ -3600,7 +3600,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q174";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q178";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -19852,6 +19852,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           +'<button class="btn" onclick="window.nsqSaveZone()" style="margin-top:8px">Save the zone</button><div class="msg" id="nsqMz"></div>'
           +'<label style="margin-top:14px">Lowest rating \u2014 nobody starts below it (a new player under it is raised to it)</label><input id="nsqMin" type="number" step="50" value="'+(ZONE.min!=null?ZONE.min:350)+'">'
           +'<button class="btn" onclick="window.nsqSaveMin()" style="margin-top:8px">Save the lowest rating</button><div class="msg" id="nsqMm"></div></div></div>';
+        h+='<div class="card"><h2>Place every club by rating</h2><div class="in">'
+          +'<div style="font-size:13px;color:#7a6658">After changing the divisions above, this runs the placement for <b>every club in the register</b>, one after the other: each club gets the divisions it needs and every member is placed in the band their rating falls in. Moves are recorded on each club\u2019s Division Moves. It can take a minute.</div>'
+          +'<button class="btn" onclick="window.nsqPlaceEveryClub()">Place every club by rating</button><div class="msg" id="nsqM4"></div></div></div>';   /* q177 */
       } else {
         /* q065: provinces and clubs choose nothing — the divisions are set by National and a club's are created as its players
            need them. This panel tells them the divisions, and (a club) how many of its players are in each. */
@@ -19905,6 +19908,30 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       makeDivisions(S.club, want, pin).then(function(r){ return load().then(function(){ draw(); var mm=document.getElementById("nsqM2");
         mm.className=r.errs.length?"msg bad":"msg ok"; mm.textContent=r.made+" division"+(r.made===1?"":"s")+" created inside "+S.clubName+"."+(r.errs.length?" "+r.errs.join("; "):"");
         rpc("nsq_replace",{p_club:S.club}); }); }); };
+    /* q177 (Andre): the national screen places EVERY club — 17 clubs is 17 presses otherwise. One club at a time, in order,
+       so the database is never asked to do the whole register at once; the line below says where it has got to. */
+    W.nsqPlaceEveryClub=function(){
+      var m=document.getElementById("nsqM4"); if(!m) return;
+      var cs=(W.PLAT.clubs||[]).filter(function(c){ return levelOf(c.id)==="club"; })
+                               .sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+      if(!cs.length){ m.className="msg bad"; m.textContent="No clubs found in this register."; return; }
+      if(!W.confirm("Place every member of all "+cs.length+" clubs in the division their rating falls in?\n\nThis records a move for everybody who changes division.")) return;
+      var placed=0, moved=0, created=0, bad=[];
+      var step=function(k){
+        if(k>=cs.length){
+          m.className=bad.length?"msg bad":"msg ok";
+          m.textContent=cs.length+" clubs done \u00b7 "+placed+" placed, "+moved+" moved"+(created?(", "+created+" divisions created"):"")
+            +(bad.length?(" \u00b7 not done: "+bad.join(", ")):"");
+          try{ W.__nsqMovesDirty=true; }catch(e){}
+          return;
+        }
+        m.className="msg"; m.textContent="Placing "+cs[k].name+" ("+(k+1)+" of "+cs.length+")\u2026";
+        return rpc("nsq_replace",{p_club:cs[k].id}).then(function(r){
+          if(r && r.ok){ placed+=(r.placed||0); moved+=(r.moved||0); created+=(r.created||0); } else bad.push(cs[k].name);
+        }).catch(function(){ bad.push(cs[k].name); }).then(function(){ return step(k+1); });
+      };
+      step(0);
+    };
     W.nsqPlaceAll=function(){ var m=document.getElementById("nsqM3"); m.className="msg"; m.textContent="Placing\u2026";
       rpc("nsq_replace",{p_club:S.club}).then(function(r){ if(!r||r.ok!==true){ m.className="msg bad"; m.textContent=(r&&(r.error||r.message))||"Not placed."; return; }
         load().then(function(){ draw(); var mm=document.getElementById("nsqM3"); if(mm){ mm.className="msg ok"; mm.textContent=(r.placed||0)+" placed, "+(r.moved||0)+" moved"+(r.created?(", "+r.created+" division"+(r.created===1?"":"s")+" created"):"")+(r.raised?(", "+r.raised+" raised to the lowest rating"):"")+"."; } }); }); };
@@ -20680,6 +20707,29 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           h+='</div>';
         });
       }
+      /* q178 (Andre): WHO IS NOT PLAYING. A round split over two nights means half the section is off — the first thing
+         a player asks on the night is "am I on?". For the chosen day, each section with real matches lists the pairs
+         that have no fixture that day. Provisional slots are ignored: a pair is only "off" once the round is drawn. */
+      (function(){
+        var real=rows.filter(function(x){ return !x.prov && x.r.play_day===UI.day && (!UI.div || x.r.division===UI.div); });
+        if(!real.length) return;
+        var divs=[]; real.forEach(function(x){ if(divs.indexOf(x.r.division)<0) divs.push(x.r.division); }); divs.sort();
+        var blocks=divs.map(function(d){
+          var on={}; real.forEach(function(x){ if(x.r.division!==d) return; var f=x.f||{};
+            if(f.seed_a) on[f.seed_a]=1; if(f.seed_b) on[f.seed_b]=1; });
+          var off=Object.keys(D.ents).filter(function(k){ return k.indexOf(d+"|")===0; })
+            .map(function(k){ return {seed:Number(k.split("|")[1]), e:D.ents[k]}; })
+            .filter(function(x){ return x.seed && !on[x.seed]; })
+            .sort(function(a,b){ return a.seed-b.seed; });
+          if(!off.length) return "";
+          return '<div style="margin:10px 0 2px;font-size:12px;font-weight:800;color:#7a6658">'+esc(divLabel(d))+' \u00b7 '+off.length+' pair'+(off.length===1?'':'s')+' off</div>'
+            + off.map(function(x){ return '<div style="padding:5px 10px;border-bottom:1px solid #f4efe9;font-size:13.5px;color:#3b2a1e">'
+                +'<span style="color:#D35400;font-weight:800">['+x.seed+']</span> '+esc(x.e.p1+(x.e.p2?(" & "+x.e.p2):""))+'</div>'; }).join("");
+        }).join("");
+        if(!blocks) return;
+        h+='<div class="card"><h2>Not playing on '+esc(fmtDay(UI.day))+'</h2>'
+          +'<p class="sub" style="margin:0 0 2px">Entered, but with no match on this day \u2014 their night off.</p>'+blocks+'</div>';
+      })();
       /* the organiser */
       h+='<div class="card"><h2 style="cursor:pointer" onclick="nsqOopAdmin()">Organiser <span style="font-size:11px;font-weight:600;color:#888">'+(UI.openAdmin?'\u25b4':'\u25be')+' venues \u00b7 allocation \u00b7 generate</span></h2>'
         +(UI.openAdmin?adminHtml():'')+'</div>';
