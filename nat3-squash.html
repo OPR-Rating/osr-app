@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q200";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q201";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17604,6 +17604,16 @@ W.nhOpenPair=function(name){
     }catch(e){}
     W.__nhLastSearch=s;
     try{ var t2=W.__nhTrail; for(var i=t2.length-1;i>=0;i--){ if(t2[i].search===s){ t2.length=i+1; break; } } }catch(e){}
+    try{
+      var _t3=W.__nhTrail||[], _in=_t3.some(function(v){ return String(v.search||"")===s; }), _g3="";
+      try{ _g3=(new URLSearchParams(s.replace(/^\?/,"")).get("go")||"").toLowerCase(); }catch(_e){}
+      if(!_in && _g3 && NAT3_PARENT_GO[_g3] && _t3.length && nhOnShellPage()){
+        history.replaceState({nat3:1},"",location.pathname+String(_t3[_t3.length-1].search||""));
+        W.__nhLastSearch=String(location.search||""); W.__nhLastHash=String(location.hash||"");
+        return;                                   /* q201: REPLACE, never push — the stale entry is spent, not kept,
+                                                      so history shrinks and the last press still leaves the app */
+      }
+    }catch(e){}
     var shape=null; try{ shape=nhShape(new URLSearchParams(location.search)); }catch(e){}
     if(shape && nhOnShellPage()){ nhRender(shape); return; }
     location.reload();   /* a parent page or another register: the page has to be loaded on that address */
@@ -20076,6 +20086,20 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     W.__nsqOwnerLoad=function(){ OWNP=null; return load(); };
     load();
 
+
+    /* q201 (Andre: "it takes a long time thinking — then opens 'No teams entered yet' — if I refresh it opens the
+       draw as it should", and with Kloof's OWN tournament too, so not a cache).
+       W.PLAT.tourClub is what tells the shim whose tournament this is, and it SURVIVES moving from one tournament to
+       the next inside the page. Open the Gillitts tournament and then Kloof's, and the first reads of Kloof's draw
+       still went out pinned to Gillitts — so the sheet honestly reported no teams, and a reload (which clears it)
+       put it right. It is now replaced the moment a tournament is opened, and CLEARED when the owner is not yet
+       known, so a stale one can never answer for the next tournament. */
+    var setOwner=function(tn){
+      var n=String(tn||"").trim();
+      try{ W.PLAT.tourClub=W.__nsqOwner(n)||0; }catch(e){}
+      if(!n) return;
+      try{ load().then(function(){ var o=W.__nsqOwner(n); try{ W.PLAT.tourClub=o||0; }catch(e){} }); }catch(e){}
+    };
     /* the tables that belong to a tournament rather than to a board */
     /* the parent asks for these by their OPR names ("tournament_entries"); the shim renames them to plat_squash_*
        further down the chain, and this wrapper sits ABOVE it — so both spellings have to be recognised */
@@ -20097,6 +20121,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           if(tn) return load().then(function(){
             var own=W.__nsqOwner(tn);
             if(!own) return _f.apply(W, args);
+            /* q200b: SET IT BEFORE THE CALL, NOT AFTER. The shim below widens a club-table read on a DOOR to the club
+               and all its divisions unless it already knows whose tournament this is. That was being learnt in the
+               background, so the first reads of a tournament opened from another board — the ones that decide whether
+               it has any teams at all — still went out widened, and the sheet said "No teams entered yet" over a full
+               draw. The owner is known right here; the shim is told now, synchronously, every time. */
+            try{ W.PLAT.tourClub=own; }catch(e){}
             var u2=url.replace(/club_id=eq\.\d+/g, "club_id=eq."+own);
             if(u2===url) return _f.apply(W, args);
             return _f.call(W, u2, init);
@@ -20109,7 +20139,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           var nm=b && String((b.tournament || (b.entry && b.entry.tournament) || "")).trim();
           if(b && nm) return load().then(function(){
             var own=W.__nsqOwner(nm);
-            if(!own || Number(b.club_id)===own) return _f.apply(W, args);
+            if(!own) return _f.apply(W, args);
+            try{ W.PLAT.tourClub=own; }catch(e){}            /* q200b: before the call, as above */
+            if(Number(b.club_id)===own) return _f.apply(W, args);
             b.club_id=own;
             var i2={}; for(var k in init) i2[k]=init[k]; i2.body=JSON.stringify(b);
             return _f.call(W, u, i2);
@@ -20119,15 +20151,51 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       return _f.apply(W, arguments);
     };
 
+
+    /* =============================================================================================================
+       q201 (Andre's recording, 15 Oct): tapping a tournament waits a long time, shows "No teams entered yet" over a
+       draw that is plainly there, and then — left alone or reloaded — fills in correctly a few seconds later.
+
+       I could not reproduce the empty read itself, so this is a GUARD, not a diagnosis: an empty answer for a
+       tournament that exists is never taken as final. It is asked again, twice, before anybody is told there is
+       nothing there. A tournament that genuinely has no teams still says so, about two seconds later.
+       ============================================================================================================= */
+    (function(){
+      var tries={};
+      setInterval(function(){ try{
+        var scr=document.getElementById("tournamentSheetScreen"); if(!scr || !scr.classList.contains("active")) return;
+        var box=document.getElementById("tournamentSheetContent"); if(!box) return;
+        var txt=(box.innerText||"");
+        if(!/No teams entered yet/.test(txt)) return;
+        /* the sheet returns on the empty state BEFORE it records which tournament it is, so the title — which it
+           does set — is the reliable way to know what to ask for again */
+        var ctx=W._tmCtx||{}, ttl="";
+        try{ ttl=((document.getElementById("tournamentSheetTitle")||{}).textContent||"").trim(); }catch(e){}
+        var tn=ttl||ctx.tournament||W.TOURNAMENT_EVENT||""; if(!tn) return;
+        var k=String(tn);
+        var r=tries[k]||{n:0,at:0};
+        if(r.n>=2) return;
+        if(Date.now()-r.at < 1500) return;
+        r.n++; r.at=Date.now(); tries[k]=r;
+        if(typeof loadTournamentSheet==="function") loadTournamentSheet(tn, ctx.division||null);
+      }catch(e){} }, 900);
+      /* a tournament that fills in correctly is forgotten, so it is asked again next time it is opened */
+      setInterval(function(){ try{
+        var box=document.getElementById("tournamentSheetContent"); if(!box) return;
+        if(/No teams entered yet/.test(box.innerText||"")) return;
+        var ctx=W._tmCtx||{}; if(ctx.tournament) delete tries[String(ctx.tournament)];
+      }catch(e){} }, 2000);
+    })();
+
     /* q200: a tournament opened from the chooser tells the rest of the app whose it is, so the door's own routing
        (n317) and anything else that asks are looking at the same answer. */
     (function(){ var g0=W.loadTournamentSheet; if(typeof g0!=="function") return;
       W.loadTournamentSheet=function(tn, div){
-        try{ load().then(function(){ var o=W.__nsqOwner(tn); if(o) W.PLAT.tourClub=o; }); }catch(e){}
+        try{ setOwner(tn); }catch(e){}
         return g0.apply(this, arguments); }; })();
     (function(){ var g1=W.showEnterTournament; if(typeof g1!=="function") return;
       W.showEnterTournament=function(tn){
-        try{ var n=tn||W._etTournament||""; load().then(function(){ var o=W.__nsqOwner(n); if(o) W.PLAT.tourClub=o; }); }catch(e){}
+        try{ setOwner(tn||W._etTournament||""); }catch(e){}
         return g1.apply(this, arguments); }; })();
   })();
 
@@ -20404,7 +20472,14 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       Promise.all([getEntries(tour), liveDivs(tour)]).then(function(r){ var ents=r[0]||[], st=r[1]; if(!st){ btn.dataset.nsqAt="0"; return; }   /* busy: try again */
         var divs={}; ents.forEach(function(e){ if(e.category) divs[e.category]=1; }); var names=Object.keys(divs);
         var allDone=names.length>0 && names.every(function(d){ return !!st[d]; });
-        btn.style.display=allDone?"none":""; });
+        /* q201 (Andre): THE DOOR MUST NOT DISAPPEAR. q141 removed this button once every division had its draw —
+           which also removed the only way to start ANOTHER division, or to add a team to one that has not been drawn.
+           At Gillitts it left the tournament with no way in at all. The button always stays; it says what it is for. */
+        btn.style.display="";
+        if(!btn.dataset.nsqLbl) btn.dataset.nsqLbl=(btn.textContent||"").trim();
+        var want=allDone ? "\u2795 Enter a team \u00b7 start another division" : btn.dataset.nsqLbl;
+        if((btn.textContent||"").trim()!==want) btn.textContent=want;
+      });
     }catch(e){} }, 900);
     setInterval(function(){ try{
       var bar=document.querySelector("#tournamentScreen.active .tm-divbar:not(.cl-divbar), .screen.active .tm-divbar:not(.cl-divbar)"); if(!bar) return;
@@ -22803,6 +22878,53 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         return f0.apply(this, arguments);
       };
     })();
+
+
+    /* =============================================================================================================
+       q201 (Andre: "the whole tournament placement and everything is messed... the flow is just very confusing").
+       The entry screen had four jobs on it and nothing said which came first: a card to add a team, a table of who
+       is in, the section's match rules, and the generate button — with the rules and the button appearing and
+       moving as the field filled up. The jobs are the same; they are now NUMBERED, in the order you do them, and
+       each division's own step 3 and 4 sit inside that division's block where q199 put them.
+       ============================================================================================================= */
+    var STEPS=[
+      [/^Enter a (team|player)\b/i, "Step 1 \u00b7 Enter the teams"],
+      [/^Entered (teams|players)\b/i, "Step 2 \u00b7 Check who is in"]
+    ];
+    /* sq_tour.js moves each division's draw block OUT of the shared "Generate draws" card and in under that
+       division in the list, so step 3 is labelled on the block itself, once per division. */
+    var stepThree=function(){
+      Array.prototype.forEach.call(document.querySelectorAll("#etBody .nsqDivGen"), function(slot){
+        if(slot.dataset.nsqStep) return;
+        if(!slot.querySelector("button, .nsqRules")) return;          /* nothing in it yet */
+        slot.dataset.nsqStep="1";
+        var tag=document.createElement("div");
+        tag.style.cssText="font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;"
+          +"color:#B8480A;margin:10px 2px 2px";
+        tag.textContent="Step 3 \u00b7 Set the rules, then generate";
+        slot.insertBefore(tag, slot.firstChild);
+      });
+    };
+    setInterval(function(){ try{
+      var body=document.getElementById("etBody"); if(!body) return;
+      var scr=document.getElementById("enterTournamentScreen"); if(!scr || !scr.classList.contains("active")) return;
+      Array.prototype.forEach.call(body.querySelectorAll(".card > h2"), function(h){
+        if(h.dataset.nsqStep) return;
+        var t=(h.firstChild && h.firstChild.nodeValue ? h.firstChild.nodeValue : h.textContent||"").trim();
+        for(var i=0;i<STEPS.length;i++){
+          if(STEPS[i][0].test(t)){
+            h.dataset.nsqStep="1";
+            var tag=document.createElement("span");
+            tag.style.cssText="display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;"
+              +"font-weight:800;color:#B8480A;margin-bottom:2px";
+            tag.textContent=STEPS[i][1];
+            h.insertBefore(tag, h.firstChild);
+            return;
+          }
+        }
+      });
+      stepThree();
+    }catch(e){} }, 800);
 
     /* the register is read fresh each time the entry screen is opened */
     (function(){ var f0=W.showEnterTournament; if(typeof f0!=="function") return;
