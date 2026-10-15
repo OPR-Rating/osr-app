@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q194";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q195";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -7291,8 +7291,11 @@ async function loadTournamentSheet(tournament, division) {
   const maxPlayed = Math.max(0, ...fixtures.filter(f => f.round < 90 && f.round_type!=='ko' && f.round_type!=='plate' && f.sets_a != null).map(f => f.round));
 
   let activeTab = box._tab || 'teams';
-  let curRound = box._round || (roundNos[0] || 1);
-  if (!roundNos.includes(curRound)) curRound = roundNos[0] || 1;
+  let curRound = box._round || 0;
+  if (!roundNos.includes(curRound)) {                                  /* q195: open on the round being played */
+    const _open = roundNos.filter(r => (rounds[r]||[]).some(f => f.seed_b !== 0 && f.sets_a == null));
+    curRound = _open.length ? _open[0] : (roundNos[roundNos.length-1] || roundNos[0] || 1);
+  }
 
   function teamsHTML() {
     if(!N) return '<div class="card"><p class="sub">Nothing entered in the ' + TM_DIVISION + ' division yet.</p></div>';
@@ -7449,7 +7452,8 @@ async function loadTournamentSheet(tournament, division) {
       }
       const played = f.sets_a != null;
       const aWin = played && f.sets_a > f.sets_b, bWin = played && f.sets_b > f.sets_a;
-      const score = played ? (f.sets_a + '–' + f.sets_b + ' (' + f.games_a + '–' + f.games_b + ')') : '—';
+      const score = played ? (f.sets_a + '–' + f.sets_b
+        + '<div style="font-size:11px;font-weight:600;color:#8a7a6e;margin-top:1px;white-space:nowrap;">' + f.games_a + '–' + f.games_b + '</div>') : '—';   /* q195 */
       // Handicap (handicap events only): a small tag under each team's own name.
       let hcA = '', hcB = '';
       if (window._tmIsHandicap) {
