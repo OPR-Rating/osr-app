@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q192";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q193";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -21906,6 +21906,23 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var ctx=W._tmCtx||{}; if(ctx.tournament && typeof loadTournamentSheet==="function") loadTournamentSheet(ctx.tournament, ctx.division);
       }catch(e){} }, 1800);
     }catch(e){} }, 500);
+
+    /* q193 (Andre): a Social or Ladder sheet must not offer the tournaments — that choice was made at the door, and
+       leaving it there is exactly how a tournament match got saved as a social one. A sheet opened FROM a fixture keeps
+       its tournament, because that is what it is recording. */
+    setInterval(function(){ try{
+      var scr=document.getElementById("entryScreen"); if(!scr || !scr.classList.contains("active")) return;
+      var sel=document.getElementById("matchEvent"); if(!sel) return;
+      var fromFixture=!!(W.__nsqBackToDraw && W.__nsqBackToDraw.on);
+      if(fromFixture){ sel.dataset.nsqTrim=""; return; }
+      var keep={"Social":1, "Ladder Match":1, "":1};
+      var extra=Array.prototype.filter.call(sel.options,function(o){ return o.value && !keep[o.value]; });
+      if(!extra.length) return;
+      var was=sel.value;
+      extra.forEach(function(o){ o.remove(); });
+      if(was && !keep[was]) { sel.value="Social"; try{ sel.dispatchEvent(new Event("change")); }catch(e){} }
+      else sel.value=was;
+    }catch(e){} }, 600);
 
     /* the front door's big button opens the chooser */
     (function(){ var f0=W.doorPick; if(typeof f0!=="function") return;
