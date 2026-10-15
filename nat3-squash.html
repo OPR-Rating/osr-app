@@ -1646,7 +1646,7 @@ st0.textContent += "html{overflow-y:scroll}";   // p98: the scrollbar's space is
           </div>
           <div class="ac-card">
             <h4>Add an individual</h4>
-            <input id="amName" placeholder="Full name (e.g. Andre Farrell)" class="ac-field">
+            <input id="amName" placeholder="Full name (e.g. Sam Carter)" class="ac-field">
             <div class="ac-row" style="margin-bottom:9px;">
               <select id="amGender" class="ac-field" style="margin-bottom:0;"><option value="M">Male</option><option value="F">Female</option></select>
               <input id="amRating" type="number" placeholder="Rating (blank = 1500/1300)" class="ac-field" style="margin-bottom:0;">
@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q196";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q197";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -9062,6 +9062,8 @@ async function etGenerateDiv(division){
   const pin = (document.getElementById('etPin').value || '').trim();
   const gmsg = document.getElementById('etGenMsg');
   if(!pin){ gmsg.innerHTML='<span style="color:#c0392b;">Enter the admin PIN first.</span>'; return; }
+  gmsg.innerHTML = '<span style="color:#B8480A;font-weight:700;">Reading the '+division+' entries…</span>';   /* q197 */
+  try{ document.querySelectorAll('#etBody button').forEach(function(b){ if(/^Generate /.test(b.textContent||'')) b.disabled=true; }); }catch(_e){}
   const entries = TM.seedEntries(await tmLoadEntries(tournament, division));
   const N = entries.length;
   if(N < 4){ gmsg.innerHTML='<span style="color:#c0392b;">'+division+' needs at least 4 teams.</span>'; return; }
@@ -20227,8 +20229,8 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           var blk=document.createElement("div"); blk.className="card"; blk.id="nsqBlk";
           blk.innerHTML='<h2>Block entry <span style="font-size:11px;font-weight:600;color:#888">paste a list of names</span></h2>'
             +'<div id="nsqBlkBody">'
-            +'<p class="sub">Paste the names in pair order \u2014 <b>Andre Farrell, Jeff Tseng, \u2026</b> or one pair per line as <b>Andre Farrell &amp; Jeff Tseng</b>. Every name must be on the register. Two men \u2192 Men\u2019s, two ladies \u2192 Ladies, one of each \u2192 Mixed; each pair goes to its higher player\u2019s division (an open tournament: to the organiser\u2019s divisions). A player may be in more than one division, with a different partner.</p>'
-            +'<textarea id="nsqBlkTxt" rows="6" placeholder="Andre Farrell, Jeff Tseng, \u2026" style="width:100%;box-sizing:border-box;padding:10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit"></textarea>'
+            +'<p class="sub">Paste the names in pair order \u2014 <b>Sam Carter, Nina Patel, \u2026</b> or one pair per line as <b>Sam Carter &amp; Nina Patel</b>. Every name must be on the register. Two men \u2192 Men\u2019s, two ladies \u2192 Ladies, one of each \u2192 Mixed; each pair goes to its higher player\u2019s division (an open tournament: to the organiser\u2019s divisions). A player may be in more than one division, with a different partner.</p>'
+            +'<textarea id="nsqBlkTxt" rows="6" placeholder="Sam Carter, Nina Patel, \u2026" style="width:100%;box-sizing:border-box;padding:10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit"></textarea>'
             +'<div style="display:flex;gap:8px;margin:10px 0"><button class="btn btn-primary" onclick="nsqBlkCheck()" style="flex:1">Check the list</button></div>'
             +'<div id="nsqBlkOut"></div></div>';
           ec.parentNode.insertBefore(blk, ec);   /* q137: block entry above the one-at-a-time card (set-up first, then the list, then singles) */
@@ -22388,6 +22390,260 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       };
       if(!hook()){ var n=0, t=setInterval(function(){ if(hook() || ++n>40) clearInterval(t); }, 250); }
     })();
+  })();
+
+  /* ===================================================================================================================
+     NAT-SQUASH q197 · ENTERING THE TEAMS (Andre, 15 Oct, from the Gillitts tournament he set up).
+
+     "It let me pick all the Gillitts members as they on the dropdown... but when I had taken all gillitts members the
+      dropdown only offers me to type to look for names... there must be a way to say all Gillitts members or all knz
+      members etc.. this can't work like that"
+
+     The picker was the club's own people and nothing else: once they were used it emptied, and an entrant from another
+     club could only be hunted for by typing. A tournament is not a club competition. The picker now holds THE WHOLE
+     REGISTER, opening on this club and one tap from everyone, each name carrying the club it plays for.
+
+     Three other things from the same sitting:
+       · a lady was accepted into a men's division, because the old picker filtered on a gender that is simply not
+         recorded for most members — a silent filter that passes everybody when it has nothing to go on. The division's
+         rule is now CHECKED when the team is added, by name, and a player whose gender is not recorded is shown as
+         such rather than quietly dropped;
+       · "one of these is already entered in a division" never said WHO. It names them now, and the division they are
+         in, before anything is sent;
+       · a name once picked could not be taken back. It can.
+     ================================================================================================================== */
+  (function(){
+    var W=window;
+    var esc=function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+    var cid=function(){ try{ return Number(W.PLAT&&W.PLAT.cid)||0; }catch(e){ return 0; } };
+    var H=function(){ return {apikey:SB_ANON,Authorization:"Bearer "+SB_ANON,"Content-Type":"application/json"}; };
+
+    /* ---------- the register's people, read once per visit to the entry screen ---------- */
+    var ROSTER=null, ROSTERP=null;
+    var loadRoster=function(force){
+      if(ROSTERP && !force) return ROSTERP;
+      var P=Number((W.PLAT&&W.PLAT.pool)||0);
+      if(!P) return (ROSTERP=Promise.resolve(ROSTER=[]));
+      var url=SB_URL+"/rest/v1/plat_squash_v_pool_individuals?pool_id=eq."+P+"&select=full_name,gender,club_id&order=full_name.asc";
+      var get=(typeof W.__nsqPgAll==="function")
+        ? W.__nsqPgAll(url)
+        : fetch(url,{headers:H()}).then(function(r){ return r.ok?r.json():[]; });
+      ROSTERP=get.then(function(rows){
+        rows=Array.isArray(rows)?rows:[];
+        /* one row per person: the register lists somebody once per club they are registered to */
+        var seen={}, out=[];
+        rows.forEach(function(r){
+          var n=String(r.full_name||"").trim(); if(!n) return;
+          var k=n.toLowerCase();
+          if(seen[k]){ if(!seen[k].gender && r.gender) seen[k].gender=r.gender; return; }
+          seen[k]={name:n, gender:r.gender||"", club:Number(r.club_id||0)};
+          out.push(seen[k]);
+        });
+        ROSTER=out; return out;
+      }).catch(function(){ return (ROSTER=[]); });
+      return ROSTERP;
+    };
+    var clubName=function(id){
+      try{ var c=(W.PLAT.clubs||[]).filter(function(x){ return +x.id===+id; })[0];
+        if(!c) return "";
+        var p=c.parent_id?(W.PLAT.clubs||[]).filter(function(x){ return +x.id===+c.parent_id; })[0]:null;
+        /* a division's name is "Div B" on its own — say whose */
+        return (p && /^div\b/i.test(c.name)) ? (p.name+" · "+c.name) : c.name;
+      }catch(e){ return ""; }
+    };
+    var mine=function(){ try{ var b=(W.PLAT.myBoards||[]).map(Number); return b.length?b:[cid()]; }catch(e){ return [cid()]; } };
+    var hereName=function(){ try{ return clubName(cid())||W.PLAT.name||"This club"; }catch(e){ return "This club"; } };
+
+    /* ---------- the picker ---------- */
+    var cssOnce=function(){ if(document.getElementById("nsqEntCss")) return; var st=document.createElement("style"); st.id="nsqEntCss";
+      st.textContent="#nsqEnt{position:fixed;inset:0;z-index:2147483550;background:#f4efe9;display:flex;flex-direction:column;font-family:inherit}"
+        +"#nsqEnt .hd{background:linear-gradient(135deg,#7E3200,#B8480A);color:#fff;padding:13px 14px 14px;flex:none}"
+        +"#nsqEnt .hd h1{margin:5px 0 0;font-size:18px;font-weight:800}"
+        +"#nsqEnt .x{background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:20px;padding:6px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}"
+        +"#nsqEnt .sc{display:flex;gap:7px;padding:10px 14px 0;flex:none}"
+        +"#nsqEnt .sc button{flex:1;background:#fff;border:1.5px solid #e2d8ce;border-radius:11px;padding:9px 6px;font-size:12.5px;font-weight:800;color:#7a6658;cursor:pointer;font-family:inherit}"
+        +"#nsqEnt .sc button.on{background:#B8480A;border-color:#B8480A;color:#fff}"
+        +"#nsqEnt .q{flex:none;padding:10px 14px 6px}"
+        +"#nsqEnt .q input{width:100%;box-sizing:border-box;padding:11px 12px;border:1.5px solid #e2d8ce;border-radius:11px;font-size:15px;font-family:inherit}"
+        +"#nsqEnt .ls{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:4px 14px calc(22px + env(safe-area-inset-bottom,0px))}"
+        +"#nsqEnt .grp{font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:800;color:#8a7a6e;margin:13px 2px 5px}"
+        +"#nsqEnt .n{display:block;width:100%;background:#fff;border:1.5px solid #e2d8ce;border-radius:11px;padding:10px 13px;margin-bottom:6px;text-align:left;cursor:pointer;font-family:inherit}"
+        +"#nsqEnt .n b{display:block;font-size:15px;color:#3b2a1e;font-weight:700}"
+        +"#nsqEnt .n span{display:block;font-size:11.5px;color:#8a7a6e;margin-top:1px}"
+        +"#nsqEnt .none{font-size:13px;color:#7a6658;padding:14px 2px;line-height:1.55}";
+      document.head.appendChild(st); };
+    var close=function(){ var o=document.getElementById("nsqEnt"); if(o) o.remove(); };
+    W.__nsqEntClose=close;
+
+    var ST={scope:"here", q:"", which:1, cat:"", used:null, other:"", onPick:null};
+
+    var render=function(){
+      var box=document.getElementById("nsqEntList"); if(!box) return;
+      if(!ROSTER){ box.innerHTML='<div class="none">Reading the register…</div>'; return; }
+      var here=mine(), q=ST.q.trim().toLowerCase();
+      var rows=ROSTER.filter(function(p){
+        if(ST.scope==="here" && here.indexOf(p.club)<0) return false;
+        if(q && p.name.toLowerCase().indexOf(q)<0) return false;
+        if(p.name===ST.other) return false;                       /* already this team's other player */
+        if(ST.used && ST.used[p.name.toLowerCase()]) return false; /* already in this division */
+        return true;
+      });
+      /* the division's own rule, when we can tell */
+      var wantM=/^men|men's|men's singles/i.test(ST.cat), wantF=/ladies|women/i.test(ST.cat);
+      var fit=[], wrong=[], unknown=[];
+      rows.forEach(function(p){
+        if(!wantM && !wantF){ fit.push(p); return; }
+        if(!p.gender){ unknown.push(p); return; }
+        var isM=String(p.gender).toUpperCase().charAt(0)==="M";
+        if((wantM && isM) || (wantF && !isM)) fit.push(p); else wrong.push(p);
+      });
+      var line=function(p){
+        var cn=clubName(p.club);
+        return '<button class="n" onclick="window.__nsqEntTake('+JSON.stringify(p.name).replace(/"/g,"&quot;")+')">'
+          +'<b>'+esc(p.name)+'</b>'+(cn?('<span>'+esc(cn)+'</span>'):'')+'</button>';
+      };
+      var h="";
+      if(!rows.length){
+        h='<div class="none">'+(q?('Nobody in '+(ST.scope==="here"?esc(hereName()):"the register")+' matches “'+esc(ST.q)+'”.')
+          :('Everybody at '+esc(hereName())+' is already entered in this division. Tap <b>All clubs</b> above for the rest of the register.'))+'</div>';
+      } else {
+        h+=fit.map(line).join("");
+        if(unknown.length){ h+='<div class="grp">Gender not recorded</div>'
+          +'<div class="none" style="padding:0 2px 7px">The register does not say whether these players are men or ladies, so this division’s rule cannot be applied to them. Pick one only if you know they belong here.</div>'
+          +unknown.map(line).join(""); }
+        if(wrong.length){ h+='<div class="grp">Not for this division</div>'
+          +'<div class="none" style="padding:0 2px 7px">'+esc(ST.cat)+' is not open to '
+          +wrong.map(function(p){ return esc(p.name); }).join(", ")+'.</div>'; }
+      }
+      box.innerHTML=h;
+    };
+
+    W.__nsqEntScope=function(s){ ST.scope=s;
+      try{ var bs=document.querySelectorAll("#nsqEnt .sc button");
+        bs[0].className=(s==="here"?"on":""); bs[1].className=(s==="all"?"on":"");
+      }catch(e){}
+      render(); };
+    W.__nsqEntTake=function(name){
+      var f=ST.onPick; close(); if(typeof f==="function") f(name);
+    };
+
+    var open=function(label, cat, used, other, onPick){
+      cssOnce(); close();
+      ST={scope:"here", q:"", cat:cat||"", used:used||null, other:other||"", onPick:onPick};
+      var o=document.createElement("div"); o.id="nsqEnt";
+      o.innerHTML='<div class="hd"><button class="x" onclick="window.__nsqEntClose()">Close</button><h1>'+esc(label)+'</h1></div>'
+        +'<div class="sc"><button class="on" onclick="window.__nsqEntScope(\'here\')">'+esc(hereName())+'</button>'
+        +'<button onclick="window.__nsqEntScope(\'all\')">All clubs</button></div>'
+        +'<div class="q"><input id="nsqEntQ" placeholder="Search the register…" autocomplete="off"></div>'
+        +'<div class="ls" id="nsqEntList"><div class="none">Reading the register…</div></div>';
+      document.body.appendChild(o);
+      try{ document.getElementById("nsqEntQ").addEventListener("input",function(){ ST.q=this.value||""; render(); }); }catch(e){}
+      loadRoster().then(function(){ render(); });
+    };
+
+    /* the parent's own picker for a tournament entry, replaced */
+    W.etPick=function(which){
+      var cat=""; try{ cat=document.getElementById("etCat").value||""; }catch(e){}
+      var e1=document.getElementById("etP1"), e2=document.getElementById("etP2");
+      var other=(which===1)?((e2&&e2.value)||""):((e1&&e1.value)||"");
+      var mineNow=(which===1)?((e1&&e1.value)||""):((e2&&e2.value)||"");
+      var used={}; try{
+        var u=(W._etUsedInDiv && W._etUsedInDiv[cat])||[];
+        u.forEach(function(n){ if(n && n!==mineNow) used[String(n).toLowerCase()]=1; });
+      }catch(e){}
+      open((which===1?"Player 1":"Player 2"), cat, used, other, function(name){
+        try{
+          document.getElementById("etP"+which).value=name;
+          var b=document.getElementById("etP"+which+"btn");
+          b.textContent=name; b.classList.add("selected");
+          if(typeof etUpdateSeedPreview==="function") etUpdateSeedPreview();
+          paintClear();
+        }catch(e){}
+      });
+    };
+
+    /* ---------- take a name back ---------- */
+    W.__nsqEntDrop=function(which){
+      try{
+        var v=document.getElementById("etP"+which); if(v) v.value="";
+        var b=document.getElementById("etP"+which+"btn");
+        if(b){ b.textContent="— select —"; b.classList.remove("selected"); }
+        if(typeof etUpdateSeedPreview==="function") etUpdateSeedPreview();
+        paintClear();
+      }catch(e){}
+    };
+    function paintClear(){
+      [1,2].forEach(function(w){
+        var b=document.getElementById("etP"+w+"btn"); if(!b) return;
+        var v=document.getElementById("etP"+w), has=!!(v && v.value);
+        var x=document.getElementById("nsqEntX"+w);
+        if(!has){ if(x) x.remove(); return; }
+        if(!x){ x=document.createElement("button"); x.id="nsqEntX"+w; x.type="button";
+          x.setAttribute("onclick","window.__nsqEntDrop("+w+")");
+          x.style.cssText="background:none;border:none;color:#c0392b;font-size:12.5px;font-weight:700;cursor:pointer;padding:2px 0 8px;font-family:inherit;display:block";
+          x.textContent="× take this name back";
+          if(b.parentNode) b.parentNode.insertBefore(x, b.nextSibling);
+        }
+      });
+    }
+    /* the entry card is redrawn on every change — keep the little × in step */
+    setInterval(function(){ try{
+      var s=document.getElementById("enterTournamentScreen");
+      if(s && s.classList.contains("active")) paintClear();
+    }catch(e){} }, 700);
+
+    /* ---------- adding a team: say WHO, and apply the division's rule ---------- */
+    (function(){
+      var f0=W.submitTournamentEntry; if(typeof f0!=="function") return;
+      W.submitTournamentEntry=function(){
+        var cat="", p1="", p2="", msg=null;
+        try{
+          cat=document.getElementById("etCat").value||"";
+          p1=document.getElementById("etP1").value||"";
+          var e2=document.getElementById("etP2"); p2=e2?(e2.value||""):"";
+          msg=document.getElementById("etMsg");
+        }catch(e){}
+        var bad=function(t){ if(msg) msg.innerHTML='<span style="color:#c0392b;">'+t+'</span>'; };
+        var names=[p1,p2].filter(Boolean);
+
+        /* already entered — name them, and name the division they are in */
+        try{
+          var where=null, who="";
+          names.forEach(function(n){
+            if(where) return;
+            var k=String(n).toLowerCase();
+            Object.keys(W._etUsedInDiv||{}).forEach(function(d){
+              if(where) return;
+              var hit=(W._etUsedInDiv[d]||[]).some(function(x){ return x && String(x).toLowerCase()===k; });
+              if(hit){ where=d; who=n; }
+            });
+          });
+          if(where){ bad(esc(who)+" is already entered in "+esc(where)+". Take that entry out first, or pick somebody else."); return; }
+        }catch(e){}
+
+        /* the division's own rule, where the register knows the answer */
+        try{
+          var wantM=/^men/i.test(cat) && !/ladies|women/i.test(cat), wantF=/ladies|women/i.test(cat);
+          if((wantM||wantF) && ROSTER){
+            var off=null;
+            names.forEach(function(n){
+              if(off) return;
+              var p=ROSTER.filter(function(x){ return x.name.toLowerCase()===String(n).toLowerCase(); })[0];
+              if(!p || !p.gender) return;                       /* not recorded: no rule to apply */
+              var isM=String(p.gender).toUpperCase().charAt(0)==="M";
+              if((wantM && !isM) || (wantF && isM)) off=n;
+            });
+            if(off){ bad(esc(off)+" is not eligible for "+esc(cat)+". Enter them in a division they belong to, or change this tournament’s divisions."); return; }
+          }
+        }catch(e){}
+
+        return f0.apply(this, arguments);
+      };
+    })();
+
+    /* the register is read fresh each time the entry screen is opened */
+    (function(){ var f0=W.showEnterTournament; if(typeof f0!=="function") return;
+      W.showEnterTournament=function(){ try{ ROSTERP=null; loadRoster(true); }catch(e){} return f0.apply(this, arguments); }; })();
   })();
 
 })();</script>
