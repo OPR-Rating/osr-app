@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q195";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q196";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -16993,7 +16993,7 @@ W.nhOpenPair=function(name){
       return false;
     }
     var search="?"+p.q.toString()+(p.hash?("#"+p.hash):"");
-    if(search===String(location.search||"")+String(location.hash||"") && !opts.force){ var _tv=W.__nhTrail&&W.__nhTrail[W.__nhTrail.length-1]; if(!(_tv && _tv.page && _tv.search===String(location.search||""))){ try{ window.scrollTo(0,0); }catch(e){} return false; } try{ W.__nhTrail.pop(); }catch(e){} opts.force=true; opts.replace=true; }   /* q156b: on a view (Admin Control) the same address means "the page itself" */
+    if(search===String(location.search||"")+String(location.hash||"") && !opts.force){ var _tv=W.__nhTrail&&W.__nhTrail[W.__nhTrail.length-1]; var _wantS="homeScreen"; try{ var _wq=new URLSearchParams(search.split("#")[0].replace(/^\?/,""));   var _wg=(_wq.get("go")||"").toLowerCase();   _wantS={tsheet:"tournamentSheetScreen",tournaments:"tournamentScreen",entry:"entryScreen",ladders:"laddersScreen",     ladder:"ladderScreen",profiles:"profileSearchScreen",player:"profileScreen",card:"platSessScreen"}[_wg]||"homeScreen";   if(String(search).indexOf("#enter")>=0) _wantS="entryScreen"; }catch(_e){} var _nowS=""; try{ _nowS=(document.querySelector(".screen.active")||{}).id||""; }catch(_e){} var _elsewhere=!!(_nowS && _wantS && _nowS!==_wantS); if(!_elsewhere && !(_tv && _tv.page && _tv.search===String(location.search||""))){ try{ window.scrollTo(0,0); }catch(e){} return false; } try{ if(_tv && _tv.page) W.__nhTrail.pop(); }catch(e){} opts.force=true; opts.replace=true; }   /* q156b + q196 */
     try{
       if(opts.replace){ history.replaceState({nat3:1},"",location.pathname+search); var t=nhCrumbs(); t.pop(); nhCrumbsSave(t); nhCrumbPush("?"+p.q.toString()); }
       else { history.pushState({nat3:1},"",location.pathname+search); nhCrumbPush("?"+p.q.toString()); }
@@ -17573,14 +17573,16 @@ W.nhOpenPair=function(name){
       W.nhNav(PAGE+"?"+q.toString(),{replace:true,force:true,page:prev.page||""});
     } else { open(); }
   };
-  var NAT3_SCREEN_GO2={laddersScreen:"ladders",ladderScreen:"ladders",clubLadderScreen:"ladders",entryScreen:"entry",enterTournamentScreen:"entry",tournamentScreen:"tournaments",profileSearchScreen:"profiles",profileScreen:"profiles",adminScreen:"admin",platSessScreen:"card"};
+  var NAT3_SCREEN_GO2={tournamentSheetScreen:"tsheet",laddersScreen:"ladders",ladderScreen:"ladders",clubLadderScreen:"ladders",entryScreen:"entry",enterTournamentScreen:"entry",tournamentScreen:"tournaments",profileSearchScreen:"profiles",profileScreen:"profiles",adminScreen:"admin",platSessScreen:"card"};
   /* the phone's back gesture and the browser's back button */
   W.__nhLastSearch=String(location.search||"");
   W.addEventListener("popstate",function(){
     /* n305: A HASH IS NOT A PAGE. The parent moves location.hash on its own screens (a ladder, #enter) and the browser
        fires popstate for that too; taken as "the address moved", the shell redrew the board's page under the ladder
        and re-scoped the register — fifteen reads, and Men's Pairs never finished. Only a change of ?search is ours. */
-    var s=String(location.search||""); if(s===W.__nhLastSearch) return;
+    var s=String(location.search||""), hs=String(location.hash||"");
+    if(s===W.__nhLastSearch && hs!==String(W.__nhLastHash||"")){ W.__nhLastHash=hs; return; }   /* q196: the parent's own hash */
+    W.__nhLastHash=hs;
     /* n330: THE GESTURE WALKS THE TRAIL. The browser's history holds addresses; the trail holds views — and a members
        list or a ladder table is a screen, not an address, so the gesture skipped it (profile → group page, then out to
        the door in purple) and disagreed with the arrows. Now a back gesture inside the app puts the address back where
@@ -17589,9 +17591,12 @@ W.nhOpenPair=function(name){
     try{
       var t=W.__nhTrail;
       if(t && t.length>1 && nhOnShellPage()){
-        var last=t[t.length-1];
-        history.pushState({nat3:1},"",location.pathname+last.search);
+        var last=t[t.length-1], prev=t[t.length-2];
+        /* q196: hand the entry back only when the step takes no address of its own; otherwise this pop IS the step */
+        if(prev && String(prev.search||"")===s){ history.pushState({nat3:1},"",location.pathname+last.search); }
+        W.__nhLastSearch=String(location.search||"");
         W.nhBackPath();
+        W.__nhLastSearch=String(location.search||""); W.__nhLastHash=String(location.hash||"");
         return;
       }
     }catch(e){}
@@ -17619,7 +17624,7 @@ W.nhOpenPair=function(name){
     }catch(e){}
   },true);
   /* a PARENT screen asked for while the shell stands on another board: reload on that board, then open it */
-  var NAT3_SCREEN_GO={laddersScreen:"ladders",entryScreen:"entry",tournamentScreen:"tournaments",profileSearchScreen:"profiles",adminScreen:"admin",platSessScreen:"card"};
+  var NAT3_SCREEN_GO={tournamentSheetScreen:"tsheet",laddersScreen:"ladders",entryScreen:"entry",tournamentScreen:"tournaments",profileSearchScreen:"profiles",adminScreen:"admin",platSessScreen:"card"};
   /* STAGE 2: the parent's screens on ANY board, in-shell. The shim swaps the booted board's id for the current one in
      every read and write the parent makes (early_nat.js, NAT3), so the parent's own functions simply run for the board
      we stand on. What the parent loaded at boot for its board is loaded again, once, the first time a screen is asked
@@ -21843,6 +21848,50 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       try{ sessionStorage.removeItem("nsqPickEvent"); }catch(e){}
     })(); }
 
+    /* =============================================================================================================
+       q196 (Andre's recording, 15 Oct): "the back button bounces you between the rounds and the tournament door and
+       the HOME button does not respond". Both come from one thing: THE DRAW HAD NO ADDRESS. It was shown as a screen
+       on top of whatever address the page was standing on (?club=149), so
+
+         · the phone's back went to the address BEFORE the draw — the tournament page — and the shell, still holding
+           the draw as the view it was on, put the draw straight back up: the ping-pong;
+         · "Club home" in the bottom bar points at ?club=149, which was ALREADY the address, so the shell took the tap
+           as "you are here" and did nothing at all.
+
+       The draw now registers its own address the moment it opens, whichever way it was opened — the chooser, the
+       tournament page's "Draw & Rounds", My tournaments, the Order of Play. Nothing is redrawn and nothing flashes:
+       only the address and the trail are brought into step with what is on screen. Back is then one real step out of
+       the draw, and the bottom bar is a different address again, so it answers.
+       ============================================================================================================= */
+    var CRUMB="nh_trail";
+    var crumbPush=function(s){ try{
+      var t=JSON.parse(sessionStorage.getItem(CRUMB)||"[]");
+      if(t.length && t[t.length-1]===s) return;
+      if(t.length>1 && t[t.length-2]===s){ t.pop(); }
+      else t.push(s);
+      sessionStorage.setItem(CRUMB, JSON.stringify(t.slice(-30)));
+    }catch(e){} };
+    var drawAddress=function(tn, div){
+      if(!tn) return;
+      try{
+        var q=new URLSearchParams(location.search||"");
+        if((q.get("go")||"").toLowerCase()!=="tsheet" || q.get("tn")!==String(tn)){
+          q.set("go","tsheet"); q.set("tn",String(tn));
+          if(div) q.set("div",String(div)); else q.delete("div");
+          var s="?"+q.toString();
+          history.pushState({nat3:1},"",location.pathname+s);
+          crumbPush(s);
+          W.__nhLastSearch=String(location.search||"");   /* so the back gesture is seen as a move, not a no-op */
+        }
+      }catch(e){}
+      /* the view the shell thinks we are on keeps the address we just gave it */
+      try{ var t=W.__nhTrail||[], last=t[t.length-1];
+        if(last && last.screen==="tournamentSheetScreen") last.search=String(location.search||"");
+      }catch(e){}
+    };
+    (function(){ var f0=W.loadTournamentSheet; if(typeof f0!=="function") return;
+      W.loadTournamentSheet=function(tn, div){ try{ drawAddress(tn, div); }catch(e){} return f0.apply(this, arguments); }; })();
+
     W.__nsqPickTour=function(club, name){
       /* q194 (Andre's two videos): tapping a tournament navigated to ?go=tsheet, which rebuilt the whole page — on a
          laptop you saw the club door flash before the draw, and on a phone it often stopped at the door and never got
@@ -21980,6 +22029,18 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     (function(){ var f0=W.doorPick; if(typeof f0!=="function") return;
       W.doorPick=function(what){ if(what==="score"){ W.__nsqPickOpen(); return; } return f0.apply(this, arguments); }; })();
 
+    /* q196 (Andre's recording): "Enter a score" IN THE BOTTOM BAR was a second, older way in — on a door it asked
+       "where did you play?" (the question Andre had removed from everywhere else), and standing on the draw it did
+       nothing at all. There is one way in: the chooser. The bar's button opens it, from any screen. */
+    document.addEventListener("click", function(ev){
+      try{
+        var a=ev.target && ev.target.closest ? ev.target.closest("#nhBar a") : null; if(!a) return;
+        if(!/Enter a score/i.test(a.innerText||"")) return;
+        ev.preventDefault(); ev.stopPropagation();
+        W.__nsqPickOpen();
+      }catch(e){}
+    }, true);
+
     /* ---------- tapping a match on the draw ---------- */
     var rulesOf=function(div){ return (typeof W.__nsqRules==="function")?W.__nsqRules(div):{games:3,all_games:false,target:11,win_by_two:true}; };
     var lineOf=function(div){ return (typeof W.__nsqRulesLine==="function")?W.__nsqRulesLine(div):"best of 3 \u00b7 points to 11"; };
@@ -22077,6 +22138,18 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var d=W.__nsqBackToDraw||{}; W.__nsqBackToDraw={on:false, club:0, tour:""};
       if(!d.tour){ try{ goHome(); }catch(e){} return; }
       try{ sessionStorage.setItem("nsqWantRounds", String(d.tour)); sessionStorage.setItem("nsqRefetch","1"); }catch(e){}
+      /* q196: the draw has an address of its own now, and the marker was opened over it — so this is already the
+         address we are on. Show the draw and read it again, rather than asking the shell to go where it already is. */
+      try{
+        var q=new URLSearchParams(location.search||"");
+        if(Number(q.get("club"))===Number(d.club||cid()) && (q.get("go")||"").toLowerCase()==="tsheet" && q.get("tn")===String(d.tour)
+           && typeof loadTournamentSheet==="function"){
+          try{ TOURNAMENT_EVENT=d.tour; }catch(e){}
+          try{ W.showScreen("tournamentSheetScreen"); }catch(e){}
+          loadTournamentSheet(d.tour, (W._tmCtx&&W._tmCtx.division)||null);
+          return;
+        }
+      }catch(e){}
       var href=PAGEN()+"?club="+(d.club||cid())+"&go=tsheet&tn="+ENC(d.tour);
       if(W.nhNav) W.nhNav(href); else location.href=href;
     };
