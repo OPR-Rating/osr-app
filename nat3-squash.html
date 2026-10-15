@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q209";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q210";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -12146,14 +12146,14 @@ W.mePair=function(name,col){
           .filter(function(x){ var k=x.name+"|"+x.club_id+"|"+x.gender; if(seen[k]) return false; seen[k]=1; return true; });
        });
       }),
-      fetch(B+"nat_v_member_group?pool_id=eq."+P+"&select=full_name,club_id").then(J).catch(function(){ return []; }),
+      W.__nsqPgAll(B+"nat_v_member_group?pool_id=eq."+P+"&select=full_name,club_id&order=full_name.asc,club_id.asc").catch(function(){ return []; }),   /* q210: every page */
       fetch(B+"plat_clubs?pool_id=eq."+W.PLAT.pool+"&select=id,name,colour,pool_id").then(J).catch(function(){ return []; }),
       /* n93: THE PERSON'S OWN RATING, WHEREVER THEY ARE REGISTERED. The page took the rating from the people
          of the region you were standing in, so an external member — Andrew Kramer of Kloof, opened from North
          Coast — showed a dash and no level. The whole register's per-board rows are read for that name. */
       fetch(B+"plat_clubs?pool_id=eq."+P+"&select=id").then(J).catch(function(){ return []; }).then(function(cs){
         var ids=(Array.isArray(cs)?cs:[]).map(function(c){ return c.id; }); if(!ids.length) return [];
-        return fetch(B+"plat_squash_v_individuals?club_id=in.("+ids.join(",")+")&select=id,club_id,full_name,gender,current_rating,seed_rating,pool_seed").then(J).catch(function(){ return []; });
+        return W.__nsqPgAll(B+"plat_squash_v_individuals?club_id=in.("+ids.join(",")+")&select=id,club_id,full_name,gender,current_rating,seed_rating,pool_seed&order=full_name.asc,club_id.asc").catch(function(){ return []; });   /* q210: every page */
       })
     ]).then(function(r){
       var pills={}; (Array.isArray(r[2])?r[2]:[]).forEach(function(x){ if(x.club_id) pills[x.full_name]=Number(x.club_id); });
