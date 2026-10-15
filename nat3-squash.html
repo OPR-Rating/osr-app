@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q203";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q208";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -10288,10 +10288,22 @@ async function clRemove(id, label){
         _pairs.push({name:nm, club_id:d.club_id, current_rating:d.combined, initial_rating:ini, sets_played:d.sets||0, sets_won:d.sets_won||0}); });
       _pairs.sort(function(x,y){ return (y.current_rating||0)-(x.current_rating||0); });
       NEW.data={matches:_ms,pairs:_pairs,people:r[2]||[],
-                tour:live[0]||null, tours:live};        /* n81: a club can be running several at once */
-      nhCachePut(CK, NEW.data);
-      NEW.busy=null;
-      return NEW.data;
+                tour:live[0]||null, tours:live, tourMatches:[]};        /* n81: a club can be running several at once */
+      /* q205 (Andre, asked three builds running): THE DOOR MUST SHOW EACH TOURNAMENT'S RESULTS, including a
+         tournament that belongs to another club in the register. A door only ever loaded ITS OWN boards' matches,
+         so another club's tournament had nothing to show and I kept rewording the empty message instead of
+         fetching the matches. Here they are: the results of every tournament the band lists, read by tournament
+         name, used only by that band. The door's own Recent matches are untouched. */
+      var mineB={}; boards.forEach(function(b){ mineB[Number(b)]=1; });
+      var away=live.filter(function(t){ return !mineB[Number(t.club_id)]; }).map(function(t){ return String(t.name||""); }).filter(Boolean);
+      var done=function(){ nhCachePut(CK, NEW.data); NEW.busy=null; return NEW.data; };
+      if(!away.length) return done();
+      var inEv="("+away.map(function(n){ return '"'+n.replace(/"/g,'\\"')+'"'; }).join(",")+")";
+      return fetch(B+"plat_matches?discipline=eq.squash&event=in."+encodeURIComponent(inEv)
+                   +"&select=id,club_id,match_date,match_type,event,t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,t1_games,t2_games,set_scores,display_t1,display_t2,rating_delta,t1_rating_at,t2_rating_at"
+                   +"&order=match_date.desc,id.desc&limit=400").then(J)
+        .then(function(mm){ NEW.data.tourMatches=Array.isArray(mm)?mm:[]; return done(); })
+        .catch(function(){ return done(); });
     }).catch(function(){ NEW.busy=null; NEW.data={matches:[],pairs:[],people:[],tour:null}; return NEW.data; }));
   }
   function SBREST(){ return "https://djmbnvikrdgnomjhtkgf.supabase.co/rest/v1/"; }
@@ -11159,6 +11171,7 @@ async function clRemove(id, label){
       + list.map(function(t,k){
           var nm=String(t.name||"").toLowerCase();
           var ms=(d.matches||[]).filter(function(m){ return String(m.event||"").toLowerCase()===nm; });
+          if(!ms.length) ms=(d.tourMatches||[]).filter(function(m){ return String(m.event||"").toLowerCase()===nm; });   /* q205: another club's */
           var gid=t.club_id||W.PLAT.cid, gcol=clubPal(gid)[0], gname=nhBoardName(gid)||"";
           return '<button onclick="window.nhTourOpen('+k+')" style="display:flex;width:100%;align-items:center;gap:10px;'
             +'background:#fff;border:1px solid #e6e0ee;border-radius:14px;padding:10px 12px;margin-top:6px;font:inherit;'
@@ -11168,10 +11181,8 @@ async function clRemove(id, label){
             +  'padding:2px 9px;font-size:10.5px;font-weight:800;letter-spacing:.04em">GROUP \u00b7 '+esc(gname)+'</span>'
             +  '<span style="display:block;font-weight:800;font-size:14px;color:#241d33;margin-top:4px;overflow:hidden;'
             +  'text-overflow:ellipsis;white-space:nowrap">'+esc(t.name)+'</span></span>'
-            + ((Number(t.club_id)===Number(W.PLAT.cid))
-                ? ('<span style="text-align:right;line-height:1.2"><span style="display:block;font-size:15px;font-weight:800;color:'+gcol+'">'+ms.length+'</span>'
-                   +'<span style="font-size:10px;color:#8a8196">matches</span></span>')
-                : '<span style="text-align:right;font-size:10.5px;color:#8a8196;line-height:1.3">open<br>the draw</span>')   /* q202 */
+            +'<span style="text-align:right;line-height:1.2"><span style="display:block;font-size:15px;font-weight:800;color:'+gcol+'">'+ms.length+'</span>'
+            +'<span style="font-size:10px;color:#8a8196">matches</span></span>'
             +'<span id="nhtourT'+k+'" style="display:inline-block;color:var(--nhc,#D35400);transition:transform .15s">\u25bc</span></button>'
             +'<div id="nhtour'+k+'" style="display:none;padding:2px 0 6px">'
             +  '<div style="padding:8px 12px 4px;font-weight:800;font-size:13.5px;color:'+gcol+'">'+esc(t.name)+'</div>'
@@ -14398,7 +14409,7 @@ W.nhOpenPair=function(name){
         var pd=(a&&b)?((typeof W.nsqDivCmp==="function" && W.nsqDivCmp(a,b)<=0)?a:b):(a||b); return pd?(+pd.id===+W.PLAT.cid):(Number(p.club_id)===Number(W.PLAT.cid)); };
       var _seenP={};
       var d={matches:mine,pairs:(all.pairs||[]).filter(function(p){ if(_seenP[p.name]) return false; var ok=_pairMine(p); if(ok) _seenP[p.name]=1; return ok; }),
-             people:all.people,tour:all.tour,
+             people:all.people,tour:all.tour,tourMatches:(all.tourMatches||[]),   /* q205 */
              /* n81: this board's running tournaments — the club may have several at once */
              tours:(all.tours||[]).slice().sort(function(a,b){      /* q202: the register's, this club's first */
                var am=(Number(a.club_id)===Number(W.PLAT.cid))?0:1, bm=(Number(b.club_id)===Number(W.PLAT.cid))?0:1;
@@ -15520,8 +15531,13 @@ W.nhOpenPair=function(name){
     var want=ans.split(",").map(function(x){return parseInt(x.trim(),10);}).filter(function(x){return REG.clubs.some(function(c){return c.id===x;});});
     var seedAns=prompt("Seed for "+p.full_name+" (blank = keep "+(p.seed!=null?Math.round(p.seed):"–")+")","");
     var jobs=[];
-    want.forEach(function(c){ if(cur.indexOf(c)<0) jobs.push(acall({action:"add_membership",club_id:c,admin_pin:REG.pin,individual_id:id})); });
-    cur.forEach(function(c){ if(want.indexOf(c)<0) jobs.push(acall({action:"remove_membership",club_id:c,admin_pin:REG.pin,individual_id:id})); });
+    /* q207 (Andre): REMOVE THE OLD CLUB FIRST, THEN ADD THE NEW ONE. The database now refuses a second club for a
+       squash player who already belongs to one (that is how a stray club came from play). Fired together, the add
+       could be refused while the remove went through, leaving the player with no club. In this order the add always
+       finds the player free. remove_membership only unlinks — the person, ratings and matches are untouched. */
+    var _rm=cur.filter(function(c){ return want.indexOf(c)<0; }), _ad=want.filter(function(c){ return cur.indexOf(c)<0; });
+    jobs.push(Promise.all(_rm.map(function(c){ return acall({action:"remove_membership",club_id:c,admin_pin:REG.pin,individual_id:id}); }))
+      .then(function(){ return _ad.reduce(function(pr,c){ return pr.then(function(){ return acall({action:"add_membership",club_id:c,admin_pin:REG.pin,individual_id:id}); }); }, Promise.resolve()); }));
     if(seedAns!=null && seedAns.trim()!=="" && (want[0]||cur[0])) jobs.push(acall({action:"edit_member",club_id:(want[0]||cur[0]),admin_pin:REG.pin,individual_id:id,seeds:{squash:Number(seedAns)}}).then(function(){ return acall({action:"recompute",discipline:"squash",club_id:(want[0]||cur[0]),admin_pin:REG.pin}); }));
     Promise.all(jobs).then(regLoad);
   };
@@ -21711,7 +21727,13 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(MEM.busy || (MEM.map && Date.now()-MEM.at<600000)) return MEMP;
       var clubs=cs().filter(function(c){ return level(c.id)==="club"; }).map(function(c){ return +c.id; }); if(!clubs.length) return;
       MEM.busy=true;
-      MEMP=restAll("plat_memberships?select=individual_id,club_id&club_id=in.("+clubs.join(",")+")&order=individual_id.asc").then(function(ms){
+      /* q206 (Andre: Brian Dickinson "Member of Kloof" when you set him to Gillitts). plat_memberships carries no home
+         flag, and a person picks up a second CLUB row by playing there (the q176 guard only covered divisions). This
+         read was ordered by person only, so for anyone with two clubs the "home club" was whichever row the database
+         returned first — a coin toss. The OLDEST club membership is the one he was registered under, or the one the
+         Global Ledger set, so that is home: order by created_at and keep the first. */
+      MEMP=restAll("plat_memberships?select=individual_id,club_id,created_at&club_id=in.("+clubs.join(",")+")&order=individual_id.asc,created_at.asc").then(function(ms){
+        /* q208 (Andre): KZN UNATTACHED IS A CLUB, like any other. No special rule. The oldest club is home. */
         var club={}; (ms||[]).forEach(function(m){ if(m.individual_id && club[m.individual_id]==null) club[m.individual_id]=+m.club_id; });
         var ids=Object.keys(club); if(!ids.length){ MEM={at:Date.now(),map:{},busy:false}; return; }
         var chunks=[]; for(var i=0;i<ids.length;i+=300) chunks.push(ids.slice(i,i+300));
