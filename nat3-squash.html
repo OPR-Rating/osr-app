@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q186";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q191";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -12493,7 +12493,7 @@ W.mePair=function(name,col){
           var gc=clubPal(gid)[0];
           h+='<div style="display:flex;align-items:center;gap:8px;padding:10px 14px 4px">'
             +'<span style="width:10px;height:10px;border-radius:50%;background:'+gc+'"></span>'
-            +'<span style="font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;color:'+gc+'">Partnerships in '+esc((typeof W.nsqPlace==="function"?W.nsqPlace(gid):"")||nhBoardName(gid)||"another region")+'</span>'
+            +'<span style="font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:800;color:'+gc+'">Matches played at '+esc((typeof W.nsqPlace==="function"?W.nsqPlace(gid):"")||nhFullBoardName(gid)||"another region")+'</span>'
             +'<span style="font-size:11px;color:#8a8196">\u00b7 '+byGroup[gid].length+'</span></div>';
           /* n101: PLAT'S PARTNERSHIP CARD, COPIED. One card per pair: the name bold, the category as a pill on
              the right (Men's blue, Ladies pink, Mixed green — plat's own colours), then Rating · Matches · Move
@@ -12986,8 +12986,8 @@ W.mePair=function(name,col){
     var pill='<div data-plat-keep="1" style="display:flex;align-items:center;gap:9px;margin-top:10px;background:#fff7ed;'
       +'border:1.5px solid #f59e0b;border-radius:12px;padding:10px 13px;font-size:13px;line-height:1.45;color:#7c2d12">'
       +'<span data-plat-keep="1" style="flex:0 0 auto;background:#f59e0b;color:#fff;font-weight:800;font-size:11px;letter-spacing:.06em;'
-      +'border-radius:99px;padding:3px 10px">ADMINS ONLY</span>'
-      +'<span>Tapping a fixture here <b>edits</b> a score. <b>All scores are entered on the club page</b>, with <b>Enter a score</b>.</span></div>';
+      +'border-radius:99px;padding:3px 10px;display:none">ADMINS ONLY</span>'
+      +'<span><b>Tap a fixture to enter the score.</b></span></div>';   /* q191 */
     function fix(){
       try{
         document.querySelectorAll("p.sub").forEach(function(p){
@@ -21361,8 +21361,8 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var pill=null; Array.prototype.forEach.call(scr.querySelectorAll("div[data-plat-keep]"),function(d){ if(/ADMINS ONLY|ADMIN ENTRIES/.test(d.textContent||"") && d.querySelector("span")) pill=d; });
       if(pill && pill.dataset.nsqMode!==(adm?"1":"0")){ pill.dataset.nsqMode=adm?"1":"0";
         pill.innerHTML=adm
-          ? '<span data-plat-keep="1" style="flex:0 0 auto;background:#1e8449;color:#fff;font-weight:800;font-size:11px;letter-spacing:.06em;border-radius:99px;padding:3px 10px">ADMIN ENTRIES ON</span><span style="flex:1">Tap a fixture to enter or edit its score.</span><button onclick="window.nsqAdminLock()" style="flex:0 0 auto;border:1.5px solid #7c2d12;background:#fff;color:#7c2d12;border-radius:999px;padding:6px 12px;font:inherit;font-weight:800;cursor:pointer">Lock</button>'
-          : '<span data-plat-keep="1" style="flex:0 0 auto;background:#f59e0b;color:#fff;font-weight:800;font-size:11px;letter-spacing:.06em;border-radius:99px;padding:3px 10px">ADMINS ONLY</span><span style="flex:1"><b>Scores are entered on the club page</b> with <b>Enter a score</b>. Organisers can enter or edit a result here with the admin code.</span><button onclick="window.nsqAdminUnlock()" style="flex:0 0 auto;border:1.5px solid #7c2d12;background:#7c2d12;color:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-weight:800;cursor:pointer">Admin entries</button>';
+          ? '<span data-plat-keep="1" style="flex:0 0 auto;background:#1e8449;color:#fff;font-weight:800;font-size:11px;letter-spacing:.06em;border-radius:99px;padding:3px 10px">ADMIN ENTRIES ON</span><span style="flex:1">Tap any match to enter its score, or to correct one that is already in.</span><button onclick="window.nsqAdminLock()" style="flex:0 0 auto;border:1.5px solid #7c2d12;background:#fff;color:#7c2d12;border-radius:999px;padding:6px 12px;font:inherit;font-weight:800;cursor:pointer">Lock</button>'
+          : '<span data-plat-keep="1" style="flex:1"><b>Tap a fixture to enter the score.</b></span><button onclick="window.nsqAdminUnlock()" style="flex:0 0 auto;border:1.5px solid #7c2d12;background:#7c2d12;color:#fff;border-radius:999px;padding:6px 12px;font:inherit;font-weight:800;cursor:pointer">Admin entries</button>';
         pill.style.background=adm?"#eaf7ee":"#fff7ed"; pill.style.borderColor=adm?"#1e8449":"#f59e0b"; }
     };
     W.nsqAdminUnlock=function(){
@@ -21795,7 +21795,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         +"#nsqPick .x{background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:20px;padding:6px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}"
         +"#nsqPick .wrap{padding:14px 14px calc(110px + env(safe-area-inset-bottom,0px));max-width:560px;margin:0 auto}"
         +"#nsqPick .two{display:flex;gap:10px}"
-        +"#nsqPick .big{flex:1;background:#fff;border:1.5px solid #e2d8ce;border-radius:14px;padding:16px 12px;text-align:center;font-size:15px;font-weight:800;color:#3b2a1e;cursor:pointer;font-family:inherit}"
+        +"#nsqPick .big{flex:1;background:#B8480A;border:none;border-radius:14px;padding:16px 12px;text-align:center;font-size:15px;font-weight:800;color:#fff;cursor:pointer;font-family:inherit;box-shadow:0 1px 0 rgba(0,0,0,.06)}"   /* q189: the two were lost on the page */
         +"#nsqPick .lead{background:#B8480A;color:#fff;border:none;border-radius:14px;padding:13px 14px;width:100%;text-align:left;font-size:14.5px;font-weight:800;margin:14px 0 8px;font-family:inherit}"
         +"#nsqPick .grp{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:800;color:#8a7a6e;margin:14px 2px 6px}"
         +"#nsqPick .t{display:block;width:100%;background:#fff;border:1.5px solid #e2d8ce;border-radius:13px;padding:12px 14px;margin-bottom:8px;text-align:left;cursor:pointer;font-family:inherit}"
@@ -21908,6 +21908,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var d=W.__nsqFxNow; if(!d) return; W.__nsqFxClose();
       var r=d.rules, A=halves(d.a), B=halves(d.b);
       W.__nsqBackToDraw={on:true, club:cid(), tour:d.tour};   /* q186 */
+      try{ PEND.put(d.id, d.tour, d.div); }catch(e){}   /* q188 */
       try{
         /* q182 (Andre): NO SET-UP PAGE. Everything was decided when the section was set up, so the marker opens on the
            one thing nobody can know in advance — who serves first. Same route the entry sheet's marker already uses. */
@@ -21929,6 +21930,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var d=W.__nsqFxNow; if(!d) return; W.__nsqFxClose();
       var r=d.rules, A=halves(d.a), B=halves(d.b), n=0;
       W.__nsqBackToDraw={on:true, club:cid(), tour:d.tour};   /* q186 */
+      try{ PEND.put(d.id, d.tour, d.div); }catch(e){}   /* q188 */
       (function go(){
         var scr=document.getElementById("entryScreen");
         if(!scr || !scr.classList.contains("active")){
@@ -21953,6 +21955,37 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         })();
       })();
     };
+
+    /* q188 (Andre: "the draw takes time to show the result, so I tapped the match again and the marker opened ready to
+       do it again"). Two halves. A fixture scored on this phone is remembered until its result is actually on the board,
+       and while it is remembered: tapping it says so instead of opening the marker, and the draw re-reads itself until
+       the result lands — no manual refresh. The memory is in sessionStorage, so a page reload does not lose it. */
+    var PEND={
+      key:"nsqPendingFx",
+      all:function(){ try{ return JSON.parse(sessionStorage.getItem(this.key)||"{}")||{}; }catch(e){ return {}; } },
+      put:function(id, tour, div){ var m=this.all(); m[String(id)]={t:Date.now(), tour:tour, div:div}; try{ sessionStorage.setItem(this.key, JSON.stringify(m)); }catch(e){} },
+      has:function(id){ var r=this.all()[String(id)]; if(!r) return false;
+        if(Date.now()-r.t > 600000){ this.drop(id); return false; }   /* ten minutes and we stop worrying */
+        return true; },
+      drop:function(id){ var m=this.all(); delete m[String(id)]; try{ sessionStorage.setItem(this.key, JSON.stringify(m)); }catch(e){} }
+    };
+    W.__nsqPend=PEND;
+
+    /* the board catches up by itself: while a scored fixture is still showing "to play", read it again */
+    setInterval(function(){ try{
+      var m=PEND.all(), ids=Object.keys(m); if(!ids.length) return;
+      var scr=document.getElementById("tournamentSheetScreen"); if(!scr || !scr.classList.contains("active")) return;
+      var ctx=W._tmCtx||{}; if(!ctx.tournament) return;
+      var fxs=W._tmFixturesById||{}, want=null;
+      ids.forEach(function(id){
+        var f=fxs[id];
+        if(f && f.sets_a!=null){ PEND.drop(id); return; }          /* it is on the board — nothing more to do */
+        if(f) want=id;                                              /* on screen and still blank: read again */
+      });
+      if(!want) return;
+      var now=Date.now(); if(W.__nsqPendAt && now-W.__nsqPendAt<2500) return; W.__nsqPendAt=now;
+      try{ if(typeof loadTournamentSheet==="function") loadTournamentSheet(ctx.tournament, ctx.division); }catch(e){}
+    }catch(e){} }, 1200);
 
     /* q186: where "back" goes after a result that came from a fixture — the draw it came from, not the club door */
     W.__nsqBackToDraw={on:false, club:0, tour:""};
@@ -21994,6 +22027,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           try{
             var f=(W._tmFixturesById||{})[fixtureId], ctx=W._tmCtx||{}, names=W._tmSeedNames||{};
             if(!f || !ctx.tournament || f.sets_a!=null || f.seed_b===0) return f0.apply(this, arguments);
+            /* q188: scored on this phone a moment ago and the board has not caught up — do not offer to score it again */
+            if(PEND.has(fixtureId)){
+              W.alert("That score was entered a moment ago and is still being saved.\n\nThe draw will show it by itself — give it a few seconds. Score it again only if it has not appeared.");
+              return;
+            }
             var div=ctx.division||f.division||"";
             /* q180: the section's rules decide what the marker opens with, so they are in hand BEFORE the sheet shows */
             var show=function(){ fxOpen({ id:fixtureId, tour:ctx.tournament, div:div, cat:catOf(div),
@@ -22004,6 +22042,190 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
             else show();
             return;
           }catch(e){ return f0.apply(this, arguments); }
+        };
+        return true;
+      };
+      if(!hook()){ var n=0, t=setInterval(function(){ if(hook() || ++n>40) clearInterval(t); }, 250); }
+    })();
+  })();
+
+  /* ===================================================================================================================
+     NAT-SQUASH q187 · THE PLACEMENT DRAW (Andre, 15 Oct). Kloof's own draws come off SportyHQ as a MONRAD — nobody is
+     knocked out and every finishing place from 1 to N is played for. Rather than bend our Swiss to suit them, it is
+     offered as one more choice beside Banded Swiss, True Swiss and Round robin.
+
+     The rule, read off their sheets and confirmed by SportyHQ's own description ("ranked by score and then by starting
+     number ... all positions can be played out"):
+       · round 1 is by seed: 1 v N, 2 v N-1 …
+       · after every round each block splits in half — its winners take the top half of that block's places, its losers
+         the bottom half — and inside a block the order is points first, then seed
+       · the next round pairs each block high against low: 1 v 8, 2 v 7 … then 1 v 4, 2 v 3 … then 1 v 2
+       · so a block of 16 becomes two of 8, then four of 4, then eight of 2, and the last round decides 1/2, 3/4 …
+     Points are games won (fixed 3 games, so every match hands out exactly 3 points — a 3-0 or a 2-1).
+     ================================================================================================================== */
+  (function(){
+    var W=window;
+    var LS=function(d){ return "nsqPlace|"+(W._etTournament||"")+"|"+d; };
+    var ON={};
+    W.__nsqPlaceOn=function(d){ if(ON[d]!=null) return ON[d]; try{ return localStorage.getItem(LS(d))==="1"; }catch(e){ return false; } };
+    W.nsqPlaceSet=function(d,on){ ON[d]=!!on; try{ localStorage.setItem(LS(d),on?"1":"0"); }catch(e){}
+      if(on){ try{ if(W.nsqDivRRSet) W.nsqDivRRSet(d,false); }catch(e){} }
+      try{ W.renderEnterScreen(); }catch(e){} };
+
+    /* ---- the arithmetic ---- */
+    /* every block is an array of seeds in place order; one rule pairs them all: top against bottom */
+    var pairsOf=function(block){ var out=[], m=block.length; for(var i=0;i<Math.floor(m/2);i++) out.push([block[i], block[m-1-i]]); return out; };
+    W.__nsqPlacePairs=pairsOf;
+
+    /* games won by each seed across every played fixture */
+    var pointsOf=function(fixtures){
+      var p={};
+      (fixtures||[]).forEach(function(f){
+        if(f.sets_a==null || f.sets_b==null) return;
+        p[f.seed_a]=(p[f.seed_a]||0)+(Number(f.sets_a)||0);
+        p[f.seed_b]=(p[f.seed_b]||0)+(Number(f.sets_b)||0);
+      });
+      return p;
+    };
+
+    /* replay the played rounds and give the blocks as they now stand */
+    W.__nsqPlaceBlocks=function(N, fixtures){
+      var seeds=[]; for(var i=1;i<=N;i++) seeds.push(i);
+      var blocks=[seeds], pts=pointsOf(fixtures);
+      var byRound={}; (fixtures||[]).forEach(function(f){ (byRound[f.round]=byRound[f.round]||[]).push(f); });
+      var rounds=Object.keys(byRound).map(Number).sort(function(a,b){ return a-b; });
+      var order=function(a,b){ return ((pts[b]||0)-(pts[a]||0)) || (a-b); };   /* points, then the starting number */
+      for(var r=0;r<rounds.length;r++){
+        var rn=rounds[r], fx=byRound[rn];
+        if(fx.some(function(f){ return f.sets_a==null; })) break;              /* that round is not finished */
+        var out=[];
+        blocks.forEach(function(B){
+          if(B.length<2){ out.push(B); return; }
+          var win=[], los=[];
+          pairsOf(B).forEach(function(pr){
+            var f=fx.filter(function(x){ return (x.seed_a===pr[0]&&x.seed_b===pr[1])||(x.seed_a===pr[1]&&x.seed_b===pr[0]); })[0];
+            if(!f){ win.push(pr[0]); los.push(pr[1]); return; }
+            var aw=(Number(f.sets_a)||0)>(Number(f.sets_b)||0);
+            var winner=aw?f.seed_a:f.seed_b, loser=aw?f.seed_b:f.seed_a;
+            win.push(winner); los.push(loser);
+          });
+          win.sort(order); los.sort(order);
+          out.push(win); out.push(los);
+        });
+        blocks=out;
+      }
+      return blocks;
+    };
+
+    /* the fixtures for the next round: every block, top against bottom */
+    W.__nsqPlaceNext=function(N, fixtures){
+      var blocks=W.__nsqPlaceBlocks(N, fixtures), out=[], base=0;
+      blocks.forEach(function(B){
+        if(B.length>=2) pairsOf(B).forEach(function(pr){ out.push({seed_a:pr[0], seed_b:pr[1], from:base+1, to:base+B.length}); });
+        base+=B.length;
+      });
+      return out;
+    };
+    W.__nsqPlaceRounds=function(N){ var r=0, n=N; while(n>1){ n=n/2; r++; } return r; };
+
+    /* ---- the choice, beside the other formats ---- */
+    setInterval(function(){ try{
+      if(!W._etTournament) return;
+      var body=document.getElementById("etBody"); if(!body) return;
+      Array.prototype.forEach.call(body.querySelectorAll(".nsqSwissSw"),function(row){
+        if(row.querySelector("button[data-place]")) return;
+        var rr=row.querySelector("button[data-rr]"); if(!rr) return;
+        var m=String(rr.getAttribute("data-sec")||"").trim();
+        if(!m){ var blk=row.parentNode, b=blk&&blk.querySelector("b"); m=b?((b.dataset&&b.dataset.nsqSec)||b.textContent||"").trim():""; }
+        if(!m) return;
+        var on=W.__nsqPlaceOn(m);
+        var btn=document.createElement("button");
+        btn.className="ac-btn "+(on?"ac-btn-primary":"ac-btn-ghost");
+        btn.setAttribute("data-place","1");
+        btn.style.cssText="text-align:left;line-height:1.35";
+        btn.innerHTML=(on?"● ":"○ ")+"<b>Placement draw</b> — nobody is knocked out and every place is played for (Kloof’s own format)";
+        btn.addEventListener("click",function(){ W.nsqPlaceSet(m, !W.__nsqPlaceOn(m)); });
+        rr.parentNode.appendChild(btn);
+      });
+    }catch(e){} }, 700);
+
+    /* ---- generating it ---- */
+    (function(){ var f0=W.etGenerateDiv; if(typeof f0!=="function"){ var n=0, t=setInterval(function(){
+        if(typeof W.etGenerateDiv==="function"){ clearInterval(t); hook(W.etGenerateDiv); } else if(++n>40) clearInterval(t); }, 250); return; }
+      hook(f0);
+      function hook(orig){
+        W.etGenerateDiv=async function(division){
+          if(!W.__nsqPlaceOn(division)) return orig.apply(this, arguments);
+          var gmsg=document.getElementById("etGenMsg");
+          var say=function(h){ if(gmsg) gmsg.innerHTML=h; };
+          try{
+            var tournament=W._etTournament;
+            var pin=((document.getElementById("etPin")||{}).value||"").trim();
+            if(!pin){ try{ pin=(document.querySelector(".nsqDivPin")||{}).value||""; }catch(e){} }
+            pin=String(pin||"").trim();
+            if(!pin){ say('<span style="color:#c0392b;">Enter the admin code first.</span>'); return; }
+            var entries=TM.seedEntries(await tmLoadEntries(tournament, division));
+            var N=entries.length;
+            if(N<4){ say('<span style="color:#c0392b;">'+division+' needs at least 4 teams.</span>'); return; }
+            if((N & (N-1))!==0){ say('<span style="color:#B9770E;">A placement draw needs 4, 8, 16 or 32 teams — '+division+' has '+N+'.</span>'); return; }
+            var existing=await tmLoadFixtures(tournament, division);
+            if(existing.length && !confirm(division+" already has a draw. Replace it with a placement draw?")) return;
+            TM_ADMIN_PIN=pin;
+            var H={apikey:SB_ANON, Authorization:"Bearer "+SB_ANON, "Content-Type":"application/json"};
+            say("Saving the seeding…");
+            var sr=await fetch(SB_URL+"/functions/v1/tournament",{method:"POST",headers:H,
+              body:JSON.stringify({action:"save_seeds", club_id:CLUB_ID, admin_pin:pin, seeds:entries.map(function(e){ return {id:e.id, seed:e.seed}; })})});
+            var sj=await sr.json().catch(function(){ return {}; });
+            if(!sr.ok || !sj.ok){ say('<span style="color:#c0392b;">Could not save the seeding: '+((sj&&sj.error)||sr.status)+'</span>'); return; }
+            say("Generating "+division+" — round 1 of "+W.__nsqPlaceRounds(N)+"…");
+            var rows=W.__nsqPlaceNext(N, []).map(function(p){
+              return {tournament:tournament, division:division, round:1, round_type:"place", band:"", seed_a:p.seed_a, seed_b:p.seed_b};
+            });
+            var wr=await fetch(SB_URL+"/functions/v1/tournament",{method:"POST",headers:H,
+              body:JSON.stringify({action:"write_fixtures", club_id:CLUB_ID, admin_pin:pin, tournament:tournament, division:division, replace:true, fixtures:rows})});
+            var wj=await wr.json().catch(function(){ return {}; });
+            if(!wr.ok || !wj.ok){ say('<span style="color:#c0392b;">Could not write the draw: '+((wj&&wj.error)||wr.status)+'</span>'); return; }
+            say('<span style="color:#1e8449;font-weight:800">'+division+' placement draw made — round 1 of '+W.__nsqPlaceRounds(N)+'.</span>');
+            try{ W.renderEnterScreen(); }catch(e){}
+          }catch(e){ say('<span style="color:#c0392b;">'+(e&&e.message||e)+'</span>'); }
+        };
+      }
+    })();
+
+    /* ---- the next round ---- */
+    (function(){
+      var hook=function(){
+        var f0=W.tmGenerateNextRound; if(typeof f0!=="function" || W.__nsqPlaceNextRaw) return false;
+        W.__nsqPlaceNextRaw=f0;
+        W.tmGenerateNextRound=async function(){
+          try{
+            var tournament=(W._tmCtx&&W._tmCtx.tournament)||W._etTournament, division=(W._tmCtx&&W._tmCtx.division)||TM_DIVISION;
+            var fx=await tmLoadFixtures(tournament, division);
+            if(!fx.length || !fx.some(function(f){ return f.round_type==="place"; })) return f0.apply(this, arguments);
+            var ent=await tmLoadEntries(tournament, division), N=ent.length;
+            var byRound={}; fx.forEach(function(f){ (byRound[f.round]=byRound[f.round]||[]).push(f); });
+            var rounds=Object.keys(byRound).map(Number).sort(function(a,b){ return a-b; });
+            var last=rounds[rounds.length-1]||0;
+            var open=(byRound[last]||[]).filter(function(f){ return f.sets_a==null; }).length;
+            if(open>0){ W.alert("Round "+last+" still has "+open+" match"+(open===1?"":"es")+" without a result. Enter them all first."); return; }
+            var totalR=W.__nsqPlaceRounds(N);
+            if(last>=totalR){ W.alert("The placement draw is complete — every place has been played for."); return; }
+            var next=W.__nsqPlaceNext(N, fx);
+            if(!next.length){ W.alert("Nothing left to pair."); return; }
+            var pin=(W.prompt("Admin code to make round "+(last+1)+" of "+division+":")||"").trim();
+            if(!pin) return;
+            var rows=next.map(function(p){
+              return {tournament:tournament, division:division, round:last+1, round_type:"place",
+                      band:(p.from===p.to?String(p.from):(p.from+"–"+p.to)), seed_a:p.seed_a, seed_b:p.seed_b};
+            });
+            var r=await fetch(SB_URL+"/functions/v1/tournament",{method:"POST",
+              headers:{apikey:SB_ANON, Authorization:"Bearer "+SB_ANON, "Content-Type":"application/json"},
+              body:JSON.stringify({action:"write_fixtures", club_id:CLUB_ID, admin_pin:pin, tournament:tournament, division:division, replace:false, fixtures:rows})});
+            var j=await r.json().catch(function(){ return {}; });
+            if(!r.ok || !j.ok){ if(typeof W.__nsqPinRefused==="function" && /Admin PIN required/i.test(String(j&&j.error||""))) j=W.__nsqPinRefused(j||{});
+              W.alert("Could not make the round: "+((j&&j.error)||r.status)); return; }
+            try{ loadTournamentSheet(tournament, division); }catch(e){}
+          }catch(e){ W.alert("Could not make the round: "+(e&&e.message||e)); }
         };
         return true;
       };
