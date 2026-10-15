@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q193";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q194";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -21840,12 +21840,33 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     })(); }
 
     W.__nsqPickTour=function(club, name){
-      W.__nsqPickClose();
-      /* q184 (Andre): arrive ON THE DRAW, not on the team list — the draw is what you came for */
-      try{ if(typeof W.__nsqTabRounds==="function") W.__nsqTabRounds(); }catch(e){}
-      var href=PAGEN()+"?club="+club+"&go=tsheet&tn="+ENC(name)+"&back="+ENC("?club="+cid());
-      if(W.nhNav) W.nhNav(href); else location.href=href;
+      /* q194 (Andre's two videos): tapping a tournament navigated to ?go=tsheet, which rebuilt the whole page — on a
+         laptop you saw the club door flash before the draw, and on a phone it often stopped at the door and never got
+         to the draw at all. A tournament on the board you are already standing on now opens the draw DIRECTLY, with no
+         navigation, and the chooser stays up until the draw is really on screen so nothing flashes behind it. */
+      try{ var t=document.getElementById("nsqPickT"); if(t) t.innerHTML='<div class="sub">Opening the draw\u2026</div>'; }catch(e){}
       try{ sessionStorage.setItem("nsqWantRounds", String(name)); }catch(e){}
+      var here=(Number(club)===Number(cid()));
+      if(here && typeof loadTournamentSheet==="function"){
+        try{ W._etTournament=name; }catch(e){}
+        try{ TOURNAMENT_EVENT=name; }catch(e){}
+        try{ loadTournamentSheet(name, null); }catch(e){}
+      } else {
+        /* a tournament at another club: the page is rebuilt for that board, and ?go=tsheet alone has never been enough
+           to land on the draw (it stops at the door). The wish is left where a watcher picks it up once the new board
+           is really up, and the draw is opened then. */
+        try{ sessionStorage.setItem("nsqWantTour", JSON.stringify({club:Number(club), name:String(name)})); }catch(e){}
+        var href=PAGEN()+"?club="+club+"&go=tsheet&tn="+ENC(name)+"&back="+ENC("?club="+cid());
+        if(W.nhNav) W.nhNav(href); else location.href=href;
+      }
+      /* the chooser lifts only when the draw is there (or after a fair wait, so it can never trap anybody) */
+      var n=0; (function wait(){
+        try{
+          var scr=document.getElementById("tournamentSheetScreen"), box=document.getElementById("tournamentSheetContent");
+          if(scr && scr.classList.contains("active") && box && (box.innerText||"").trim().length>60){ W.__nsqPickClose(); return; }
+        }catch(e){}
+        if(++n<50) setTimeout(wait,200); else W.__nsqPickClose();
+      })();
     };
 
     W.__nsqPickOpen=function(){
@@ -21859,9 +21880,16 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         +'<button class="lead">Tournament match</button>'
         +'<div id="nsqPickT"><div class="sub">Looking for tournaments\u2026</div></div></div>';
       document.body.appendChild(o);
-      var pool=Number(W.PLAT.pool||0), ids=cs().map(function(c){ return +c.id; });
-      if(!ids.length){ document.getElementById("nsqPickT").innerHTML='<div class="sub">No tournaments running.</div>'; return; }
-      rest("plat_squash_tournaments?club_id=in.("+ids.join(",")+")&active=eq.true&archived=eq.false&select=id,name,club_id&order=id.desc").then(function(rows){
+      /* q194 (Andre, mobile): the list was built the instant the chooser opened, and the register's clubs are read in the
+         background — so on a board that had only just come up there was nothing to look in, and another club's
+         tournament could not be seen at all. We wait for the register to be in hand first. */
+      var wait=(W.PLAT&&W.PLAT.ready&&W.PLAT.ready.then)?W.PLAT.ready:Promise.resolve();
+      wait.catch(function(){}).then(function(){
+        var ids=cs().map(function(c){ return +c.id; }).filter(function(n){ return n>0; });
+        if(!ids.length){ var b0=document.getElementById("nsqPickT"); if(b0) b0.innerHTML='<div class="sub">No tournament is running at the moment.</div>'; return; }
+        return rest("plat_squash_tournaments?club_id=in.("+ids.join(",")+")&active=eq.true&archived=eq.false&select=id,name,club_id&order=id.desc");
+      }).then(function(rows){
+        if(rows===undefined) return;
         var box=document.getElementById("nsqPickT"); if(!box) return;
         rows=Array.isArray(rows)?rows:[];
         if(!rows.length){ box.innerHTML='<div class="sub">No tournament is running at the moment. If one has just been set up, ask the organiser to activate it.</div>'; return; }
@@ -21879,6 +21907,26 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         box.innerHTML=h;
       });
     };
+
+    /* q194: a tournament asked for on ANOTHER board \u2014 once that board is up, open its draw. Survives the page
+       rebuild, used once, then forgotten. */
+    setInterval(function(){ try{
+      var raw=null; try{ raw=sessionStorage.getItem("nsqWantTour"); }catch(e){}
+      if(!raw) return;
+      var w=null; try{ w=JSON.parse(raw); }catch(e){}
+      if(!w || !w.name){ try{ sessionStorage.removeItem("nsqWantTour"); }catch(e){} return; }
+      if(Number(cid())!==Number(w.club)) return;
+      if(typeof loadTournamentSheet!=="function") return;
+      var scr=document.getElementById("tournamentSheetScreen"), box=document.getElementById("tournamentSheetContent");
+      var ctx=W._tmCtx||{};
+      if(scr && scr.classList.contains("active") && ctx.tournament===w.name && box && (box.innerText||"").trim().length>60){
+        try{ sessionStorage.removeItem("nsqWantTour"); }catch(e){} return;
+      }
+      if(W.__nsqTourAt && Date.now()-W.__nsqTourAt<2500) return; W.__nsqTourAt=Date.now();
+      try{ W._etTournament=w.name; }catch(e){}
+      try{ TOURNAMENT_EVENT=w.name; }catch(e){}
+      try{ loadTournamentSheet(w.name, null); }catch(e){}
+    }catch(e){} }, 500);
 
     /* q184: arriving at a tournament from the chooser, open its DRAW. A board hop can reload the page, so the wish is
        left in sessionStorage and picked up here, whichever way we got there; it is used once and cleared. */
