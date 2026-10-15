@@ -3600,7 +3600,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q178";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q179";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -21545,6 +21545,141 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           j=W.__nsqPinRefused(j);
           return new Response(JSON.stringify(j),{status:401,headers:{"Content-Type":"application/json"}});
         }).catch(function(){ return r; }); }); };
+  })();
+
+  /* ===================================================================================================================
+     NAT-SQUASH q179 · HOW A MATCH IS PLAYED — PER SECTION (Andre, 15 Oct). Chris's club marks every match live, so the
+     rules must be set ONCE, where the section's format is chosen, and never again at the court: games per match, points
+     per game, win by two. Section 1 and 2 to 11 while Section 3 plays to 15, in one tournament. Editable after the draw
+     — matches already played keep the score they were played under; only matches still to come use the new rules.
+     A section with no rules saved plays the default: best of 3, points to 11, win by two.
+     ================================================================================================================== */
+  (function(){
+    var W=window;
+    var esc=function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+    var ENC=encodeURIComponent;
+    var cid=function(){ try{ return Number(W.PLAT&&W.PLAT.cid)||Number(CLUB_ID)||0; }catch(e){ return 0; } };
+    var tourNow=function(){ try{ return (W._tmCtx&&W._tmCtx.tournament)||W._etTournament||TOURNAMENT_EVENT||""; }catch(e){ return ""; } };
+    var H=function(){ return {apikey:SB_ANON,Authorization:"Bearer "+SB_ANON,"Content-Type":"application/json"}; };
+    var rest=function(q){ return fetch(SB_URL+"/rest/v1/"+q,{headers:H()}).then(function(r){ return r.ok?r.json():[]; }).catch(function(){ return []; }); };
+    var act=function(body){ body.club_id=cid(); return fetch(SB_URL+"/functions/v1/tournament",{method:"POST",headers:H(),body:JSON.stringify(body)})
+      .then(function(r){ return r.json().catch(function(){ return {ok:false,error:"No reply ("+r.status+")"}; }); }).catch(function(){ return {ok:false,error:"Connection problem."}; }); };
+
+    var DEF={games:3, all_games:false, target:11, win_by_two:true};
+    var MAP={}, AT=0, BUSY=false, FOR="";
+
+    /* ---- the rules for a section, as the marker and the sheet read them ---- */
+    W.__nsqRules=function(div){ var r=MAP[String(div||"")]; return r?{games:r.games, all_games:!!r.all_games, target:r.target, win_by_two:!!r.win_by_two}
+                                                                   :{games:DEF.games, all_games:DEF.all_games, target:DEF.target, win_by_two:DEF.win_by_two}; };
+    W.__nsqRulesLine=function(div){ var r=W.__nsqRules(div);
+      return (r.all_games?("all "+r.games+" games"):("best of "+r.games))+" · points to "+r.target+(r.win_by_two?"":" · no two-point margin"); };
+    W.__nsqRulesReady=function(){ return !!AT; };
+
+    var load=function(force){
+      var t=tourNow(), c=cid(); if(!t||!c) return Promise.resolve(MAP);
+      if(!force && FOR===c+"|"+t && AT && Date.now()-AT<30000) return Promise.resolve(MAP);
+      if(BUSY) return Promise.resolve(MAP); BUSY=true;
+      return rest("plat_squash_section_rules?club_id=eq."+c+"&tournament=eq."+ENC(t)+"&select=division,games,all_games,target,win_by_two")
+        .then(function(rows){ var m={}; (rows||[]).forEach(function(r){ m[String(r.division)]=r; });
+          MAP=m; AT=Date.now(); FOR=c+"|"+t; BUSY=false; return MAP; })
+        .catch(function(){ BUSY=false; return MAP; });
+    };
+    W.__nsqRulesLoad=load;
+
+    /* ---- the block, inside each section's own draw card ---- */
+    var PICK={};                                   /* what is on screen but not yet saved, per section */
+    var cur=function(d){ return PICK[d]||W.__nsqRules(d); };
+    var pill=function(d,key,val,label,on){
+      return '<button type="button" class="nsqRuleP" data-sec="'+esc(d)+'" data-k="'+key+'" data-v="'+esc(String(val))+'" '
+        +'style="border:1.5px solid '+(on?'#B8480A':'#d9cfc6')+';background:'+(on?'#B8480A':'#fff')+';color:'+(on?'#fff':'#5a4a3f')+';'
+        +'border-radius:18px;padding:6px 12px;font-size:12.5px;font-weight:'+(on?'800':'600')+';cursor:pointer;font-family:inherit">'+esc(label)+'</button>';
+    };
+    var html=function(d){
+      var r=cur(d);
+      return '<div class="nsqRules" data-sec="'+esc(d)+'" style="margin:10px 0 2px;padding:10px 11px;border:1px solid #e8ded4;border-radius:10px;background:#fffaf6">'
+        +'<div style="font-size:12px;font-weight:800;color:#B8480A;margin-bottom:7px">How is a match played?</div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">'
+          + pill(d,"g","3b","Best of 3", r.games===3&&!r.all_games)
+          + pill(d,"g","3a","All 3 games", r.games===3&&r.all_games)
+          + pill(d,"g","5b","Best of 5", r.games===5&&!r.all_games)
+          + pill(d,"g","5a","All 5 games", r.games===5&&r.all_games)
+        +'</div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">'
+          + pill(d,"t","11","Points to 11", r.target===11)
+          + pill(d,"t","15","Points to 15", r.target===15)
+          + pill(d,"w","1","Win by two", r.win_by_two===true)
+          + pill(d,"w","0","Sudden death", r.win_by_two===false)
+        +'</div>'
+        +'<div style="display:flex;gap:8px;align-items:center">'
+          +'<button type="button" class="ac-btn nsqRuleSave" data-sec="'+esc(d)+'" style="flex:1;padding:8px 10px;font-size:12.5px">Save these rules</button>'
+          +'<span class="nsqRuleMsg" style="font-size:11.5px;color:#7a6658"></span></div>'
+        +'<div style="font-size:11px;color:#8a7a6e;margin-top:6px">The marker and the score sheet use these — nothing is set at the court. '
+        +'Changing them later leaves matches already played as they were.</div></div>';
+    };
+    var pinOf=function(blk){
+      var p=""; try{ var b=blk.querySelector(".nsqDivPin"); if(b) p=b.value||""; }catch(e){}
+      if(!p){ var pe=document.getElementById("etPin"); p=(pe&&pe.value)||""; }
+      if(!p){ try{ p=sessionStorage.getItem("nsqSeedPin")||""; }catch(e){} }
+      p=String(p||"").trim();
+      if(!p) p=String(W.prompt("Admin code to set this section's rules:")||"").trim();
+      return p;
+    };
+    var repaint=function(d){
+      Array.prototype.forEach.call(document.querySelectorAll('.nsqRules[data-sec="'+String(d).replace(/"/g,'\\"')+'"]'),function(box){
+        var msg=box.querySelector(".nsqRuleMsg"), keep=msg?msg.textContent:"";
+        box.outerHTML=html(d);
+        if(keep){ var b2=document.querySelector('.nsqRules[data-sec="'+String(d).replace(/"/g,'\\"')+'"] .nsqRuleMsg'); if(b2) b2.textContent=keep; }
+      });
+    };
+    W.__nsqRulesRepaint=repaint;
+
+    document.addEventListener("click", function(e){
+      var p=e.target && e.target.closest && e.target.closest(".nsqRuleP");
+      if(p){ var d=p.getAttribute("data-sec"), k=p.getAttribute("data-k"), v=p.getAttribute("data-v"), r=Object.assign({}, cur(d));
+        if(k==="g"){ r.games=(v.charAt(0)==="5")?5:3; r.all_games=(v.charAt(1)==="a"); }
+        else if(k==="t") r.target=(v==="15")?15:11;
+        else if(k==="w") r.win_by_two=(v==="1");
+        PICK[d]=r; repaint(d); e.preventDefault(); return; }
+      var s=e.target && e.target.closest && e.target.closest(".nsqRuleSave");
+      if(!s) return;
+      e.preventDefault();
+      var d=s.getAttribute("data-sec"), box=s.closest(".nsqRules"), blk=box?box.parentNode:document, msg=box?box.querySelector(".nsqRuleMsg"):null, r=cur(d);
+      var pin=pinOf(blk); if(!pin){ if(msg) msg.textContent="The admin code is needed."; return; }
+      if(msg) msg.textContent="Saving…";
+      act({action:"rules_save", admin_pin:pin, tournament:tourNow(), division:d,
+           games:r.games, all_games:r.all_games, target:r.target, win_by_two:r.win_by_two}).then(function(res){
+        if(!res || res.ok!==true){ if(typeof W.__nsqPinRefused==="function" && /Admin PIN required/i.test(String(res&&res.error||""))) res=W.__nsqPinRefused(res||{});
+          if(msg) msg.textContent=(res&&res.error)||"Not saved."; return; }
+        delete PICK[d];
+        load(true).then(function(){ repaint(d); var m2=document.querySelector('.nsqRules[data-sec="'+String(d).replace(/"/g,'\\"')+'"] .nsqRuleMsg');
+          if(m2) m2.textContent="Saved — "+W.__nsqRulesLine(d); });
+      });
+    }, true);
+
+    /* the page is rebuilt often, so the block is added once per build, under each section's admin-code row */
+    setInterval(function(){ try{
+      var body=document.getElementById("etBody"); if(!body || !tourNow()) return;
+      var want=[];
+      Array.prototype.forEach.call(body.querySelectorAll("b[data-nsq-sec],b"),function(bb){
+        var d=(bb.dataset&&bb.dataset.nsqSec)||""; if(!d) return;
+        var blk=bb.closest("div"); if(!blk) return;
+        var card=blk; for(var i=0;i<4 && card && !card.querySelector(".nsqDivPin") && card.parentNode;i++) card=card.parentNode;
+        var host=(card && card.querySelector(".nsqDivPin")) ? card : blk;
+        if(host.querySelector('.nsqRules[data-sec="'+d.replace(/"/g,'\\"')+'"]')) return;
+        want.push([host,d]);
+      });
+      if(!want.length) return;
+      load().then(function(){ want.forEach(function(x){ var host=x[0], d=x[1];
+        if(!document.body.contains(host)) return;
+        if(host.querySelector('.nsqRules[data-sec="'+d.replace(/"/g,'\\"')+'"]')) return;
+        var row=host.querySelector(".nsqDivPin"); var at=row?row.parentNode:null;
+        var div=document.createElement("div"); div.innerHTML=html(d);
+        if(at && at.parentNode) at.parentNode.insertBefore(div.firstChild, at.nextSibling); else host.appendChild(div.firstChild);
+      }); });
+    }catch(e){} }, 700);
+
+    /* a tournament change clears what was loaded */
+    setInterval(function(){ try{ var k=cid()+"|"+tourNow(); if(FOR && k!==FOR){ MAP={}; AT=0; PICK={}; FOR=""; } }catch(e){} }, 1500);
   })();
 
 })();</script>
