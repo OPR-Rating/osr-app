@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q201";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q202";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -11163,8 +11163,10 @@ async function clRemove(id, label){
             +  'padding:2px 9px;font-size:10.5px;font-weight:800;letter-spacing:.04em">GROUP \u00b7 '+esc(gname)+'</span>'
             +  '<span style="display:block;font-weight:800;font-size:14px;color:#241d33;margin-top:4px;overflow:hidden;'
             +  'text-overflow:ellipsis;white-space:nowrap">'+esc(t.name)+'</span></span>'
-            +'<span style="text-align:right;line-height:1.2"><span style="display:block;font-size:15px;font-weight:800;color:'+gcol+'">'+ms.length+'</span>'
-            +'<span style="font-size:10px;color:#8a8196">matches</span></span>'
+            + ((Number(t.club_id)===Number(W.PLAT.cid))
+                ? ('<span style="text-align:right;line-height:1.2"><span style="display:block;font-size:15px;font-weight:800;color:'+gcol+'">'+ms.length+'</span>'
+                   +'<span style="font-size:10px;color:#8a8196">matches</span></span>')
+                : '<span style="text-align:right;font-size:10.5px;color:#8a8196;line-height:1.3">open<br>the draw</span>')   /* q202 */
             +'<span id="nhtourT'+k+'" style="display:inline-block;color:var(--nhc,#D35400);transition:transform .15s">\u25bc</span></button>'
             +'<div id="nhtour'+k+'" style="display:none;padding:2px 0 6px">'
             +  '<div style="padding:8px 12px 4px;font-weight:800;font-size:13.5px;color:'+gcol+'">'+esc(t.name)+'</div>'
@@ -14387,7 +14389,9 @@ W.nhOpenPair=function(name){
       var d={matches:mine,pairs:(all.pairs||[]).filter(function(p){ if(_seenP[p.name]) return false; var ok=_pairMine(p); if(ok) _seenP[p.name]=1; return ok; }),
              people:all.people,tour:all.tour,
              /* n81: this board's running tournaments — the club may have several at once */
-             tours:(all.tours||[]).filter(function(t){ return Number(t.club_id)===Number(W.PLAT.cid); })};
+             tours:(all.tours||[]).slice().sort(function(a,b){      /* q202: the register's, this club's first */
+               var am=(Number(a.club_id)===Number(W.PLAT.cid))?0:1, bm=(Number(b.club_id)===Number(W.PLAT.cid))?0:1;
+               return (am-bm) || (Number(b.id)-Number(a.id)); })};
       /* n86: EXAMPLE DATA MUST NEVER HIDE REAL PLAY. The rule was "fewer than five matches, show a sample",
          so a board with one real match showed five invented ones instead — the member's own match vanished
          and the band counted fiction. A sample is only ever shown when there is NOTHING to show, and even
@@ -20057,7 +20061,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var _f=W.fetch;
     /* name -> club_id for every tournament in this register. A name used at two clubs is left alone: then the board
        you are on is the only thing that can tell them apart, and guessing would be worse than not pinning. */
-    var OWN=null, OWNP=null;
+    var OWN=null, OWNP=null, ROWS=[];
+    /* q202: the register's live tournaments, for the club door's Tournaments band */
+    W.__nsqTourRows=function(){ return ROWS.filter(function(t){ return t.active && !t.archived; }); };
     var load=function(){
       if(OWNP) return OWNP;
       /* the register is read in the background at boot, so the pool may not be known yet — wait for it rather than
@@ -20066,10 +20072,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       OWNP=ready.catch(function(){}).then(function(){
         var P=0; try{ P=Number(W.PLAT&&W.PLAT.pool)||0; }catch(e){}
         if(!P){ OWNP=null; return (OWN={}); }
-        var u=SB_URL+"/rest/v1/plat_squash_tournaments?pool_id=eq."+P+"&select=name,club_id";
+        var u=SB_URL+"/rest/v1/plat_squash_tournaments?pool_id=eq."+P+"&select=id,name,club_id,active,archived";
         return _f.call(W,u,{headers:{apikey:SB_ANON,Authorization:"Bearer "+SB_ANON}})
         .then(function(r){ return r.ok?r.json():[]; })
         .then(function(rows){
+          ROWS=Array.isArray(rows)?rows:[];
           var seen={}, dup={};
           (Array.isArray(rows)?rows:[]).forEach(function(t){
             var n=String(t.name||"").trim(); if(!n) return;
@@ -20132,6 +20139,21 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
             return _f.call(W, u2, init);
           });
         }
+        /* --- 1b. the DOOR's own tournament list (q202) --- */
+        /* A club door reads the tournaments table for itself and its divisions, which is why Westville's door
+           listed none while two were running in the register. A list read — no tournament named — is answered for
+           the WHOLE REGISTER, so every door can show what is on. Reads only; a write still names its tournament
+           and is pinned to that tournament's club by the rule above. */
+        if(/\/rest\/v1\/(?:plat_squash_)?tournaments\b/.test(url) && /club_id=in\.\(/.test(url)
+           && !/[?&](tournament|name)=eq\./.test(url)
+           && String((init&&init.method)||"GET").toUpperCase()==="GET"){
+          var P2=0; try{ P2=Number(W.PLAT&&W.PLAT.pool)||0; }catch(e){}
+          if(P2){
+            var u3=url.replace(/club_id=in\.\([^)]*\)/, "pool_id=eq."+P2);
+            if(u3!==url) return _f.call(W, u3, init);
+          }
+        }
+
         /* --- 2. the tournament edge function: the body names the tournament --- */
         if(/\/functions\/v1\/(tournament|plat_tournament_squash)(\?|$)/.test(url) && init && init.body
            && String(init.method||"").toUpperCase()==="POST"){
@@ -20474,7 +20496,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var allDone=names.length>0 && names.every(function(d){ return !!st[d]; });
         /* q201 (Andre): THE DOOR MUST NOT DISAPPEAR. q141 removed this button once every division had its draw —
            which also removed the only way to start ANOTHER division, or to add a team to one that has not been drawn.
-           At Gillitts it left the tournament with no way in at all. The button always stays; it says what it is for. */
+           At Gillitts it left the tournament with no way in at all. The button always stays; it says what it is for.
+           q202 (Andre): — but only on Draw & Rounds. Tournament Stats is a stats page; q201 forced the button
+           visible on BOTH, which put Enter a team (and the Order of Play button beside it) on the stats page. */
+        var _stats=false; try{ _stats=(W._tourInternalView==="stats"); }catch(e){}
+        if(_stats){ btn.style.display="none"; return; }
         btn.style.display="";
         if(!btn.dataset.nsqLbl) btn.dataset.nsqLbl=(btn.textContent||"").trim();
         var want=allDone ? "\u2795 Enter a team \u00b7 start another division" : btn.dataset.nsqLbl;
@@ -20826,7 +20852,16 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     /* q132: the board the TOURNAMENT lives on is the board on screen (W.PLAT.cid), not the board the app booted on (CLUB_ID) —
        plat_* reads and the admin calls are not re-pointed by the shim, so they must name it themselves */
     var cid=function(){ try{ return Number(W.PLAT&&W.PLAT.cid)||Number(CLUB_ID)||0; }catch(e){ return 0; } };
-    var tourNow=function(){ try{ return (W._tmCtx&&W._tmCtx.tournament)||W._etTournament||TOURNAMENT_EVENT||""; }catch(e){ return ""; } };
+    /* q202 (Andre: "the order of play ... I think it also thinks it is Kloof ... as if it has swapped places").
+       _tmCtx is the LAST DRAW LOOKED AT and it survives leaving that tournament, so opening Kloof's Order of Play
+       after viewing the Gillitts draw showed Gillitts' schedule on Kloof's board — and, with q200 pinning reads to
+       the tournament's own club, Kloof's own schedule could not be reached at all. The tournament the page is ON
+       comes first now; the last draw is only the fall-back, and only while that draw is actually on screen. */
+    var tourNow=function(){ try{
+      var sheet=document.getElementById("tournamentSheetScreen");
+      if(sheet && sheet.classList.contains("active") && W._tmCtx && W._tmCtx.tournament) return W._tmCtx.tournament;
+      return TOURNAMENT_EVENT || W._etTournament || (W._tmCtx&&W._tmCtx.tournament) || "";
+    }catch(e){ return ""; } };
     var H=function(){ return {apikey:SB_ANON,Authorization:"Bearer "+SB_ANON,"Content-Type":"application/json"}; };
     var rest=function(q){ return fetch(SB_URL+"/rest/v1/"+q,{headers:H()}).then(function(r){ return r.ok?r.json():[]; }).catch(function(){ return []; }); };
     var act=function(body){ body.club_id=cid(); return fetch(SB_URL+"/functions/v1/tournament",{method:"POST",headers:H(),body:JSON.stringify(body)})
@@ -21145,7 +21180,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
     /* ---------- the button on the tournament page ---------- */
     setInterval(function(){ try{
-      var box=document.getElementById("tournamentInternal"); if(!box || box.style.display==="none" || box.querySelector("#nsqOopBtn")) return;
+      var box=document.getElementById("tournamentInternal"); if(!box || box.style.display==="none") return;
+      /* q202: Tournament Stats is a stats page — the Order of Play button belongs on Draw & Rounds */
+      var _st=false; try{ _st=(W._tourInternalView==="stats"); }catch(e){}
+      var _had=box.querySelector("#nsqOopBtn");
+      if(_st){ if(_had) _had.remove(); return; }
+      if(_had) return;
       var grid=box.querySelector(".ladders-grid"); if(!grid) return;
       var b=document.createElement("button"); b.className="menu-btn"; b.id="nsqOopBtn"; b.style.marginTop="8px"; b.innerHTML="\ud83d\udd52 Order of Play"; b.setAttribute("onclick","nsqOopOpen()");
       grid.appendChild(b);
@@ -21440,14 +21480,28 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         W.loadTournamentSheet(tournament, division);
       }; })();
 
-    /* q152: on a true-Swiss division the Rounds table has no Band column (the pill is meaningless there) */
-    setInterval(function(){ try{
+    /* q152: on a true-Swiss division the Rounds table has no Band column (the pill is meaningless there)
+       q201 (Andre: "why on the draw page does it flash the pills between the names and then close"): this ran on a
+       600ms TIMER, so on every render the Band pills were drawn, sat there between Team A and Team B for up to half
+       a second, and then disappeared — the flash. It now runs the moment the table appears, in the same breath as
+       the render, with the timer kept only as a backstop. */
+    var bandApply=function(){ try{
       var scr=document.getElementById("tournamentSheetScreen"); if(!scr||!scr.classList.contains("active")) return;
       var d=W._tmCtx&&W._tmCtx.division, fx=d?LASTFX[d]:null; if(!fx||!fx.length) return;
       var trueSwiss=!fx.some(function(f){ return f.round_type==="fixed"; }) && fx.some(function(f){ return f.round_type==="swiss"; });
       Array.prototype.forEach.call(scr.querySelectorAll("table.fxtbl"),function(t){ if(t.dataset.nsqBand===(trueSwiss?"off":"on")) return; t.dataset.nsqBand=trueSwiss?"off":"on";
         Array.prototype.forEach.call(t.querySelectorAll("tr"),function(tr){ var c=tr.children[2]; if(c) c.style.display=trueSwiss?"none":""; }); });
-    }catch(e){} }, 600);
+    }catch(e){} };
+    (function(){
+      var box=null, n=0;
+      (function hook(){
+        box=document.getElementById("tournamentSheetContent");
+        if(!box){ if(++n<60) setTimeout(hook,250); return; }
+        try{ new MutationObserver(function(){ bandApply(); }).observe(box,{childList:true,subtree:true}); }catch(e){}
+        bandApply();
+      })();
+    })();
+    setInterval(bandApply, 600);
     /* q156: an odd section cannot be a Swiss — offer the round robin right there (byes rotate) */
     setInterval(function(){ try{
       if(!W._etTournament || W._etTourFormat!=="swiss") return;
