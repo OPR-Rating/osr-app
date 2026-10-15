@@ -1133,7 +1133,7 @@ st0.textContent += "html{overflow-y:scroll}";   // p98: the scrollbar's space is
        the query string is swapped, a body is not, and the door's screen hides the entry buttons. */
     var doorIds = (!pool && W.PLAT.clubDoor && W.PLAT.kids && W.PLAT.kids.length) ? [CID].concat(W.PLAT.kids).join(",") : "";
     /* n317: a WRITE to a tournament table from the door is scoped to the tournament's own group */
-    if(doorIds && method!=="GET" && CLUB_TABLES[tbl] && W.PLAT.tourClub){ qs=qs.replace(/club_id=eq\.\d+/g,"club_id=eq."+Number(W.PLAT.tourClub)); doorIds=""; }
+    if(doorIds && CLUB_TABLES[tbl] && W.PLAT.tourClub && (method!=="GET" || /(?:^|&)tournament=eq\./.test(qs))){ qs=qs.replace(/club_id=eq\.\d+/g,"club_id=eq."+Number(W.PLAT.tourClub)); doorIds=""; }   /* q200 */
     if(CLUB_TABLES[tbl]){ if(pool) swapClub("club_id=in.("+(clubIds||"0")+")"); else if(doorIds) swapClub("club_id=in.("+doorIds+")"); return "plat_"+DISC+"_"+tbl+"?"+qs; }
     /* n105: THE TOURNAMENT STATS TABLE WAS NEVER TRANSLATED. plat's stats sheet reads `tournament_results`
        (per event, per category, per club); it lives on the platform as `plat_tournament_results`, not under
@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q198";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q200";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -20022,6 +20022,116 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
   })();
 
   /* ===================================================================================================================
+     NAT-SQUASH q200 · A TOURNAMENT BELONGS TO ONE BOARD (Andre, 15 Oct).
+
+     "I created the tournament in gilletts and then the system added the tournament to the score entry — before it was
+      generated — so I saw it there, I clicked on it and it said enter teams, the OLD BOARD actually, so that is where
+      I entered them."
+
+     He is right and I had it backwards. The chooser lists every tournament in the register, and from it you can open
+     one that belongs to ANOTHER club. The sheet it opens, and the "Enter a team" screen behind it, carry the
+     tournament's NAME and nothing about whose tournament it is — so every read and every write went to the board the
+     page happened to be standing on. Standing at Kloof and opening the Gillitts tournament, 31 pairs were written
+     against Kloof. The Gillitts page could not see them: a whole division (Props) disappeared, "Enter a team" hid
+     itself because every division it COULD see had a draw, and a result entered on the wrong board's copy of the
+     entries was sent to the wrong division and never landed on its fixture.
+
+     Nothing warned anybody, and nothing was wrong with the data — it was simply filed under the wrong club.
+
+     From here a tournament's OWN board is used for everything about it, whichever board you are standing on: its
+     entries, its draws, its seeds, its section rules and its order of play, read or written. The board you stand on
+     still decides everything else (your ratings, your ladders, your members) exactly as before.
+     ================================================================================================================== */
+  (function(){
+    var W=window;
+    var _f=W.fetch;
+    /* name -> club_id for every tournament in this register. A name used at two clubs is left alone: then the board
+       you are on is the only thing that can tell them apart, and guessing would be worse than not pinning. */
+    var OWN=null, OWNP=null;
+    var load=function(){
+      if(OWNP) return OWNP;
+      /* the register is read in the background at boot, so the pool may not be known yet — wait for it rather than
+         remembering an empty answer for the rest of the visit */
+      var ready=(W.PLAT && W.PLAT.ready && W.PLAT.ready.then) ? W.PLAT.ready : Promise.resolve();
+      OWNP=ready.catch(function(){}).then(function(){
+        var P=0; try{ P=Number(W.PLAT&&W.PLAT.pool)||0; }catch(e){}
+        if(!P){ OWNP=null; return (OWN={}); }
+        var u=SB_URL+"/rest/v1/plat_squash_tournaments?pool_id=eq."+P+"&select=name,club_id";
+        return _f.call(W,u,{headers:{apikey:SB_ANON,Authorization:"Bearer "+SB_ANON}})
+        .then(function(r){ return r.ok?r.json():[]; })
+        .then(function(rows){
+          var seen={}, dup={};
+          (Array.isArray(rows)?rows:[]).forEach(function(t){
+            var n=String(t.name||"").trim(); if(!n) return;
+            if(seen[n]!=null && Number(seen[n])!==Number(t.club_id)) dup[n]=1;
+            seen[n]=Number(t.club_id);
+          });
+          Object.keys(dup).forEach(function(n){ delete seen[n]; });
+          OWN=seen; return OWN;
+        }).catch(function(){ OWNP=null; return (OWN={}); });
+      });
+      return OWNP;
+    };
+    W.__nsqOwner=function(name){ try{ return (OWN||{})[String(name||"").trim()]||0; }catch(e){ return 0; } };
+    W.__nsqOwnerLoad=function(){ OWNP=null; return load(); };
+    load();
+
+    /* the tables that belong to a tournament rather than to a board */
+    /* the parent asks for these by their OPR names ("tournament_entries"); the shim renames them to plat_squash_*
+       further down the chain, and this wrapper sits ABOVE it — so both spellings have to be recognised */
+    var TBL=/\/rest\/v1\/(?:plat_squash_)?(tournament_entries|tournament_fixtures|tournaments|section_rules|order_of_play|oop_[a-z_]+)\b/;
+    var pick=function(qs){
+      /* the tournament this request is about, however it is named */
+      var m=qs.match(/(?:^|[?&])tournament=eq\.([^&]*)/) || qs.match(/(?:^|[?&])name=eq\.([^&]*)/);
+      if(!m) return "";
+      try{ return decodeURIComponent(m[1]).trim(); }catch(e){ return String(m[1]).trim(); }
+    };
+
+    W.fetch=function(u, init){
+      var url=""; try{ url=String((u&&u.url)||u||""); }catch(e){ return _f.apply(W, arguments); }
+      var args=arguments;
+      try{
+        /* --- 1. REST: a read or write of a tournament's own tables --- */
+        if(TBL.test(url) && /club_id=eq\.\d+/.test(url)){
+          var tn=pick(url.split("?")[1]||"");
+          if(tn) return load().then(function(){
+            var own=W.__nsqOwner(tn);
+            if(!own) return _f.apply(W, args);
+            var u2=url.replace(/club_id=eq\.\d+/g, "club_id=eq."+own);
+            if(u2===url) return _f.apply(W, args);
+            return _f.call(W, u2, init);
+          });
+        }
+        /* --- 2. the tournament edge function: the body names the tournament --- */
+        if(/\/functions\/v1\/(tournament|plat_tournament_squash)(\?|$)/.test(url) && init && init.body
+           && String(init.method||"").toUpperCase()==="POST"){
+          var b=null; try{ b=JSON.parse(init.body); }catch(e){ b=null; }
+          var nm=b && String((b.tournament || (b.entry && b.entry.tournament) || "")).trim();
+          if(b && nm) return load().then(function(){
+            var own=W.__nsqOwner(nm);
+            if(!own || Number(b.club_id)===own) return _f.apply(W, args);
+            b.club_id=own;
+            var i2={}; for(var k in init) i2[k]=init[k]; i2.body=JSON.stringify(b);
+            return _f.call(W, u, i2);
+          });
+        }
+      }catch(e){}
+      return _f.apply(W, arguments);
+    };
+
+    /* q200: a tournament opened from the chooser tells the rest of the app whose it is, so the door's own routing
+       (n317) and anything else that asks are looking at the same answer. */
+    (function(){ var g0=W.loadTournamentSheet; if(typeof g0!=="function") return;
+      W.loadTournamentSheet=function(tn, div){
+        try{ load().then(function(){ var o=W.__nsqOwner(tn); if(o) W.PLAT.tourClub=o; }); }catch(e){}
+        return g0.apply(this, arguments); }; })();
+    (function(){ var g1=W.showEnterTournament; if(typeof g1!=="function") return;
+      W.showEnterTournament=function(tn){
+        try{ var n=tn||W._etTournament||""; load().then(function(){ var o=W.__nsqOwner(n); if(o) W.PLAT.tourClub=o; }); }catch(e){}
+        return g1.apply(this, arguments); }; })();
+  })();
+
+  /* ===================================================================================================================
      NAT-SQUASH q116 · TOURNAMENTS BY DIVISION (Andre). The member still picks Men's / Ladies / Mixed / All Sorts; on save the
      pair is placed in "<category> - <Div>" — the division of its HIGHER player (the same decider the boards use). Each
      division section is then its own draw (the existing per-division engine: seeds, groups, playoffs, knockout). An
@@ -20089,8 +20199,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
             return _f.call(W,u,init).then(function(r){
               return r.clone().json().then(function(j){
                 if(!(r.ok && j && j.ok)) return r;
+                /* q199: a result that came from a TAPPED FIXTURE carries its own division and round — nothing to work out */
+                var _fd=W.__nsqFxDiv; var _div=pl.division, _rnd=bm.force_fixture_round||null;
+                try{ if(_fd && _fd.tour===pl.event && Date.now()-_fd.at<600000){ _div=_fd.div; if(_rnd==null) _rnd=_fd.round; W.__nsqFxDiv=null; } }catch(e){}
                 return _f.call(W, SB_URL+"/functions/v1/tournament",{method:"POST",headers:{apikey:SB_ANON,Authorization:"Bearer "+SB_ANON,"Content-Type":"application/json"},
-                  body:JSON.stringify({action:"place_match",club_id:cid(),tournament:pl.event,division:pl.division,force_round:bm.force_fixture_round||null,
+                  body:JSON.stringify({action:"place_match",club_id:cid(),tournament:pl.event,division:_div,force_round:_rnd,
                     match:{t1p1:bm.t1p1,t1p2:bm.t1p2,t2p1:bm.t2p1,t2p2:bm.t2p2}})})
                   .then(function(x){ return x.json().catch(function(){ return {}; }); })
                   .then(function(p){ if(p && p.ok && p.placed){ j.fixture="placed"; return jresp(j,200); } j.fixture=(j.fixture==="ambiguous"?"ambiguous":"nomatch"); return jresp(j,200); })
@@ -20111,7 +20224,22 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         if(all.some(function(r){ return r.category===base; })) return null;
         var best=null, bestN=0, hit=function(r,x){ return x && (r.p1===x || r.p2===x); };
         var secs={}; all.forEach(function(r){ if(baseOf(r.category)===base && r.category!==base) (secs[r.category]=secs[r.category]||[]).push(r); });
-        Object.keys(secs).forEach(function(s){ var n=0; [ed.t1p1,ed.t1p2,ed.t2p1,ed.t2p2].forEach(function(x){ if(secs[s].some(function(r){ return hit(r,x); })) n++; });
+        /* q199 (Andre's Gillitts tournament, 15 Oct): the section used to be chosen by HOW MANY OF THE FOUR NAMES it
+           held. A player may enter several divisions with different partners — by design — so with 47 pairs across
+           Drops, Grumble and Props all three sections held all four names, and the first one checked won. A Drops
+           result was then sent to Grumble, where those two PAIRS do not exist, and came back unplaced: "the players
+           didn't match a fixture closely enough", on a match you had tapped on the draw.
+           A section now has to hold BOTH PAIRS AS THEY PLAYED, which only one section can. The old count is still the
+           fall-back for a stand-in, where one name differs — that rule is untouched. */
+        var pk=function(a,b){ return [String(a||"").trim().toLowerCase(), String(b||"").trim().toLowerCase()].sort().join("|"); };
+        var want1=pk(ed.t1p1,ed.t1p2), want2=pk(ed.t2p1,ed.t2p2);
+        var exact=Object.keys(secs).filter(function(s){
+          var has1=secs[s].some(function(r){ return pk(r.p1,r.p2)===want1; });
+          var has2=secs[s].some(function(r){ return pk(r.p1,r.p2)===want2; });
+          return has1 && has2; });
+        if(exact.length===1){ W.__nsqPlace={event:ev, division:exact[0], at:Date.now()}; return exact[0]; }
+        var pool=exact.length?exact:Object.keys(secs);
+        pool.forEach(function(s){ var n=0; [ed.t1p1,ed.t1p2,ed.t2p1,ed.t2p2].forEach(function(x){ if(secs[s].some(function(r){ return hit(r,x); })) n++; });
           if(n>bestN){ bestN=n; best=s; } });
         if(!best || bestN<2) return null;
         W.__nsqPlace={event:ev, division:best, at:Date.now()};
@@ -21675,7 +21803,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var r=cur(d), open=!!OPEN[d];
       if(!open){
         return '<div class="nsqRules" data-sec="'+esc(d)+'" style="margin:10px 0 2px;padding:9px 11px;border:1px solid #e8ded4;border-radius:10px;background:#fffaf6;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
-          +'<span style="font-size:12px;font-weight:800;color:#B8480A">How a match is played</span>'
+          +'<span style="font-size:12px;font-weight:800;color:#B8480A">How a match is played<span style="display:block;font-weight:700;color:#7a6658;font-size:11px;margin-top:1px">'+esc(W.tmDivLabel?W.tmDivLabel(d):d)+'</span></span>'
           +'<b style="font-size:13px;color:#3b2a1e;flex:1;min-width:140px">'+esc(W.__nsqRulesLine(d))+'</b>'
           +'<button type="button" onclick="window.__nsqRulesEdit(\''+String(d).replace(/'/g,"\\'")+'\',true)" '
           +'style="border:1.5px solid #d9cfc6;background:#fff;color:#5a4a3f;border-radius:16px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Change</button>'
@@ -21749,8 +21877,14 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       Array.prototype.forEach.call(body.querySelectorAll("b[data-nsq-sec],b"),function(bb){
         var d=(bb.dataset&&bb.dataset.nsqSec)||""; if(!d) return;
         var blk=bb.closest("div"); if(!blk) return;
-        var card=blk; for(var i=0;i<4 && card && !card.querySelector(".nsqDivPin") && card.parentNode;i++) card=card.parentNode;
-        var host=(card && card.querySelector(".nsqDivPin")) ? card : blk;
+        /* q199 (Andre): "how is a match played is not fixed to the division — they are at the bottom so you don't know
+           which one you are setting". The panel was hung on the first ancestor that held an admin-code box; a division
+           with fewer than four teams has no Generate button and therefore no code box, so the walk went up past the
+           division altogether and every panel piled up at the foot of the card. Each division now has a slot of its
+           own on the list, and the panel goes in THAT, under that division and nowhere else. */
+        var host=(bb.closest && bb.closest(".nsqDivGen")) || null;
+        if(!host){ var card=blk; for(var i=0;i<4 && card && !card.querySelector(".nsqDivPin") && card.parentNode;i++) card=card.parentNode;
+          host=(card && card.querySelector(".nsqDivPin")) ? card : blk; }
         if(host.querySelector('.nsqRules[data-sec="'+d.replace(/"/g,'\\"')+'"]')) return;
         want.push([host,d]);
       });
@@ -21758,9 +21892,8 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       load().then(function(){ want.forEach(function(x){ var host=x[0], d=x[1];
         if(!document.body.contains(host)) return;
         if(host.querySelector('.nsqRules[data-sec="'+d.replace(/"/g,'\\"')+'"]')) return;
-        var row=host.querySelector(".nsqDivPin"); var at=row?row.parentNode:null;
         var div=document.createElement("div"); div.innerHTML=html(d);
-        if(at && at.parentNode) at.parentNode.insertBefore(div.firstChild, at.nextSibling); else host.appendChild(div.firstChild);
+        host.appendChild(div.firstChild);   /* q199: at the end of that division's own block */
       }); });
     }catch(e){} }, 700);
 
@@ -22213,7 +22346,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
             }
             var div=ctx.division||f.division||"";
             /* q180: the section's rules decide what the marker opens with, so they are in hand BEFORE the sheet shows */
-            var show=function(){ fxOpen({ id:fixtureId, tour:ctx.tournament, div:div, cat:catOf(div),
+            /* q199 (Andre's Gillitts tournament): WHEN YOU TAP A FIXTURE THERE IS NOTHING TO GUESS. The division and
+               the round are right here. They are remembered, and the result is put on THIS fixture's division instead
+               of being worked out again from the four names afterwards — which is what sent a Drops result looking
+               for its pairs in Grumble. */
+            try{ W.__nsqFxDiv={tour:ctx.tournament, div:div, round:Number(f.round)||null, at:Date.now()}; }catch(e){}
+            var show=function(){ fxOpen({ id:fixtureId, tour:ctx.tournament, div:div, cat:catOf(div), round:Number(f.round)||null,
                      label:(W.tmDivLabel?W.tmDivLabel(div):div), rules:rulesOf(div),
                      a:names[f.seed_a]||("Seed "+f.seed_a), b:names[f.seed_b]||("Seed "+f.seed_b) }); };
             if(typeof W.__nsqRulesLoad==="function"){ var done=false; var once=function(){ if(done) return; done=true; show(); };
@@ -22623,22 +22761,27 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           var e2=document.getElementById("etP2"); p2=e2?(e2.value||""):"";
           msg=document.getElementById("etMsg");
         }catch(e){}
-        var bad=function(t){ if(msg) msg.innerHTML='<span style="color:#c0392b;">'+t+'</span>'; };
+        /* the entry screen redraws itself a moment after any change, which wipes the message box — so the reason is
+           written again for a second or two, the same way sq_tour.js does it */
+        var bad=function(t){
+          var html='<span style="color:#c0392b;">'+t+'</span>';
+          var n=0; (function put(){ var m=document.getElementById("etMsg"); if(m) m.innerHTML=html;
+            if(++n<8) setTimeout(put, 220); })();
+        };
         var names=[p1,p2].filter(Boolean);
 
-        /* already entered — name them, and name the division they are in */
+        /* Already in THIS division — name them. A player may enter more than one division with a different partner,
+           which is how the app is meant to work, so only a second entry in the SAME division is refused. (q199: q197
+           checked every division and would have refused half of the Gillitts field.) */
         try{
-          var where=null, who="";
+          var who="";
+          var here=(W._etUsedInDiv && W._etUsedInDiv[cat]) || [];
           names.forEach(function(n){
-            if(where) return;
+            if(who) return;
             var k=String(n).toLowerCase();
-            Object.keys(W._etUsedInDiv||{}).forEach(function(d){
-              if(where) return;
-              var hit=(W._etUsedInDiv[d]||[]).some(function(x){ return x && String(x).toLowerCase()===k; });
-              if(hit){ where=d; who=n; }
-            });
+            if(here.some(function(x){ return x && String(x).toLowerCase()===k; })) who=n;
           });
-          if(where){ bad(esc(who)+" is already entered in "+esc(where)+". Take that entry out first, or pick somebody else."); return; }
+          if(who){ bad(esc(who)+" is already entered in "+esc(cat)+" with another partner. Take that entry out first, or pick somebody else."); return; }
         }catch(e){}
 
         /* the division's own rule, where the register knows the answer */
