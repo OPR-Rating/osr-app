@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q202";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q203";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -4005,7 +4005,12 @@ async function showProfileSearch() {
   showScreen('profileSearchScreen');
   // ODR person-first: the search lists INDIVIDUALS. Picking one shows all their teams.
   try{
-    const inds = await sbGet(`individuals?select=id,full_name,gender,seed_rating&club_id=eq.${CLUB_ID}&order=full_name.asc`) || [];
+    let inds = [];                                                     /* q203: read past the 1,000-row stop */
+    for(let _off=0; _off<50000; _off+=1000){
+      const _pg = await sbGet(`individuals?select=id,full_name,gender,seed_rating&club_id=eq.${CLUB_ID}&order=full_name.asc&limit=1000&offset=${_off}`) || [];
+      inds = inds.concat(_pg);
+      if(_pg.length < 1000) break;
+    }
     window._profileIndivs = inds;
     // Build the OSR individual-rating map BEFORE rendering so the list pills read live ratings
     // (same source as the profile card: odrIndivRating). Fixes Move/rating showing the seed.
@@ -13537,6 +13542,12 @@ W.mePair=function(name,col){
   W.recFilterM=function(){
     var v=String((document.getElementById("recFindM")||{}).value||"").trim().toLowerCase();
     var list=(W.__recMembers||[]).filter(function(x){ return !v || window.__nsqNameHit(v,x.p.full_name); });
+    if(v){ var _rk=function(n){ n=String(n||"").toLowerCase();
+             if(n.indexOf(v)===0) return 0;                                              /* Zach Caine */
+             if(n.split(/\s+/).some(function(w){ return w.indexOf(v)===0; })) return 1;  /* Rebecca Zammit */
+             return 2; };                                                                /* anywhere else */
+           list=list.slice().sort(function(a,b){ var ra=_rk(a.p.full_name), rb=_rk(b.p.full_name);
+             return (ra-rb) || String(a.p.full_name).localeCompare(String(b.p.full_name)); }); }   /* q203 */
     var box=document.getElementById("recMembers"), cnt=document.getElementById("recCountM"); if(cnt) cnt.textContent=list.length;
     if(!box) return;
     var col=W.__recCol||"#D35400";
@@ -20070,9 +20081,13 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
          remembering an empty answer for the rest of the visit */
       var ready=(W.PLAT && W.PLAT.ready && W.PLAT.ready.then) ? W.PLAT.ready : Promise.resolve();
       OWNP=ready.catch(function(){}).then(function(){
-        var P=0; try{ P=Number(W.PLAT&&W.PLAT.pool)||0; }catch(e){}
-        if(!P){ OWNP=null; return (OWN={}); }
-        var u=SB_URL+"/rest/v1/plat_squash_tournaments?pool_id=eq."+P+"&select=id,name,club_id,active,archived";
+        /* q203b (Andre: "even Kloof shows no tournaments — what have you done?"): I asked this table for
+           pool_id=eq.<pool> without ever checking that the column exists. If it does not, the read fails, the answer
+           is empty, and with q202 reading the door's band from here EVERY door went blank. The register's clubs are
+           already in hand — ask by club, which cannot fail. */
+        var ids=[]; try{ ids=(W.PLAT.clubs||[]).map(function(c){ return Number(c.id); }).filter(function(n){ return n>0; }); }catch(e){}
+        if(!ids.length){ OWNP=null; return (OWN={}); }
+        var u=SB_URL+"/rest/v1/plat_squash_tournaments?club_id=in.("+ids.join(",")+")&select=id,name,club_id,active,archived";
         return _f.call(W,u,{headers:{apikey:SB_ANON,Authorization:"Bearer "+SB_ANON}})
         .then(function(r){ return r.ok?r.json():[]; })
         .then(function(rows){
@@ -20147,9 +20162,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         if(/\/rest\/v1\/(?:plat_squash_)?tournaments\b/.test(url) && /club_id=in\.\(/.test(url)
            && !/[?&](tournament|name)=eq\./.test(url)
            && String((init&&init.method)||"GET").toUpperCase()==="GET"){
-          var P2=0; try{ P2=Number(W.PLAT&&W.PLAT.pool)||0; }catch(e){}
-          if(P2){
-            var u3=url.replace(/club_id=in\.\([^)]*\)/, "pool_id=eq."+P2);
+          var ids2=[]; try{ ids2=(W.PLAT.clubs||[]).map(function(c){ return Number(c.id); }).filter(function(n){ return n>0; }); }catch(e){}
+          if(ids2.length>1){                                   /* q203b: by club, never by a column we assumed */
+            var u3=url.replace(/club_id=in\.\([^)]*\)/, "club_id=in.("+ids2.join(",")+")");
             if(u3!==url) return _f.call(W, u3, init);
           }
         }
