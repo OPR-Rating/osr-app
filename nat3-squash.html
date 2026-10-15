@@ -351,6 +351,15 @@
     #tournamentSheetContent table.fxtbl th:nth-child(3), #tournamentSheetContent table.fxtbl td:nth-child(3){ display:none; }
     #tournamentSheetContent table.fxtbl td.ta, #tournamentSheetContent table.fxtbl td.tb { font-size:12.5px; padding:10px 6px; }
   }
+  /* q181: when the Band column is hidden the two teams need a gutter of their own */
+  #tournamentSheetContent table.fxtbl[data-nsq-band="off"] td.ta,
+  #tournamentSheetContent table.fxtbl[data-nsq-band="off"] th.ta{ padding-right:18px!important; border-right:1px solid #ece2d8; }
+  #tournamentSheetContent table.fxtbl[data-nsq-band="off"] td.tb,
+  #tournamentSheetContent table.fxtbl[data-nsq-band="off"] th.tb{ padding-left:18px!important; }
+  @media(max-width:560px){
+    #tournamentSheetContent table.fxtbl td.ta, #tournamentSheetContent table.fxtbl th.ta{ padding-right:12px!important; border-right:1px solid #ece2d8; }
+    #tournamentSheetContent table.fxtbl td.tb, #tournamentSheetContent table.fxtbl th.tb{ padding-left:12px!important; }
+  }
   #tournamentSheetContent td.ta.winr, #tournamentSheetContent td.tb.winr { color:#1e7a34; font-weight:700; }
   #tournamentSheetContent td { padding:11px 6px; }
   #tournamentSheetContent th.ta, #tournamentSheetContent th.tb { width:30%; }
@@ -1934,6 +1943,7 @@ function mkOpen(preload){
   MK.players={t1p1:null,t1p2:null,t2p1:null,t2p2:null};
   MK.fmt=5; MK.cat="Men's"; MK.format='doubles'; MK.firstServe=1; MK.view='setup'; MK.event=""; MK.target=11; MK.allPlay=false;
   MK.returnToEntry=false;   // home-launched marker self-submits. markerFromEntry() sets this true.
+  MK.fromFixture=false;     // q182: only a match opened from a fixture skips the set-up
   if(typeof loadPlayers==='function'){ loadPlayers(); }   // ODR: refresh individuals for the pickers
   if(preload){
     if(preload.format) MK.format=preload.format;
@@ -3600,7 +3610,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q180";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q182";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -5538,7 +5548,7 @@ function markerFromEntry(){
   MK.fmt    = parseInt(entryData.sets) || 5;   // games-played chosen on entry (label/display only)
   MK.allPlay = !(MK.fmt===3 || MK.fmt===5);     // q155: 1, 2 or 4 games chosen on the sheet = that many, all played
   if(!MK.target) MK.target=11;
-  MK.firstServe=1; MK.eventLocked=null; MK.preload=null;
+  MK.firstServe=1; MK.eventLocked=null; MK.preload=null; MK.fromFixture=false;   // q182
   MK.returnToEntry = true;                      // finish -> return to Step 3, don't self-submit
   MK.handicap = undefined;                      // unknown here; mkStart resolves it before play
                                                 // (the setup-dropdown path sets it via mkSetupEventChanged)
@@ -5564,7 +5574,7 @@ function mkServePrompt(){
       <div style="font-size:12px;color:#9a8578;">vs</div>
       <div style="font-size:15px;color:#FFA033;font-weight:700;margin-top:2px;">${lbl2}</div>
     </div>
-    <div class="mk-grp">${mkMatchRows()}</div>
+    ${MK.fromFixture ? '' : '<div class="mk-grp">'+mkMatchRows()+'</div>'}
     <div class="mk-grp">
       <h3>Who serves first?</h3>
       <div class="mk-seg">
@@ -5572,7 +5582,7 @@ function mkServePrompt(){
         <button onclick="mkStartFromServe(2)">${sing?'Player 2':'Team 2'}</button>
       </div>
     </div>
-    <button class="mk-cancel" style="margin-top:8px;" onclick="mkBack()">‹ Back to teams</button>
+    <button class="mk-cancel" style="margin-top:8px;" onclick="mkBack()">${MK.fromFixture ? '\u2039 Back to the draw' : '\u2039 Back to teams'}</button>
   </div>`;
 }
 function mkStartFromServe(side){ MK.firstServe=side; mkStart(); }
@@ -18919,7 +18929,22 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var scr=document.getElementById("entryScreen"); if(!scr || !scr.classList.contains("active")) return;
       var box=document.getElementById("platEntryClub"); if(!box) return;
       var cid=Number(W.PLAT.cid||0); if(!clubOf(cid) && levelOf(cid)!=="province") return;     /* only in the Masters structure */
-      var sel=box.querySelector("select"); if(sel && !sel.value){ var first=Array.prototype.filter.call(sel.options,function(o){ return o.value; })[0]; if(first){ sel.value=first.value; sel.dispatchEvent(new Event("change",{bubbles:true})); } }
+      /* q182 (Andre): the board is no longer chosen on the sheet — it was chosen at the door (Social / Ladder /
+         the tournament) and the save decides the division. A placeholder of "0" counted as chosen before, which left
+         "Choose the group where this match was played" sitting under a hidden box with Next greyed out. */
+      try{ W.__grpChosen=true; var _n=document.getElementById("grpGateNote"); if(_n) _n.remove();
+           Array.prototype.forEach.call(document.querySelectorAll("#entryContent .btn-primary, #entryScreen .btn-primary"),function(b){
+             if(/Next/i.test(b.textContent||"")){ b.disabled=false; b.style.opacity=""; b.title=""; } }); }catch(e){}
+      /* q182b: a club door's list can be empty (its divisions are not groups you pick) — then the board on screen IS
+         the answer, so it is put in as the value. Both gates read a real id and stop asking. */
+      try{ var _s=box.querySelector("select");
+        if(_s && (!_s.value || String(_s.value)==="0") && !Array.prototype.some.call(_s.options,function(o){ return parseInt(o.value,10)>0; })){
+          var _o=document.createElement("option"); _o.value=String(cid); _o.textContent=((W.PLAT.clubs||[]).filter(function(c){ return +c.id===cid; })[0]||{}).name||"This board";
+          _s.appendChild(_o); _s.value=String(cid); try{ _s.dispatchEvent(new Event("change")); }catch(e){}
+        }
+        var _g=document.getElementById("nhGrpNote"); if(_g) _g.remove();
+      }catch(e){}
+      var sel=box.querySelector("select"); if(sel && (!sel.value || String(sel.value)==="0")){ var first=Array.prototype.filter.call(sel.options,function(o){ return o.value; })[0]; if(first){ sel.value=first.value; sel.dispatchEvent(new Event("change",{bubbles:true})); } }
       if(box.style.display!=="none") box.style.display="none";
       var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===cid; })[0], club=cs.filter(function(c){ return +c.id===+clubOf(cid); })[0];
       if(me && club && me.id!==club.id){ Array.prototype.forEach.call(scr.querySelectorAll(".header *"),function(x){ if(x.children.length===0 && (x.textContent||"").trim()===me.name) x.textContent=club.name; }); }   /* the club, not a division */
@@ -21678,6 +21703,25 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       }); });
     }catch(e){} }, 700);
 
+    /* q182 (Andre): once a section's draw is generated the Entered teams screen is gone, so the rules must also live
+       where the organiser actually stands — on the DRAW, for the section on screen. Same panel, same admin code. */
+    setInterval(function(){ try{
+      var scr=document.getElementById("tournamentSheetScreen"); if(!scr || !scr.classList.contains("active")) return;
+      var box=document.getElementById("tournamentSheetContent"); if(!box) return;
+      var ctx=W._tmCtx||{}, d=ctx.division||""; if(!d || !tourNow()) return;
+      var have=box.querySelector(".nsqRules");
+      if(have && have.dataset.sec===d) return;
+      if(have) have.remove();
+      load().then(function(){
+        var b2=document.getElementById("tournamentSheetContent"); if(!b2) return;
+        var c2=(W._tmCtx||{}).division||""; if(c2!==d) return;
+        if(b2.querySelector('.nsqRules[data-sec="'+d.replace(/"/g,'\\"')+'"]')) return;
+        var wrap=document.createElement("div"); wrap.innerHTML=html(d);
+        var el=wrap.firstChild; el.style.margin="2px 0 12px";
+        b2.insertBefore(el, b2.firstChild);
+      });
+    }catch(e){} }, 800);
+
     /* a tournament change clears what was loaded */
     setInterval(function(){ try{ var k=cid()+"|"+tourNow(); if(FOR && k!==FOR){ MAP={}; AT=0; PICK={}; FOR=""; } }catch(e){} }, 1500);
   })();
@@ -21704,11 +21748,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
     /* ---------- the chooser ---------- */
     var cssOnce=function(){ if(document.getElementById("nsqPickCss")) return; var st=document.createElement("style"); st.id="nsqPickCss";
-      st.textContent="#nsqPick{position:fixed;inset:0;z-index:9998;background:#f4efe9;overflow:auto;-webkit-overflow-scrolling:touch;font-family:inherit}"
+      st.textContent="#nsqPick{position:fixed;inset:0;z-index:2147483500;background:#f4efe9;overflow:auto;-webkit-overflow-scrolling:touch;font-family:inherit}"
         +"#nsqPick .hd{background:linear-gradient(135deg,#7E3200,#B8480A);color:#fff;padding:16px 16px 18px}"
         +"#nsqPick .hd h1{margin:6px 0 0;font-size:21px;font-weight:800}"
         +"#nsqPick .x{background:rgba(255,255,255,.18);border:none;color:#fff;border-radius:20px;padding:6px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}"
-        +"#nsqPick .wrap{padding:14px 14px 40px;max-width:560px;margin:0 auto}"
+        +"#nsqPick .wrap{padding:14px 14px calc(110px + env(safe-area-inset-bottom,0px));max-width:560px;margin:0 auto}"
         +"#nsqPick .two{display:flex;gap:10px}"
         +"#nsqPick .big{flex:1;background:#fff;border:1.5px solid #e2d8ce;border-radius:14px;padding:16px 12px;text-align:center;font-size:15px;font-weight:800;color:#3b2a1e;cursor:pointer;font-family:inherit}"
         +"#nsqPick .lead{background:#B8480A;color:#fff;border:none;border-radius:14px;padding:13px 14px;width:100%;text-align:left;font-size:14.5px;font-weight:800;margin:14px 0 8px;font-family:inherit}"
@@ -21793,9 +21837,19 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var d=W.__nsqFxNow; if(!d) return; W.__nsqFxClose();
       var r=d.rules, A=halves(d.a), B=halves(d.b);
       try{
-        mkOpen({format:"doubles", t1:[A[0]||"",A[1]||null], t2:[B[0]||"",B[1]||null], cat:d.cat, tournament:d.tour});
-        MK.target=r.target; MK.fmt=r.games; MK.allPlay=!!r.all_games;
-        if(typeof mkRenderSetup==="function") mkRenderSetup();
+        /* q182 (Andre): NO SET-UP PAGE. Everything was decided when the section was set up, so the marker opens on the
+           one thing nobody can know in advance — who serves first. Same route the entry sheet's marker already uses. */
+        if(typeof liveFinish==="function" && typeof LIVE!=="undefined" && LIVE.active) liveFinish("abandoned");
+        MK.players={t1p1:A[0]||"", t1p2:A[1]||null, t2p1:B[0]||"", t2p2:B[1]||null};
+        MK.format="doubles"; MK.cat=d.cat||"All Sorts"; MK.event=d.tour;
+        MK.fmt=r.games; MK.allPlay=!!r.all_games; MK.target=r.target;
+        MK.firstServe=1; MK.eventLocked=d.tour; MK.preload=null;
+        MK.returnToEntry=false;           /* nothing to go back to: the marker submits the result itself */
+        MK.handicap=undefined;            /* mkStart resolves it before play */
+        MK.fromFixture=true;              /* q182: the serve page asks ONE thing */
+        if(typeof loadPlayers==="function"){ loadPlayers(); }
+        showScreen("markerScreen");
+        mkServePrompt();
       }catch(e){ W.alert("The marker could not be opened here."); }
     };
 
@@ -21832,8 +21886,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var fxOpen=function(d){
       W.__nsqFxNow=d; cssOnce(); W.__nsqFxClose();
       var o=document.createElement("div"); o.id="nsqFx";
-      o.style.cssText="position:fixed;inset:0;z-index:9999;background:rgba(32,20,12,.55);display:flex;align-items:flex-end;justify-content:center";
-      o.innerHTML='<div style="background:#fff;width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:18px 16px 22px;font-family:inherit">'
+      /* q182: above the home bar (2147483000) and clear of it, so Back and Organiser entry are never hidden behind it */
+      o.style.cssText="position:fixed;inset:0;z-index:2147483600;background:rgba(32,20,12,.55);display:flex;align-items:flex-end;justify-content:center;overflow:auto;-webkit-overflow-scrolling:touch";
+      o.innerHTML='<div style="background:#fff;width:100%;max-width:520px;border-radius:18px 18px 0 0;padding:18px 16px calc(96px + env(safe-area-inset-bottom,0px));margin-top:auto;font-family:inherit">'
         +'<div style="font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:800;color:#8a7a6e">You are scoring</div>'
         +'<div style="font-size:17px;font-weight:800;color:#3b2a1e;margin:7px 0 2px;line-height:1.35">'+esc(d.a)+'</div>'
         +'<div style="font-size:13px;color:#7a6658;margin:0 0 2px">v</div>'
