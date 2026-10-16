@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q211";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q212";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -12384,7 +12384,7 @@ W.mePair=function(name,col){
     var club=(W.PLAT.clubs||[]).find(function(c){ return Number(c.id)===Number(C); })||{id:C,name:W.PLAT.name};
     var whoQ=(function(){ try{ return new URLSearchParams(location.search).get("who")||""; }catch(e){ return ""; } })();
     var target=whoQ||meName();
-    Promise.all([nhFetch(),meClaims(), target?meWide(target):Promise.resolve(null), whoQ?Promise.resolve(true):meVerify()]).then(function(res){
+    Promise.all([nhFetch(),meClaims(), target?meWide(target):Promise.resolve(null), whoQ?Promise.resolve(true):meVerify(), (W.__nsqMemLoad?W.__nsqMemLoad().catch(function(){}):null)]).then(function(res){   /* q212c */
       if(!whoQ && res[3]===false){ target=null; }   /* n100: the claimed person is gone — back to claiming */
       var all=Object.assign({},res[0]), claims=res[1]||{}; W.__meTaken=claims;
       /* the person's own matches and pairs come from the whole register */
@@ -12438,7 +12438,7 @@ W.mePair=function(name,col){
         + 'background:'+(myPhoto?("#fff url("+myPhoto+") center/cover no-repeat"):"rgba(255,255,255,.18)")+';border:2px solid rgba(255,255,255,.5);cursor:pointer;overflow:hidden">'
         + (myPhoto?"":esc(inits(me)))+'</span>' 
         + '<span><h1 style="margin:0 0 2px">'+esc(me)+'</h1>'
-        + '<span class="sub"><span class="nsqMemberOf" data-who="'+esc(me)+'"></span>'+(homeId?("plays mostly at "+esc(nhBoardName(homeId))):"no matches yet")+'</span></span></div>'
+        + '<span class="sub">'+(function(){ var _mt=(typeof W.__nsqMemberOfText==="function")?W.__nsqMemberOfText(me):null; return _mt==null?('<span class="nsqMemberOf" data-who="'+esc(me)+'"></span>'):('<span class="nsqMemberOf" data-done="1" data-who="'+esc(me)+'">'+esc(_mt)+'</span>'); })()+(homeId?("plays mostly at "+esc(nhBoardName(homeId))):"no matches yet")+'</span></span></div>'
         /* n174: THE FIGURES LEAVE THE BANNER. The header was taking a third of the screen; rating, level and rank
            now sit in a pill directly under it, as part of the page. */
         /* n78: opened from the records, the way back is the page that sent us; your own page goes home */
@@ -14331,11 +14331,9 @@ W.nhOpenPair=function(name){
         '<div class="band opr doorband"'+regBandStyle(RC)+'>'+nhMark()+''
         /* n150: A SHORT HERO THAT SAYS WHAT THIS IS, and the member's own page on the right — the first question
            everyone asks is "where do I see my rating". The week's count moved to Recent matches. */
-        + '<div style="display:flex;align-items:center;gap:10px;margin-top:8px">'
-        +   '<span style="flex:1;min-width:0">'
-        +     '<h1 style="margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(W.PLAT.name||"")+'</h1>'
-        +     '<div style="font-size:12px;opacity:.85;margin-top:2px">'+nhDoorDetail(d,kids)+'</div>'
-        +   '</span>'
+        + '<h1 style="margin:8px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(W.PLAT.name||"")+'</h1>'   /* q212: the whole width */
+        + '<div style="display:flex;align-items:center;gap:10px;margin-top:6px">'
+        +   '<div style="flex:1;min-width:0;font-size:12px;opacity:.85">'+nhDoorDetail(d,kids)+'</div>'
         +   nhMePill()
         + '</div></div>'
         /* where am I */
@@ -17049,7 +17047,7 @@ W.nhOpenPair=function(name){
     /* n317: entry from the door IS allowed (Andre) — the write is routed to the tournament's own group by the shim */
   }
   function nhRender(shape, page){
-    var tok=++W.__nhNavTok;
+    var tok=++W.__nhNavTok; W.__nhHomeDrawn=String(location.search||"");   /* q212d: what the home page now shows */
     NEW.data=null; NEW.busy=null;   /* the per-board cache (nhCacheGet) still serves the reads */
     try{ if(W.__nhHeroHold) clearInterval(W.__nhHeroHold); }catch(e){}
     var goq0=""; try{ goq0=(new URLSearchParams(location.search).get("go")||"").toLowerCase(); }catch(e){}
@@ -17577,17 +17575,47 @@ W.nhOpenPair=function(name){
       if(v.screen && v.screen!=="homeScreen"){ var k=["club","pool","nat","board"].map(function(x){ return x+"="+(q.get(x)||""); }).join("&"); return v.screen+"|"+k; }
       return "home|"+(v.page||"")+"|"+q.toString(); }catch(e){ return (v.screen||"")+"|"+String(v.search||""); }
   }
+  function nhScrCount(){ var n=0; (W.__nhTrail||[]).forEach(function(v){ if(v && v.h) n++; }); return n; }
+  function nhScrPush(v,last){ try{
+    if(W.__nhInPop || !v || v.screen==="homeScreen" || !last) return;
+    if(String(last.search||"")!==String(v.search||"") || String(location.search||"")!==String(v.search||"")) return;
+    v.h=1; history.pushState({nat3:1,nat3scr:1,nat3d:nhScrCount()},"",location.href);   /* q212d */
+  }catch(e){} }
+  function nhScrDrop(v){ try{
+    if(!v || !v.h || W.__nhInPop) return;
+    if(history.state && history.state.nat3scr){ W.__nhSkipPop=(W.__nhSkipPop||0)+1; history.back(); }   /* q212d: quietly */
+  }catch(e){} }
+  /* q212d: the home page of an address, drawn afresh in place (same history entry) and brought to the front */
+  W.__nhRedrawHome=function(search, page){
+    W.__nhTrailHold=true;
+    W.__nhAfterNav=function(){ try{ goHome(); if(page==="admin" && !document.querySelector("#nh .band")) W.nhAdminPage(); }catch(e){} W.__nhTrailHold=false; };
+    W.__nhSkipGo=false;
+    W.nhNav(PAGE+search,{replace:true,force:true,page:page||""});
+  };
+  W.__nhOpenView=function(v){   /* q212d: show a view of the trail on the address we stand on */
+    W.__nhTrailHold=true;
+    try{
+      if(v.screen==="homeScreen"){
+        if(String(W.__nhHomeDrawn||"")===String(location.search||"")){ goHome(); }
+        else { W.__nhTrailHold=false; W.__nhRedrawHome(String(location.search||""), v.page); return; }
+      }
+      else if(v.screen==="ladderScreen" && W.__nhLadderArgs && typeof loadLadder==="function"){ loadLadder.apply(null, W.__nhLadderArgs); }
+      else W.showScreen(v.screen);
+    }catch(e){}
+    W.__nhTrailHold=false;
+  };
   function nhTrailPush(screen, page){
     if(W.__nhTrailHold) return;
     var t=W.__nhTrail, v={search:String(location.search||""),screen:screen||"homeScreen",page:page||""}, last=t[t.length-1];
     if(last && nhViewKey(last)===nhViewKey(v)){ last.search=v.search; return; }   /* the same view: keep the newer address */
     /* stepping onto the view behind us IS a back — unwind rather than grow */
-    var prev=t[t.length-2]; if(prev && nhViewKey(prev)===nhViewKey(v)){ t.pop(); return; }
+    var prev=t[t.length-2]; if(prev && nhViewKey(prev)===nhViewKey(v)){ nhScrDrop(t.pop()); return; }
     t.push(v); if(t.length>60) t.shift();
+    nhScrPush(v, last);   /* q212d */
   }
   W.nhBackPath=function(){
     var t=W.__nhTrail; if(t.length<2){ try{ goHome(); }catch(e){} return; }
-    var _left=t.pop();
+    var _left=t.pop(); nhScrDrop(_left);   /* q212d */
     try{ var _pk2=function(x){ var q=new URLSearchParams(String(x&&x.search||'').split('?')[1]||''); var g=(q.get('go')||'').toLowerCase();
            return (g==='pair'||g==='me') ? (g+'|'+String(q.get('pair')||q.get('who')||'').trim().toLowerCase()) : ''; };
          var _lk=_pk2(_left); if(_lk){ while(t.length>1 && _pk2(t[t.length-1])===_lk) t.pop(); } }catch(e){}   /* n355: no second copy of the page you leave */
@@ -17620,6 +17648,18 @@ W.nhOpenPair=function(name){
        fires popstate for that too; taken as "the address moved", the shell redrew the board's page under the ladder
        and re-scoped the register — fifteen reads, and Men's Pairs never finished. Only a change of ?search is ours. */
     var s=String(location.search||""), hs=String(location.hash||"");
+    /* q212d: our own quiet step (an in-app arrow took its screen's entry away) */
+    if(W.__nhSkipPop){ W.__nhSkipPop--; W.__nhLastSearch=s; W.__nhLastHash=hs; return; }
+    W.__nhInPop=true; setTimeout(function(){ W.__nhInPop=false; },0);
+    /* q212d: stepping off a screen's own entry: fewer screen entries now lie beneath us than the trail holds */
+    try{
+      var _t9=W.__nhTrail||[], _d9=(history.state && history.state.nat3d)||0, _c9=nhScrCount();
+      if(_c9>_d9 && s===String(W.__nhLastSearch||"") && nhOnShellPage()){
+        while(_t9.length>1 && _c9>_d9){ var _x9=_t9.pop(); if(_x9 && _x9.h) _c9--; }
+        W.__nhLastHash=hs; W.__nhOpenView(_t9[_t9.length-1]);
+        return;
+      }
+    }catch(e){}
     if(s===W.__nhLastSearch && hs!==String(W.__nhLastHash||"")){ W.__nhLastHash=hs; return; }   /* q196: the parent's own hash */
     W.__nhLastHash=hs;
     /* n330: THE GESTURE WALKS THE TRAIL. The browser's history holds addresses; the trail holds views — and a members
@@ -17630,13 +17670,28 @@ W.nhOpenPair=function(name){
     try{
       var t=W.__nhTrail;
       if(t && t.length>1 && nhOnShellPage()){
-        var last=t[t.length-1], prev=t[t.length-2];
-        /* q196: hand the entry back only when the step takes no address of its own; otherwise this pop IS the step */
-        if(prev && String(prev.search||"")===s){ history.pushState({nat3:1},"",location.pathname+last.search); }
-        W.__nhLastSearch=String(location.search||"");
-        W.nhBackPath();
-        W.__nhLastSearch=String(location.search||""); W.__nhLastHash=String(location.hash||"");
-        return;
+        var last=t[t.length-1], prev=t[t.length-2], _ls=String(last.search||""), _ps=String(prev.search||""), _q212out=false;
+        if(_ls===_ps){
+          /* q212b: the screen we leave has no address of its own (Tournaments, ladders, members on a division): the
+             browser stepped one entry too far. Give that entry back and step back one screen, on the same address. */
+          history.pushState({nat3:1},"",location.pathname+_ls);
+          W.__nhLastSearch=_ls;
+          if(prev.screen==="homeScreen"){
+            /* the page behind may still hold what was drawn there last (a profile opened from a list): draw it afresh */
+            t.pop(); W.__nhRedrawHome(_ls, prev.page);
+          } else { W.nhBackPath(); }
+        } else if(_ps===s && prev.screen==="homeScreen"){
+          /* q212b: the browser's step IS the trail's step (a page with its own address): draw it, rewrite nothing */
+          t.pop(); W.__nhLastSearch=s; W.__nhLastHash=hs;
+          /* redraw in place (the board may change, a screen may stand over it); replace = the same entry, history intact */
+          W.__nhRedrawHome(s, prev.page);
+          return;
+        } else if(_ps===s){
+          W.__nhLastSearch=s; W.nhBackPath();   /* the step is back to a screen on that address: open it */
+        } else {
+          _q212out=true;   /* q212b: out of step with the phone: the phone's history wins (below), the trail follows */
+        }
+        if(!_q212out){ W.__nhLastSearch=String(location.search||""); W.__nhLastHash=String(location.hash||""); return; }
       }
     }catch(e){}
     W.__nhLastSearch=s;
@@ -21754,6 +21809,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     W.__nsqMemLoad=function(){ var p=memLoad(); return p&&p.then?p:Promise.resolve(); };
     W.__nsqPgAll=function(url){ var out=[]; var step=function(from){ return fetch(url+(url.indexOf("?")<0?"?":"&")+"limit=1000&offset="+from).then(function(r){ return r.json(); }).then(function(rows){ rows=Array.isArray(rows)?rows:[]; out=out.concat(rows); return (rows.length===1000 && from<50000)?step(from+1000):out; }); }; return step(0); };
     W.__nsqMemReady=function(){ return !!MEM.map; };
+    /* q212c: the "Member of" words, ready for the page's FIRST paint (null while the memberships are still loading).
+       The 0.8 s timer below filled them in after the page had drawn, so the whole page dropped by a line. */
+    W.__nsqMemberOfText=function(name){ if(!MEM.map) return null; var c=byId(W.__nsqClubOfName(name)); return c?("Member of "+c.name+" \u00b7 "):""; };
     (function(){ var f0=W.nhMemberList; if(typeof f0!=="function") return;
       W.nhMemberList=function(C){ var self=this, a=arguments; return W.__nsqMemLoad().then(function(){ return f0.apply(self,a); }, function(){ return f0.apply(self,a); }); }; })();
     /* q170: a tournament files its pairs under its own category ("All Sorts"); every page reads only Men's / Ladies /
