@@ -3632,7 +3632,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q212";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q213";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -22370,7 +22370,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var box=document.getElementById("tournamentSheetContent"); if(!box || (box.innerText||"").length<40) return;
       try{ sessionStorage.removeItem("nsqRefetch"); }catch(e){}
       setTimeout(function(){ try{
-        var ctx=W._tmCtx||{}; if(ctx.tournament && typeof loadTournamentSheet==="function") loadTournamentSheet(ctx.tournament, ctx.division);
+        var ctx=W._tmCtx||{}; if(ctx.tournament && typeof loadTournamentSheet==="function") W.__nsqSheetSmooth(ctx.tournament, ctx.division);   /* q213 */
       }catch(e){} }, 1800);
     }catch(e){} }, 500);
 
@@ -22483,6 +22483,72 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     };
     W.__nsqPend=PEND;
 
+    /* q213 (Andre: "why does the draw page jump when it updates after a result is posted?"). Every re-read rebuilt the
+       whole draw in place: the page snapped to the top (the parent's showScreen scrolls to 0,0), the plain draw showed
+       for a moment without our additions (legend, "to play", the Schedule / Page buttons — the match row leapt up 84 px)
+       and then they came back one by one over 0.6 s. Measured: four moves per re-read, a dozen while a result was
+       awaited. Now a re-read the person did not ask for is done OUT OF SIGHT: what they are looking at stays on screen
+       (a still copy), the draw is rebuilt underneath, and when it has settled the copy is lifted — ONE change, at the
+       same scroll position. */
+    /* the page's styles for the draw are written against its name (#tournamentSheetContent): while the draw on screen
+       carries another name for a moment, the same styles are given to that name */
+    var oldCss=function(){
+      try{
+        var out=[], ON="#tournamentSheetContent", NN="#nsqSheetOld";
+        var take=function(rules){ var o=[]; Array.prototype.forEach.call(rules||[],function(r){
+          if(r.selectorText && r.selectorText.indexOf(ON)>=0) o.push(r.cssText.split(ON).join(NN));
+          else if(r.media && r.cssRules){ var inner=take(r.cssRules); if(inner.length) o.push("@media "+r.media.mediaText+"{"+inner.join("\n")+"}"); } }); return o; };
+        Array.prototype.forEach.call(document.styleSheets,function(sh){ var rs=null; try{ rs=sh.cssRules; }catch(e){} if(rs) out=out.concat(take(rs)); });
+        var st=document.getElementById("nsqOldCss"); if(!st){ st=document.createElement("style"); st.id="nsqOldCss"; document.head.appendChild(st); }
+        st.textContent=out.join("\n");
+      }catch(e){}
+    };
+    W.__nsqSheetSmooth=function(t, d){
+      var raw=function(){ try{ if(typeof loadTournamentSheet==="function") return loadTournamentSheet(t, d); }catch(e){} };
+      try{
+        var scr=document.getElementById("tournamentSheetScreen"), box=document.getElementById("tournamentSheetContent");
+        if(!scr || !scr.classList.contains("active") || !box || (box.innerText||"").trim().length<80 || W.__nsqSmoothBusy) return raw();
+        W.__nsqSmoothBusy=true;
+        oldCss();
+        /* the draw you are looking at stays exactly as it is (still scrollable, still tappable) under another name;
+           the rebuild is drawn into a hidden twin that carries the real name, so every reader and patch finds it */
+        var fresh=document.createElement(box.tagName); fresh.className=box.className; fresh.id="tournamentSheetContent";
+        fresh.setAttribute("data-nsq-fresh","1");
+        /* the draw keeps its open tab and round ON the element (box._tab, box._round): the twin carries them on */
+        try{ Object.keys(box).forEach(function(k){ if(k.charAt(0)==="_") fresh[k]=box[k]; }); }catch(e){}
+        fresh.style.position="absolute"; fresh.style.visibility="hidden"; fresh.style.pointerEvents="none";
+        fresh.style.left="0"; fresh.style.top="0"; fresh.style.width=box.getBoundingClientRect().width+"px";
+        box.id="nsqSheetOld";
+        box.parentNode.insertBefore(fresh, box);   /* first in the page, so a patch that takes the first match takes the twin */
+        var done=false, t0=Date.now(), quiet=Date.now(), mo=null;
+        var finish=function(){ if(done) return; done=true; try{ mo&&mo.disconnect(); }catch(e){}
+          try{
+            if(fresh.parentNode){
+              /* the draw scrolls inside its own panel: line the new draw up with exactly where the old one sat on screen */
+              var sc=null; for(var e=box.parentNode; e && e!==document.body; e=e.parentNode){ var oy=getComputedStyle(e).overflowY; if((oy==="auto"||oy==="scroll") && e.scrollHeight>e.clientHeight){ sc=e; break; } }
+              /* line up by CONTENT: the first table row in view, and the same row in the new draw (the browser's scroll
+                 anchoring may already have moved the old draw's top edge, so its edge is no reference) */
+              var vTop=sc?sc.getBoundingClientRect().top:0, rowsO=box.querySelectorAll("tr"), ri=-1, top0=box.getBoundingClientRect().top;
+              for(var i2=0;i2<rowsO.length;i2++){ if(rowsO[i2].getBoundingClientRect().bottom>vTop+1){ ri=i2; top0=rowsO[i2].getBoundingClientRect().top; break; } }
+              fresh.style.position=""; fresh.style.visibility=""; fresh.style.pointerEvents=""; fresh.style.left=""; fresh.style.top=""; fresh.style.width="";
+              fresh.removeAttribute("data-nsq-fresh"); if(box.parentNode) box.parentNode.removeChild(box);
+              try{ var rowsN=fresh.querySelectorAll("tr"), ref=(ri>=0 && rowsN[ri])?rowsN[ri]:fresh;
+                var dy=ref.getBoundingClientRect().top-top0; if(dy){ if(sc) sc.scrollTop+=dy; else W.scrollBy(0,dy); } }catch(e){}
+            }
+            else { box.id="tournamentSheetContent"; }
+          }catch(e){}
+          W.__nsqSmoothBusy=false; };
+        try{ mo=new MutationObserver(function(){ quiet=Date.now(); }); mo.observe(fresh,{childList:true,subtree:true,characterData:true}); }catch(e){}
+        var sx=W.scrollX||0, sy=W.scrollY||0;
+        var pr=raw();
+        try{ W.scrollTo(sx, sy); }catch(e){}   /* the parent's showScreen jumps to the top: put it back before any paint */
+        var settle=function(){ var now=Date.now(); if(now-t0>3000 || (now-t0>=900 && now-quiet>=300)){ finish(); return; } setTimeout(settle,100); };
+        Promise.resolve(pr).then(function(){ t0=Date.now(); setTimeout(settle,100); }, finish);
+        setTimeout(finish, 9000);   /* never leave the twin hidden */
+        return pr;
+      }catch(e){ try{ W.__nsqSmoothBusy=false; var b2=document.getElementById("nsqSheetOld"); if(b2 && !document.getElementById("tournamentSheetContent")) b2.id="tournamentSheetContent"; }catch(_e){} return raw(); }
+    };
+
     /* the board catches up by itself: while a scored fixture is still showing "to play", read it again */
     setInterval(function(){ try{
       var m=PEND.all(), ids=Object.keys(m); if(!ids.length) return;
@@ -22501,7 +22567,16 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
          half seconds for TEN MINUTES, so the board sat there blinking "updating…" for as long as you watched it.
          It tries a few times and then stops, and says plainly what happened instead of blinking at you. */
       if(PEND.bump(want) > 6){ PEND.drop(want); stuckNote(ctx); return; }
-      try{ if(typeof loadTournamentSheet==="function") loadTournamentSheet(ctx.tournament, ctx.division); }catch(e){}
+      /* q213: a quiet look at the fixtures — the draw is rebuilt only when the result is actually there */
+      try{
+        if(typeof tmLoadFixtures==="function"){
+          var _id=want, _t=ctx.tournament, _d=ctx.division;
+          tmLoadFixtures(_t, _d).then(function(rows){
+            var hit=(rows||[]).filter(function(x){ return String(x.id)===String(_id); })[0];
+            if(hit && hit.sets_a!=null) W.__nsqSheetSmooth(_t, _d);
+          }).catch(function(){});
+        } else if(typeof loadTournamentSheet==="function") W.__nsqSheetSmooth(ctx.tournament, ctx.division);
+      }catch(e){}
     }catch(e){} }, 1200);
 
     function stuckNote(ctx){
@@ -22532,7 +22607,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
            && typeof loadTournamentSheet==="function"){
           try{ TOURNAMENT_EVENT=d.tour; }catch(e){}
           try{ W.showScreen("tournamentSheetScreen"); }catch(e){}
-          loadTournamentSheet(d.tour, (W._tmCtx&&W._tmCtx.division)||null);
+          W.__nsqSheetSmooth(d.tour, (W._tmCtx&&W._tmCtx.division)||null);   /* q213 */
           return;
         }
       }catch(e){}
