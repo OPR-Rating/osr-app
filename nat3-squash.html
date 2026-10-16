@@ -2331,7 +2331,9 @@ function mkScoreCall(){
   if(MK.over) return 'Match complete — tap End to enter score';
   const [a,b]=MK.gp; const hi=MK.server===1?a:b, lo=MK.server===1?b:a;
   let call=(a===0&&b===0)?'Love–all':(hi+'–'+lo);
-  if(a===10||b===10) call+=' · Game ball';
+  { const _T=(MK.hcTeam?11:(MK.target||11)), _w2=(!MK.hcTeam && MK.winByTwo===true);
+    const _gb=function(x,y){ return (x+1)>=_T && (!_w2 || (x+1-y)>=2); };
+    if(_gb(a,b)||_gb(b,a)) call+=' · Game ball'; }   // q214: to 11 or 15, win-by-two respected
   return call;
 }
 function mkRenderScore(){
@@ -3632,7 +3634,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q213";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q214";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -5694,7 +5696,6 @@ function renderStep4(){
       <div class="field" style="margin-bottom:0;">
         <!-- Player PIN hidden (not required to submit) -->
         <input type="hidden" id="submitterPin" value="">
-        <div style="font-size:11px;color:#5aa98d;margin-top:6px;">Players use their own PIN. A club admin can use the club admin code to enter on anyone's behalf.</div>
       </div>
     </div>
     <div id="err4" class="error-msg"></div>
@@ -21027,6 +21028,8 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var slot=Number(a.slot_minutes||60);
         jobs.forEach(function(J){
           var w=dayWin(J.day), st=w&&!isNaN(w.s)?w.s:tmin(a.start_time), endAt=w?w.e:(a.end_time?tmin(a.end_time):NaN), fin=!!w;
+          /* q214: the section's own times for that day come first */
+          (planOf(a)||[]).forEach(function(p){ if(String(p.day)!==String(J.day)) return; if(p.start && !isNaN(tmin(p.start))) st=tmin(p.start); if(p.end && !isNaN(tmin(p.end))){ endAt=tmin(p.end); fin=true; } });
           var brk=D.breaks.filter(function(k){ return +k.venue_id===+a.venue_id && k.play_day===J.day; }).map(function(k){ var s0=tmin(k.start_time); return [s0, s0+Number(k.minutes||30)]; });
           var m=1, t=st, guard=0;
           while(m<=J.n && guard++<400){
@@ -21162,7 +21165,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       divs.forEach(function(d){ var a=D.allocs.filter(function(x){ return x.division===d; })[0], vv=a?venueOf(a.venue_id):null;
         var n=Object.keys(D.fx).filter(function(id){ return D.fx[id].division===d; }).length, sch=D.rows.filter(function(r){ return r.division===d; }).length;
         h+='<div style="padding:8px 0;border-bottom:1px solid #f0ecf6"><div style="display:flex;align-items:center;gap:8px"><b style="flex:1">'+esc(divLabel(d))+'</b><span style="font-size:11px;color:#7a6658">'+sch+' / '+n+' on the schedule</span></div>'
-          +(a?'<div style="font-size:12.5px;color:#3b2a1e;margin:3px 0">'+esc(vv?vv.name:"?")+' \u00b7 courts '+a.court_from+'\u2013'+a.court_to+' \u00b7 '+esc(fmtDay(a.play_day))+' '+hhmm(a.start_time)+(a.end_time?' to '+hhmm(a.end_time):'')+' \u00b7 '+a.slot_minutes+' min slots'+(planOf(a)?(' \u00b7 plan: '+planOf(a).map(function(p){ return fmtDay(p.day).replace(/ \d+ \w+$/,"")+' '+p.rounds; }).join(' \u00b7 ')):'')+(a.last_day&&a.last_day!==a.play_day&&!planOf(a)?' \u00b7 to '+esc(fmtDay(a.last_day))+' \u00b7 '+(a.rounds_per_day||1)+' round'+((a.rounds_per_day||1)!==1?'s':'')+' a day':'')+'</div>':'<div style="font-size:12.5px;color:#b9770e;margin:3px 0">not allocated yet</div>')
+          +(a?'<div style="font-size:12.5px;color:#3b2a1e;margin:3px 0">'+esc(vv?vv.name:"?")+' \u00b7 courts '+a.court_from+'\u2013'+a.court_to+' \u00b7 '+esc(fmtDay(a.play_day))+' '+hhmm(a.start_time)+(a.end_time?' to '+hhmm(a.end_time):'')+' \u00b7 '+a.slot_minutes+' min slots'+(planOf(a)?(' \u00b7 plan: '+planOf(a).map(function(p){ return fmtDay(p.day).replace(/ \d+ \w+$/,"")+' '+p.rounds+((p.start||p.end)?(' ('+(p.start?hhmm(p.start):'')+'\u2013'+(p.end?hhmm(p.end):'')+')'):''); }).join(' \u00b7 ')):'')+(a.last_day&&a.last_day!==a.play_day&&!planOf(a)?' \u00b7 to '+esc(fmtDay(a.last_day))+' \u00b7 '+(a.rounds_per_day||1)+' round'+((a.rounds_per_day||1)!==1?'s':'')+' a day':'')+'</div>':'<div style="font-size:12.5px;color:#b9770e;margin:3px 0">not allocated yet</div>')
           +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+dbtn(a?"Change":"Allocate","nsqOopAllocEdit",d)+(a?dbtn("Generate","nsqOopGenerate",d)+(sch?dbtn("Clear","nsqOopClear",d):'')+dbtn("Remove","nsqOopAllocRemove",d):'')+'</div>'
           +(UI.allocEdit===d?allocForm(d,a):'')+'</div>'; });
       if(D.allocs.length) h+='<div style="display:flex;gap:8px;margin:10px 0 0">'+btn("Generate all allocated divisions","nsqOopGenerate('')","flex:1;background:#D35400;color:#fff")+'</div>';
@@ -21184,13 +21187,20 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var planRows=function(a){ a=a||{};
       var f=(document.getElementById("nsqOopADay")||{}).value||a.play_day||"", l=(document.getElementById("nsqOopALast")||{}).value||a.last_day||f;
       if(!f) return '<div class="sub" style="margin:4px 0">Set the first and last day to plan each day.</div>';
-      var have={}; (planOf(a)||[]).forEach(function(p){ have[p.day]=p.rounds; });
-      var h='', d=f, n=0; while(d<=l && n++<21){ h+='<div style="display:flex;align-items:center;gap:8px;margin:4px 0"><span style="flex:none;width:96px;font-size:13px;font-weight:700">'+esc(fmtDay(d))+'</span>'
-        +'<input data-day="'+d+'" value="'+esc(have[d]||"")+'" placeholder="e.g. 1, 2a, 2b, SF, F" style="flex:1;padding:8px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit;min-width:0"></div>'; d=addDays(d,1); }
+      var have={}, hs={}, he={}; (planOf(a)||[]).forEach(function(p){ have[p.day]=p.rounds; if(p.start) hs[p.day]=hhmm(p.start); if(p.end) he[p.day]=hhmm(p.end); });
+      /* q214 (Andre): each day its own start and finish — weeknights 18:00–22:00, a Saturday 09:00–17:00 */
+      var tin=function(k,day,v){ return '<input type="time" data-'+k+'="'+day+'" value="'+esc(v||"")+'" style="flex:0 0 112px;padding:8px 6px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit;min-width:0">'; };
+      var h='<div style="display:flex;align-items:center;gap:8px;margin:6px 0 2px;font-size:11px;font-weight:800;color:#7a6658;text-transform:uppercase;letter-spacing:.06em">'
+        +'<span style="flex:none;width:96px">Day</span><span style="flex:1;min-width:110px">Rounds</span><span style="flex:0 0 112px">Start</span><span style="flex:0 0 112px">Finish by</span></div>';
+      var d=f, n=0; while(d<=l && n++<21){ h+='<div style="display:flex;align-items:center;gap:8px;margin:4px 0;flex-wrap:wrap"><span style="flex:none;width:96px;font-size:13px;font-weight:700">'+esc(fmtDay(d))+'</span>'
+        +'<input data-day="'+d+'" value="'+esc(have[d]||"")+'" placeholder="e.g. 1, 2a, 2b, SF, F" style="flex:1;min-width:110px;padding:8px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit">'
+        +tin("start",d,hs[d])+tin("end",d,he[d])+'</div>'; d=addDays(d,1); }
+      h+='<div style="font-size:11.5px;color:#7a6658;margin:4px 0 0">Start and finish are for that day only (the last match ends by the finish). Left blank, the day uses the tournament’s Playing days, else the start time above.</div>';
       return h; };
-    W.nsqOopPlanRows=function(){ var box=document.getElementById("nsqOopPlanBox"); if(!box) return; var keep={}; Array.prototype.forEach.call(box.querySelectorAll("input[data-day]"),function(x){ keep[x.dataset.day]=x.value; });
+    W.nsqOopPlanRows=function(){ var box=document.getElementById("nsqOopPlanBox"); if(!box) return; var keep={};
+      ["day","start","end"].forEach(function(k){ Array.prototype.forEach.call(box.querySelectorAll("input[data-"+k+"]"),function(x){ keep[k+"|"+x.getAttribute("data-"+k)]=x.value; }); });
       var a=D.allocs.filter(function(x){ return x.division===UI.allocEdit; })[0]||{}; box.innerHTML=planRows(a);
-      Array.prototype.forEach.call(box.querySelectorAll("input[data-day]"),function(x){ if(keep[x.dataset.day]!=null) x.value=keep[x.dataset.day]; }); };
+      ["day","start","end"].forEach(function(k){ Array.prototype.forEach.call(box.querySelectorAll("input[data-"+k+"]"),function(x){ var v=keep[k+"|"+x.getAttribute("data-"+k)]; if(v!=null) x.value=v; }); }); };
     /* q164: the tournament's playing days — each day its own start and finish */
     var daysHtml=function(){
       if(!UI.daysEdit) UI.daysEdit=(D.days||[]).map(function(x){ return {d:String(x.play_day), s:hhmm(x.start_time), e:x.end_time?hhmm(x.end_time):""}; });
@@ -21242,7 +21252,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     W.nsqOopAllocVenue=function(){ try{ var s=document.getElementById("nsqOopAVenue"), ct=document.getElementById("nsqOopACt"); if(!s||!ct) return; var v=venueOf(s.value); if(v && !ct.value) ct.value=v.courts; }catch(e){} };
     W.nsqOopAllocSave=function(d){ if(!pinOk()) return; var g=function(id){ return (document.getElementById(id)||{}).value||""; };
       act({action:"oop_save_alloc",admin_pin:UI.pin,tournament:D.tour,division:d,venue_id:g("nsqOopAVenue"),court_from:g("nsqOopACf"),court_to:g("nsqOopACt"),play_day:g("nsqOopADay"),last_day:g("nsqOopALast"),rounds_per_day:g("nsqOopARpd"),start_time:g("nsqOopAStart"),slot_minutes:g("nsqOopASlot"),end_time:g("nsqOopAEnd"),
-        day_plan:Array.prototype.map.call(document.querySelectorAll("#nsqOopPlanBox input[data-day]"),function(x){ return {day:x.dataset.day, rounds:String(x.value||"").trim()}; }).filter(function(p){ return p.rounds; })})   /* q164 */
+        day_plan:Array.prototype.map.call(document.querySelectorAll("#nsqOopPlanBox input[data-day]"),function(x){ var dd=x.dataset.day;
+          var st=document.querySelector('#nsqOopPlanBox input[data-start="'+dd+'"]'), en=document.querySelector('#nsqOopPlanBox input[data-end="'+dd+'"]');
+          return {day:dd, rounds:String(x.value||"").trim(), start:(st&&st.value)||"", end:(en&&en.value)||""}; }).filter(function(p){ return p.rounds; })})   /* q164 + q214: each day's own times */
         .then(function(j){ if(!j.ok){ alert(j.error||"Not saved."); return; } UI.allocEdit=null; draw(true); }); };
     W.nsqOopAllocRemove=function(d){ if(!pinOk()) return; if(!confirm("Remove the allocation for "+divLabel(d)+"? Its scheduled matches are removed from the schedule too.")) return;
       act({action:"oop_remove_alloc",admin_pin:UI.pin,tournament:D.tour,division:d}).then(function(j){ if(!j.ok){ alert(j.error||"Not removed."); return; } draw(true); }); };
@@ -21266,7 +21278,50 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var key=""; L.forEach(function(x){ var vv=venueOf(x.r.venue_id), k=x.r.play_day+"|"+x.r.venue_id; if(k!==key){ if(key) h+='</table>'; key=k; h+='<h2>'+esc(vv?vv.name:"Venue")+' \u00b7 '+esc(fmtDay(x.r.play_day))+'</h2><table><tr><th>Time</th><th>Court</th><th>Division</th><th>Team A</th><th></th><th>Team B</th><th>Score</th></tr>'; }
         h+='<tr><td class="n"><b>'+hhmm(x.r.start_time)+'</b></td><td class="n">'+x.r.court+'</td><td class="d">'+esc(x.label)+'</td><td class="t">'+esc(x.a)+'</td><td class="v">'+(x.prov?'':'v')+'</td><td class="t">'+esc(x.b)+'</td><td class="sc">'+esc(x.score)+'</td></tr>'; });   /* q140: a column per team, names bold, striped rows */
       h+='</table></body></html>'; w.document.write(h); w.document.close(); setTimeout(function(){ try{ w.print(); }catch(e){} },400); };
-    W.nsqOopCsv=function(){ var L=listForExport(); if(!L.length) return; var q=function(s){ return '"'+String(s==null?"":s).replace(/"/g,'""')+'"'; };
+    /* q214 (Andre: "the Excel is a CSV — can it be plain Excel?"). A real .xlsx, written here (no library): one sheet,
+       the header row bold and frozen, columns sized, times and courts as Excel numbers/time so they sort properly. */
+    var xlsxBlob=function(sheetName, header, rows, widths){
+      var X=function(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,""); };
+      var col=function(i){ var s=""; i++; while(i>0){ var m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26); } return s; };
+      var cell=function(v,r,c,st){ var ref=col(c)+(r+1);
+        if(v && typeof v==="object" && v.t==="time"){ return '<c r="'+ref+'" s="2"><v>'+v.v+'</v></c>'; }
+        if(typeof v==="number" && isFinite(v)) return '<c r="'+ref+'"'+(st?' s="'+st+'"':'')+'><v>'+v+'</v></c>';
+        return '<c r="'+ref+'" t="inlineStr"'+(st?' s="'+st+'"':'')+'><is><t xml:space="preserve">'+X(v)+'</t></is></c>'; };
+      var sd='<sheetData><row r="1">'+header.map(function(h,c){ return cell(h,0,c,1); }).join("")+'</row>'
+        + rows.map(function(rw,i){ return '<row r="'+(i+2)+'">'+rw.map(function(v,c){ return cell(v,i+1,c,0); }).join("")+'</row>'; }).join("")+'</sheetData>';
+      var cols='<cols>'+widths.map(function(w,i){ return '<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>'; }).join("")+'</cols>';
+      var files={
+        "[Content_Types].xml":'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
+        "_rels/.rels":'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+        "xl/workbook.xml":'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="'+X(sheetName).slice(0,31)+'" sheetId="1" r:id="rId1"/></sheets></workbook>',
+        "xl/_rels/workbook.xml.rels":'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+        "xl/styles.xml":'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="hh:mm"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD35400"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>',
+        "xl/worksheets/sheet1.xml":'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'+cols+sd+'</worksheet>'
+      };
+      /* a plain (stored) zip — every spreadsheet program opens it */
+      var enc=new TextEncoder(), CRC=(function(){ var t=[]; for(var n=0;n<256;n++){ var c=n; for(var k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); t[n]=c>>>0; } return t; })();
+      var crc=function(b){ var c=0xFFFFFFFF; for(var i=0;i<b.length;i++) c=CRC[(c^b[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; };
+      var parts=[], central=[], off=0;
+      var u16=function(v){ return [v&255,(v>>>8)&255]; }, u32=function(v){ return [v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255]; };
+      Object.keys(files).forEach(function(name){ var nb=enc.encode(name), db=enc.encode(files[name]), c=crc(db);
+        var lh=[].concat([0x50,0x4b,3,4],u16(20),u16(0x0800),u16(0),u16(0),u16(0x21),u32(c),u32(db.length),u32(db.length),u16(nb.length),u16(0));
+        parts.push(new Uint8Array(lh), nb, db);
+        central.push(new Uint8Array([].concat([0x50,0x4b,1,2],u16(20),u16(20),u16(0x0800),u16(0),u16(0),u16(0x21),u32(c),u32(db.length),u32(db.length),u16(nb.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(off))), nb);
+        off+=lh.length+nb.length+db.length; });
+      var csize=central.reduce(function(n,x){ return n+x.length; },0);
+      var end=new Uint8Array([].concat([0x50,0x4b,5,6],u16(0),u16(0),u16(Object.keys(files).length),u16(Object.keys(files).length),u32(csize),u32(off),u16(0)));
+      return new Blob(parts.concat(central,[end]),{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    };
+    W.nsqOopCsv=function(){ var L=listForExport(); if(!L.length) return;
+      try{
+        var rows=L.map(function(x){ var vv=venueOf(x.r.venue_id), t=tmin(x.r.start_time);
+          return [fmtDay(x.r.play_day), vv?vv.name:"", isNaN(t)?hhmm(x.r.start_time):{t:"time",v:t/1440}, Number(x.r.court)||x.r.court, x.label, x.a, x.b, x.score]; });
+        var blob=xlsxBlob("Order of Play",["Day","Venue","Time","Court","Division","Pair A","Pair B","Score"],rows,[16,18,8,7,26,34,34,9]);
+        var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="order-of-play-"+D.tour.replace(/[^a-z0-9]+/gi,"-").toLowerCase()+".xlsx";
+        document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500); return;
+      }catch(e){}
+      W.nsqOopCsvPlain(); };
+    W.nsqOopCsvPlain=function(){ var L=listForExport(); if(!L.length) return; var q=function(s){ return '"'+String(s==null?"":s).replace(/"/g,'""')+'"'; };
       var lines=["Day,Venue,Time,Court,Division,Pair A,Pair B,Score"]; L.forEach(function(x){ var vv=venueOf(x.r.venue_id); lines.push([x.r.play_day,vv?vv.name:"",hhmm(x.r.start_time),x.r.court,x.label,x.a,x.b,x.score].map(q).join(",")); });
       var blob=new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"}), a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="order-of-play-"+D.tour.replace(/[^a-z0-9]+/gi,"-").toLowerCase()+".csv"; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500); };
 
