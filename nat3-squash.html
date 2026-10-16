@@ -3634,7 +3634,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q214";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q216";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -21003,8 +21003,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var dayWin=function(day){ var w=(D.days||[]).filter(function(x){ return String(x.play_day)===day; })[0]; return w?{s:tmin(w.start_time), e:w.end_time?tmin(w.end_time):NaN, finish:true}:null; };
     var planOf=function(a){ var arr=a&&a.day_plan; if(typeof arr==="string"){ try{ arr=JSON.parse(arr); }catch(e){ arr=null; } } return Array.isArray(arr)&&arr.length?arr:null; };
     var tokens=function(t){ return String(t||"").split(/[,;\s]+/).map(function(x){ return x.trim().toUpperCase(); }).filter(Boolean); };
+    var UNFIT=[];   /* q215: provisional matches that do not fit their day (courts × hours) */
     var provRows=function(){
-      var out=[], used={};
+      var out=[], used={}; UNFIT=[];
       D.rows.forEach(function(r){ used[r.venue_id+"|"+r.play_day+"|"+tmin(r.start_time)+"|"+r.court]=1; });
       D.allocs.slice().sort(function(a,b){ return String(a.division).localeCompare(String(b.division)); }).forEach(function(a){
         var d=a.division, fxs=Object.keys(D.fx).map(function(k){ return D.fx[k]; }).filter(function(f){ return f.division===d; });
@@ -21039,6 +21040,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
               out.push({prov:true, r:{id:"p"+d+J.label+m, play_day:J.day, venue_id:a.venue_id, start_time:("0"+Math.floor(t/60)).slice(-2)+":"+("0"+(t%60)).slice(-2), court:c, division:d, status:""},
                 a:J.label+" · match "+m+" — pairs to follow", b:"", played:false, score:"", label:divLabel(d)+" · provisional"}); m++; }
             t+=slot; }
+          if(m<=J.n) UNFIT.push({day:J.day, div:d, label:J.label, n:J.n-m+1});   /* q215 */
         });
       });
       return out;
@@ -21069,7 +21071,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var render=function(){
       var b=document.getElementById("nsqOopBody"); if(!b) return;
       var tour=D.tour, rows=D.rows.map(rowView).concat(provRows());   /* q162 */
-      var days=[]; rows.forEach(function(x){ if(days.indexOf(x.r.play_day)<0) days.push(x.r.play_day); }); days.sort();
+      var days=[]; rows.forEach(function(x){ if(days.indexOf(x.r.play_day)<0) days.push(x.r.play_day); }); UNFIT.forEach(function(u){ if(days.indexOf(u.day)<0) days.push(u.day); }); days.sort();
       if(!UI.day || days.indexOf(UI.day)<0){ var t=todayISO(); UI.day=days.filter(function(d){ return d>=t; })[0]||days[days.length-1]||""; }
       var h='<div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#7a6658;margin:14px 0 8px">'+esc(tour)+'</div>';
       /* filters */
@@ -21083,6 +21085,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           + '<input type="search" placeholder="Find a name" value="'+esc(UI.q)+'" oninput="nsqOopQ(this.value)" style="flex:1;padding:9px 10px;border:1.5px solid #c9c4d4;border-radius:8px;font-size:14px;font-family:inherit;min-width:0"></div>';
         h+='<div style="display:flex;gap:8px;margin:0 0 10px">'+btn("\ud83d\udda8 Print","nsqOopPrint()")+btn("\u2b07 Excel","nsqOopCsv()")+'</div>';
       }
+      /* q215 (Andre: "day 4 = rounds 3, 4 — but round 4 never showed"): a day that cannot hold its rounds says so,
+         instead of quietly leaving the rest out */
+      (function(){ var u=UNFIT.filter(function(x){ return x.day===UI.day && (!UI.div||x.div===UI.div); }); if(!u.length) return;
+        h+='<div style="margin:0 0 10px;padding:10px 12px;border:1.5px solid #f1c40f;background:#fff8e8;border-radius:10px;font-size:12.5px;color:#8a6d1a;line-height:1.5">'
+          + u.map(function(x){ return '\u26a0\ufe0f <b>'+esc(divLabel(x.div))+' \u00b7 '+esc(x.label)+'</b>: '+x.n+' match'+(x.n===1?'':'es')+' do'+(x.n===1?'es':'')+' not fit on '+esc(fmtDay(x.day)); }).join('<br>')
+          + '<br><span style="color:#7a6658">More courts, a later finish, or another day for that round \u2014 in the section\u2019s allocation.</span></div>'; })();
       /* the schedule for the day */
       var show=rows.filter(function(x){ return x.r.play_day===UI.day && (!UI.venue||+x.r.venue_id===UI.venue) && (!UI.div||x.r.division===UI.div)
         && (!UI.q || (x.a+" "+x.b).toLowerCase().indexOf(UI.q)>=0); });
@@ -21168,9 +21176,8 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           +(a?'<div style="font-size:12.5px;color:#3b2a1e;margin:3px 0">'+esc(vv?vv.name:"?")+' \u00b7 courts '+a.court_from+'\u2013'+a.court_to+' \u00b7 '+esc(fmtDay(a.play_day))+' '+hhmm(a.start_time)+(a.end_time?' to '+hhmm(a.end_time):'')+' \u00b7 '+a.slot_minutes+' min slots'+(planOf(a)?(' \u00b7 plan: '+planOf(a).map(function(p){ return fmtDay(p.day).replace(/ \d+ \w+$/,"")+' '+p.rounds+((p.start||p.end)?(' ('+(p.start?hhmm(p.start):'')+'\u2013'+(p.end?hhmm(p.end):'')+')'):''); }).join(' \u00b7 ')):'')+(a.last_day&&a.last_day!==a.play_day&&!planOf(a)?' \u00b7 to '+esc(fmtDay(a.last_day))+' \u00b7 '+(a.rounds_per_day||1)+' round'+((a.rounds_per_day||1)!==1?'s':'')+' a day':'')+'</div>':'<div style="font-size:12.5px;color:#b9770e;margin:3px 0">not allocated yet</div>')
           +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+dbtn(a?"Change":"Allocate","nsqOopAllocEdit",d)+(a?dbtn("Generate","nsqOopGenerate",d)+(sch?dbtn("Clear","nsqOopClear",d):'')+dbtn("Remove","nsqOopAllocRemove",d):'')+'</div>'
           +(UI.allocEdit===d?allocForm(d,a):'')+'</div>'; });
-      if(D.allocs.length) h+='<div style="display:flex;gap:8px;margin:10px 0 0">'+btn("Generate all allocated divisions","nsqOopGenerate('')","flex:1;background:#D35400;color:#fff")+'</div>';
       h+='<div id="nsqOopGenMsg" class="sub" style="margin:6px 0 0"></div>';
-      /* breaks */
+      /* breaks — q216: set BEFORE generating; the generate button now follows them */
       h+='<div style="font-weight:800;margin:14px 0 4px">Breaks in the schedule <span style="font-size:11px;color:#888;font-weight:600">a venue\u2019s day: when, how long</span></div>';
       D.breaks.forEach(function(k){ var vv=venueOf(k.venue_id);
         h+='<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0ecf6"><span style="flex:1;font-size:13px"><b>'+esc(k.label||"Break")+'</b> \u00b7 '+esc(vv?vv.name:"?")+' \u00b7 '+esc(fmtDay(k.play_day))+' '+hhmm(k.start_time)+' \u00b7 '+k.minutes+' min</span>'
@@ -21180,6 +21187,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         +'<label style="font-size:12px;color:#7a6658">Day '+inp("nsqOopBDay","","","date","width:100%")+'</label><label style="font-size:12px;color:#7a6658">Break starts '+inp("nsqOopBTime","","","time","width:100%")+'</label>'
         +'<label style="font-size:12px;color:#7a6658">Minutes '+inp("nsqOopBMin","45","45","number","width:100%")+'</label><label style="font-size:12px;color:#7a6658">What it is '+inp("nsqOopBLabel","Lunch","Lunch","text","width:100%")+'</label>'
         +'<div style="grid-column:1/3">'+btn("Add break","nsqOopBreakAdd()","width:100%")+'</div></div>';
+      /* q216: last step — generate, after venues, days, allocation and breaks */
+      if(D.allocs.length) h+='<div style="font-weight:800;margin:16px 0 4px">Generate <span style="font-size:11px;color:#888;font-weight:600">after the allocations and breaks are in</span></div>'
+        +'<div style="display:flex;gap:8px;margin:4px 0 0">'+btn("Generate all allocated divisions","nsqOopGenerateAll()","flex:1;background:#D35400;color:#fff")+'</div>'
+        +'<div id="nsqOopGenAllMsg" class="sub" style="margin:6px 0 0"></div>';
       h+='<p class="sub" style="margin-top:12px">Generate places every unscheduled match of a division on the next free court and slot \u2014 earliest first, no court double-booked, no player on two courts at once, breaks respected. A knockout\u2019s later rounds are placed when their pairs are known: generate again. Tap a match on the schedule above (with the code set) to move it.</p>';
       return h;
     };
@@ -21255,17 +21266,39 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         day_plan:Array.prototype.map.call(document.querySelectorAll("#nsqOopPlanBox input[data-day]"),function(x){ var dd=x.dataset.day;
           var st=document.querySelector('#nsqOopPlanBox input[data-start="'+dd+'"]'), en=document.querySelector('#nsqOopPlanBox input[data-end="'+dd+'"]');
           return {day:dd, rounds:String(x.value||"").trim(), start:(st&&st.value)||"", end:(en&&en.value)||""}; }).filter(function(p){ return p.rounds; })})   /* q164 + q214: each day's own times */
-        .then(function(j){ if(!j.ok){ alert(j.error||"Not saved."); return; } UI.allocEdit=null; draw(true); }); };
+        .then(function(j){ if(!j.ok){ alert(j.error||"Not saved."); return; } UI.allocEdit=null;
+          /* q215 (Andre: "you could redo at any time and it would reschedule"): saving the plan re-plans the section at
+             once — the matches still to play come off and are placed again under the new plan; completed matches keep
+             their place and show with their scores */
+          msg("nsqOopGenMsg","Saved \u2014 placing "+divLabel(d)+"\u2019s matches\u2026");
+          return act({action:"oop_clear",admin_pin:UI.pin,tournament:D.tour,division:d}).then(function(c){
+            if(!c.ok){ draw(true); setTimeout(function(){ msg("nsqOopGenMsg",c.error||"Saved, but the schedule was not redone \u2014 press Generate.",true); },400); return; }
+            return act({action:"oop_generate",admin_pin:UI.pin,tournament:D.tour,division:d}).then(function(g){
+              var t=g.ok?((g.report||[]).map(function(r){ return divLabel(r.division)+": "+r.placed+" placed"+(r.unplaced?", "+r.unplaced+" did not fit (more courts, a later finish, or another day)":"")+(r.waiting?", "+r.waiting+" waiting for earlier rounds":""); }).join(" \u00b7 ")||(g.placed+" placed.")):(g.error||"Saved, but not placed \u2014 press Generate.");
+              draw(true); setTimeout(function(){ msg("nsqOopGenMsg","Saved and re-planned \u2014 "+t, !g.ok); },600); }); });
+        }); };
     W.nsqOopAllocRemove=function(d){ if(!pinOk()) return; if(!confirm("Remove the allocation for "+divLabel(d)+"? Its scheduled matches are removed from the schedule too.")) return;
       act({action:"oop_remove_alloc",admin_pin:UI.pin,tournament:D.tour,division:d}).then(function(j){ if(!j.ok){ alert(j.error||"Not removed."); return; } draw(true); }); };
     W.nsqOopGenerate=function(d){ if(!pinOk()) return; msg("nsqOopGenMsg","Placing the matches\u2026");
       act({action:"oop_generate",admin_pin:UI.pin,tournament:D.tour,division:d||""}).then(function(j){ if(!j.ok){ msg("nsqOopGenMsg",j.error||"Not generated.",true); return; }
         var t=(j.report||[]).map(function(r){ return divLabel(r.division)+": "+r.placed+" placed"+(r.unplaced?", "+r.unplaced+" did not fit (more courts, a later last start, or another day)":"")+(r.waiting?", "+r.waiting+" waiting for earlier rounds":""); }).join(" \u00b7 ");
         draw(true); setTimeout(function(){ msg("nsqOopGenMsg",t||(j.placed+" placed.")); },800); }); };
+    /* q216: generate ALL = re-plan everything allocated: the matches still to play come off and are placed again — so
+       breaks (or days) added after an earlier generate are taken into account. Completed matches keep their place. */
+    W.nsqOopGenerateAll=function(){ if(!pinOk()) return;
+      if(D.rows.length && !confirm("Re-plan every allocated division? Matches still to play are placed again (any you moved by hand go back to the plan). Completed matches stay where they are.")) return;
+      msg("nsqOopGenAllMsg","Placing the matches\u2026");
+      act({action:"oop_clear",admin_pin:UI.pin,tournament:D.tour,division:""}).then(function(c){
+        if(!c.ok){ msg("nsqOopGenAllMsg",c.error||"Not generated.",true); return; }
+        return act({action:"oop_generate",admin_pin:UI.pin,tournament:D.tour,division:""}).then(function(j){
+          if(!j.ok){ msg("nsqOopGenAllMsg",j.error||"Not generated.",true); return; }
+          var t=(j.report||[]).map(function(r){ return divLabel(r.division)+": "+r.placed+" placed"+(r.unplaced?", "+r.unplaced+" did not fit (more courts, a later finish, or another day)":"")+(r.waiting?", "+r.waiting+" waiting for earlier rounds":""); }).join(" \u00b7 ");
+          draw(true); setTimeout(function(){ msg("nsqOopGenAllMsg",t||(j.placed+" placed.")); },800); }); }); };
     W.nsqOopClear=function(d){ if(!pinOk()) return; if(!confirm("Take "+(d?divLabel(d):"every division")+" off the schedule? The draw itself is untouched.")) return;
       act({action:"oop_clear",admin_pin:UI.pin,tournament:D.tour,division:d||""}).then(function(j){ if(!j.ok){ alert(j.error||"Not cleared."); return; } draw(true); }); };
     W.nsqOopBreakAdd=function(){ if(!pinOk()) return; var g=function(id){ return (document.getElementById(id)||{}).value||""; };
-      act({action:"oop_add_break",admin_pin:UI.pin,tournament:D.tour,venue_id:g("nsqOopBVenue"),play_day:g("nsqOopBDay"),start_time:g("nsqOopBTime"),minutes:g("nsqOopBMin"),label:g("nsqOopBLabel")}).then(function(j){ if(!j.ok){ alert(j.error||"Not added."); return; } draw(true); }); };
+      act({action:"oop_add_break",admin_pin:UI.pin,tournament:D.tour,venue_id:g("nsqOopBVenue"),play_day:g("nsqOopBDay"),start_time:g("nsqOopBTime"),minutes:g("nsqOopBMin"),label:g("nsqOopBLabel")}).then(function(j){ if(!j.ok){ alert(j.error||"Not added."); return; } var had=D.rows.length; draw(true);
+        if(had) setTimeout(function(){ msg("nsqOopGenAllMsg","Break added. The schedule already made does not move by itself \u2014 press Generate all allocated divisions to place the matches around it."); },700); }); };   /* q216 */
     W.nsqOopBreakRemove=function(id){ if(!pinOk()) return; act({action:"oop_remove_break",admin_pin:UI.pin,break_id:id}).then(function(j){ if(!j.ok){ alert(j.error||"Not removed."); return; } draw(true); }); };
     W.nsqOopEdit=function(id){ UI.editing=id||null; render(); };
     W.nsqOopMove=function(id){ if(!pinOk()) return; var g=function(k){ return (document.getElementById(k)||{}).value||""; };
