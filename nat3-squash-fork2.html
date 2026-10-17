@@ -3634,7 +3634,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q228-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q229-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -21014,7 +21014,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         rest("plat_squash_oop_breaks?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=*&order=play_day.asc,start_time.asc"),
         rest("plat_squash_order_of_play?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=*&order=play_day.asc,start_time.asc,court.asc"),
         rest("plat_squash_tournament_fixtures?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=id,division,round,round_type,seed_a,seed_b,sets_a,sets_b,band"),
-        rest("plat_squash_tournament_entries?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=category,seed,p1,p2"),
+        rest("plat_squash_tournament_entries?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=category,seed,p1,p2,sub_p1,sub_p2,sub_from_round"),
         rest("plat_squash_oop_days?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=*&order=play_day.asc")   /* q164 */
       ]).then(function(r){
         D={tour:tour,at:Date.now(),venues:r[0]||[],allocs:r[1]||[],breaks:r[2]||[],rows:r[3]||[],fx:{},ents:{},divs:[],days:Array.isArray(r[6])?r[6]:[]};
@@ -21024,8 +21024,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         D.divs=Object.keys(dv); return D; });
     };
     var venueOf=function(id){ return D.venues.filter(function(v){ return +v.id===+id; })[0]||null; };
-    var pairName=function(div,seed){ var e=D.ents[div+"|"+seed]; return e?(e.p1+(e.p2?" & "+e.p2:"")):("Seed "+seed); };
-    var rowView=function(r){ var f=D.fx[r.fixture_id]||{}; var a=(f.seed_a?"["+f.seed_a+"] ":"")+pairName(f.division||r.division,f.seed_a), b=(f.seed_b?"["+f.seed_b+"] ":"")+pairName(f.division||r.division,f.seed_b);   /* q162: the seed in front of each pair */
+    /* q229 (Andre: "I substituted Chris Moody for Paul Goss — will the order show it?"): a substitution shows from its
+       round on, exactly as the draw shows it (round >= sub_from_round) — names, My page, the rest rule */
+    var withSub=function(e,round){ if(!e) return null; var on=e.sub_from_round!=null && round!=null && Number(round)>=Number(e.sub_from_round) && (e.sub_p1||e.sub_p2);
+      return on?{p1:e.sub_p1||e.p1, p2:(e.p2!=null?(e.sub_p2||e.p2):e.p2)}:{p1:e.p1, p2:e.p2}; };
+    var pairName=function(div,seed,round){ var e=withSub(D.ents[div+"|"+seed],round); return e?(e.p1+(e.p2?" & "+e.p2:"")):("Seed "+seed); };
+    var rowView=function(r){ var f=D.fx[r.fixture_id]||{}; var a=(f.seed_a?"["+f.seed_a+"] ":"")+pairName(f.division||r.division,f.seed_a,f.round), b=(f.seed_b?"["+f.seed_b+"] ":"")+pairName(f.division||r.division,f.seed_b,f.round);   /* q162: the seed in front of each pair */
       var played=f.sets_a!=null, score=played?(f.sets_a+"-"+f.sets_b):""; return {r:r,f:f,a:a,b:b,played:played,score:score,label:divLabel(r.division)}; };
 
     /* ---------- q162: PROVISIONAL SLOTS (Andre) — a Swiss section's later rounds have no pairings until the results are in,
@@ -21129,15 +21133,15 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       Object.keys(D.fx).forEach(function(k){ var f=D.fx[k]; if(onS[Number(f.id)]) return; if(!(Number(f.seed_a)>0 && Number(f.seed_b)>0)) return; if(f.sets_a!=null) return;
         var a=allocOf(f.division);
         UNPLACED.push({div:f.division, day:a?serverDay(a,f):"", venue_id:a?a.venue_id:0, f:f, label:roundLabel(f), noAlloc:!a,
-          a:"["+f.seed_a+"] "+pairName(f.division,f.seed_a), b:"["+f.seed_b+"] "+pairName(f.division,f.seed_b)}); });
+          a:"["+f.seed_a+"] "+pairName(f.division,f.seed_a,f.round), b:"["+f.seed_b+"] "+pairName(f.division,f.seed_b,f.round)}); });
       /* 1b. what Generate WOULD do with them — the server's own rules: the section's start grid, the day's finish,
          breaks, a free court, and neither pair already on court then. Placed here as if Generate had been pressed. */
-      var pBusy={}, nm=function(f){ var o2=[]; [f.seed_a,f.seed_b].forEach(function(sd){ var e=D.ents[f.division+"|"+sd]; if(e){ if(e.p1) o2.push(String(e.p1).trim().toLowerCase()); if(e.p2) o2.push(String(e.p2).trim().toLowerCase()); } }); return o2; };
+      var pBusy={}, nm=function(f){ var o2=[]; [f.seed_a,f.seed_b].forEach(function(sd){ var e=withSub(D.ents[f.division+"|"+sd],f.round); if(e){ if(e.p1) o2.push(String(e.p1).trim().toLowerCase()); if(e.p2) o2.push(String(e.p2).trim().toLowerCase()); } }); return o2; };
       var pAdd=function(names,day,s0,e0){ names.forEach(function(n){ (pBusy[n+"|"+day]=pBusy[n+"|"+day]||[]).push([s0,e0]); }); };
       D.rows.forEach(function(r){ var f=D.fx[r.fixture_id], s0=tmin(r.start_time); if(f && !isNaN(s0)) pAdd(nm(f), r.play_day, s0, s0+rowMin(r)); });
       /* q227: a player already on the schedule twice in a day with no rest (made before the rule) is listed */
       NOREST=[]; (function(){ var who={}; D.rows.forEach(function(r){ var f=D.fx[r.fixture_id], s0=tmin(r.start_time); if(!f||isNaN(s0)) return;
-          [f.seed_a,f.seed_b].forEach(function(sd){ var e=D.ents[f.division+"|"+sd]; if(!e) return; [e.p1,e.p2].forEach(function(n){ if(!n) return; var k=String(n).trim().toLowerCase()+"|"+r.play_day; (who[k]=who[k]||{name:String(n).trim(), day:r.play_day, m:[]}).m.push({s:s0, e:s0+rowMin(r), div:f.division}); }); }); });
+          [f.seed_a,f.seed_b].forEach(function(sd){ var e=withSub(D.ents[f.division+"|"+sd],f.round); if(!e) return; [e.p1,e.p2].forEach(function(n){ if(!n) return; var k=String(n).trim().toLowerCase()+"|"+r.play_day; (who[k]=who[k]||{name:String(n).trim(), day:r.play_day, m:[]}).m.push({s:s0, e:s0+rowMin(r), div:f.division}); }); }); });
         Object.keys(who).forEach(function(k){ var w=who[k], m=w.m.sort(function(x,y){ return x.s-y.s; });
           for(var i=1;i<m.length;i++){ if(m[i].s-m[i-1].e<REST){ NOREST.push({name:w.name, day:w.day, a:m[i-1], b:m[i]}); } } }); })();
       var tied=function(u){ return nm(u.f).filter(function(n){ return (pBusy[n+"|"+u.day]||[]).length>0; }).length; };   /* q227: players already on that day go first, as the server does */
@@ -21317,8 +21321,8 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         if(!real.length) return;
         var divs=[]; real.forEach(function(x){ if(divs.indexOf(x.r.division)<0) divs.push(x.r.division); }); divs.sort();
         var blocks=divs.map(function(d){
-          var on={}; real.forEach(function(x){ if(x.r.division!==d) return; var f=x.f||{};
-            if(f.seed_a) on[f.seed_a]=1; if(f.seed_b) on[f.seed_b]=1; });
+          var on={}, rnd=null; real.forEach(function(x){ if(x.r.division!==d) return; var f=x.f||{};
+            if(f.seed_a) on[f.seed_a]=1; if(f.seed_b) on[f.seed_b]=1; if(f.round!=null && (rnd==null || Number(f.round)>rnd)) rnd=Number(f.round); });
           var off=Object.keys(D.ents).filter(function(k){ return k.indexOf(d+"|")===0; })
             .map(function(k){ return {seed:Number(k.split("|")[1]), e:D.ents[k]}; })
             .filter(function(x){ return x.seed && !on[x.seed]; })
@@ -21326,7 +21330,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           if(!off.length) return "";
           return '<div style="margin:10px 0 2px;font-size:12px;font-weight:800;color:#7a6658">'+esc(divLabel(d))+' \u00b7 '+off.length+' pair'+(off.length===1?'':'s')+' off</div>'
             + off.map(function(x){ return '<div style="padding:5px 10px;border-bottom:1px solid #f4efe9;font-size:13.5px;color:#3b2a1e">'
-                +'<span style="color:#D35400;font-weight:800">['+x.seed+']</span> '+esc(x.e.p1+(x.e.p2?(" & "+x.e.p2):""))+'</div>'; }).join("");
+                +'<span style="color:#D35400;font-weight:800">['+x.seed+']</span> '+esc((function(w){ return w.p1+(w.p2?(" & "+w.p2):""); })(withSub(x.e,rnd)))+'</div>'; }).join("");
         }).join("");
         if(!blocks) return;
         h+='<div class="card"><h2>Not playing on '+esc(fmtDay(UI.day))+'</h2>'
@@ -21623,14 +21627,14 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         rest("plat_squash_order_of_play?club_id=in.("+boards.join(",")+")&play_day=gte."+today+"&select=*&order=play_day.asc,start_time.asc&limit=2000").then(function(rows){
           rows=rows||[]; if(!rows.length){ MINE.at=Date.now(); MINE.html=""; MINE.busy=false; return; }
           var ids=rows.map(function(r){ return r.fixture_id; });
-          return Promise.all([rest("plat_squash_tournament_fixtures?id=in.("+ids.join(",")+")&select=id,club_id,tournament,division,seed_a,seed_b,sets_a,sets_b"),
+          return Promise.all([rest("plat_squash_tournament_fixtures?id=in.("+ids.join(",")+")&select=id,club_id,tournament,division,round,seed_a,seed_b,sets_a,sets_b"),
                               rest("plat_squash_venues?pool_id=eq."+(W.PLAT.pool||0)+"&select=id,name")]).then(function(r){
             var fx={}; (r[0]||[]).forEach(function(f){ fx[f.id]=f; }); var vn={}; (r[1]||[]).forEach(function(v){ vn[v.id]=v.name; });
             var tours={}; Object.keys(fx).forEach(function(k){ tours[fx[k].club_id+"|"+fx[k].tournament]=fx[k]; });
-            return Promise.all(Object.keys(tours).map(function(k){ var f=tours[k]; return rest("plat_squash_tournament_entries?club_id=eq."+f.club_id+"&tournament=eq."+ENC(f.tournament)+"&select=category,seed,p1,p2"); })).then(function(el){
+            return Promise.all(Object.keys(tours).map(function(k){ var f=tours[k]; return rest("plat_squash_tournament_entries?club_id=eq."+f.club_id+"&tournament=eq."+ENC(f.tournament)+"&select=category,seed,p1,p2,sub_p1,sub_p2,sub_from_round"); })).then(function(el){
               var ents={}; var ks=Object.keys(tours); el.forEach(function(list,i){ (list||[]).forEach(function(e){ ents[ks[i]+"|"+e.category+"|"+e.seed]=e; }); });
               var mine=[]; rows.forEach(function(row){ var f=fx[row.fixture_id]; if(!f) return; var k=f.club_id+"|"+f.tournament;
-                var A=ents[k+"|"+f.division+"|"+f.seed_a], B=ents[k+"|"+f.division+"|"+f.seed_b]; if(!A||!B) return;
+                var A=withSub(ents[k+"|"+f.division+"|"+f.seed_a],f.round), B=withSub(ents[k+"|"+f.division+"|"+f.seed_b],f.round); if(!A||!B) return;
                 var inA=[A.p1,A.p2].some(function(n){ return String(n||"").toLowerCase()===low; }), inB=[B.p1,B.p2].some(function(n){ return String(n||"").toLowerCase()===low; });
                 if(!inA && !inB) return; var us=inA?A:B, them=inA?B:A;
                 mine.push({d:row.play_day,t:hhmm(row.start_time),v:vn[row.venue_id]||"",c:row.court,tour:f.tournament,div:divLabel(f.division),partner:[us.p1,us.p2].filter(function(n){ return n && String(n).toLowerCase()!==low; })[0]||"",them:them.p1+(them.p2?" & "+them.p2:""),played:f.sets_a!=null,score:f.sets_a!=null?(inA?(f.sets_a+"-"+f.sets_b):(f.sets_b+"-"+f.sets_a)):"",   /* q211: from HIS side, not the fixture's first team */
@@ -22263,6 +22267,39 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       +"#etBody .nsqSwissSw .ac-btn,#etBody .nsqDivGen .ac-btn-ghost,#etBody .nsqDivGen .ac-btn[onclick^=\"etGroupSet\"],#etBody .nsqDivGen .ac-btn[onclick^=\"etRRFinishSet\"]{font-size:13px!important;font-weight:400!important;padding:9px 12px!important;line-height:1.4!important}"
       +"#etBody .nsqSwissSw .ac-btn b,#etBody .nsqDivGen .ac-btn b{font-weight:700}";
     document.head.appendChild(st); }catch(e){} })();
+  /* q229 (Andre: "what happens if someone types a name not in the register, or spells it wrong?"). A substitute (one
+     player or a whole team) must be a person ON THE REGISTER: the name typed is looked up before anything is saved.
+     Capitals or spaces differ → the register's spelling is used. Not found → nothing is saved, and the message names the
+     closest register names to choose from. Otherwise a misspelt name would be saved as typed, shown on the draw and the
+     Order of Play, and its results would not reach the right player's rating. */
+  (function(){ var W=window, f0=W.fetch;
+    var norm=function(x){ return String(x||"").replace(/\s+/g," ").trim(); };
+    var rq=function(q){ return f0.call(W, SB_URL+"/rest/v1/"+q,{headers:{apikey:SB_ANON,Authorization:"Bearer "+SB_ANON}}).then(function(r){ return r.ok?r.json():[]; }).catch(function(){ return null; }); };
+    var pool=function(){ return Number(W.PLAT&&W.PLAT.pool||0); };
+    var esc=function(x){ return String(x).replace(/[%_*,()]/g," ").trim(); };
+    var look=function(name){ var n=norm(name), P=pool(); if(!n||!P) return Promise.resolve({ok:true, name:n});
+      return rq("plat_individuals?pool_id=eq."+P+"&full_name=ilike."+encodeURIComponent(esc(n))+"&select=full_name&limit=5").then(function(rows){
+        if(rows===null) return {ok:false, why:"Could not reach the register to check “"+n+"” — check the connection and try again."};
+        var hit=(rows||[]).filter(function(r){ return norm(r.full_name).toLowerCase()===n.toLowerCase(); })[0];
+        if(hit) return {ok:true, name:hit.full_name};
+        var w=n.split(" "), last=w[w.length-1], first=w[0];
+        return Promise.all([rq("plat_individuals?pool_id=eq."+P+"&full_name=ilike.*"+encodeURIComponent(esc(last))+"*&select=full_name&limit=6"),
+                            rq("plat_individuals?pool_id=eq."+P+"&full_name=ilike."+encodeURIComponent(esc(first))+"*&select=full_name&limit=6")]).then(function(rr){
+          var sug=[]; (rr[0]||[]).concat(rr[1]||[]).forEach(function(r){ if(sug.indexOf(r.full_name)<0) sug.push(r.full_name); });
+          return {ok:false, why:"“"+n+"” is not on the register"+(sug.length?(". Did you mean: "+sug.slice(0,6).join(", ")+"?"):".")+" Type the name exactly as it is on the register (or add the player to the register first). Nothing was saved."}; }); }); };
+    W.fetch=function(u,init){ var url=String(u&&u.url?u.url:u||"");
+      if(!/\/functions\/v1\/(tournament|plat_tournament_squash)(\?|$)/.test(url) || !init || typeof init.body!=="string") return f0.apply(this,arguments);
+      var body; try{ body=JSON.parse(init.body); }catch(e){ return f0.apply(this,arguments); }
+      if(!body || (body.action!=="set_substitute" && body.action!=="replace_entry_team")) return f0.apply(this,arguments);
+      var keys=(body.action==="set_substitute")?["sub_p1","sub_p2"]:["p1","p2"], self=this, args=arguments;
+      var todo=keys.filter(function(k){ return body[k]!=null && norm(body[k]); });
+      return Promise.all(todo.map(function(k){ return look(body[k]); })).then(function(res){
+        var bad=res.filter(function(r){ return !r.ok; })[0];
+        if(bad) return new Response(JSON.stringify({ok:false, error:bad.why}),{status:400,headers:{"Content-Type":"application/json"}});
+        todo.forEach(function(k,i){ body[k]=res[i].name; });
+        var init2=Object.assign({},init,{body:JSON.stringify(body)});
+        return f0.call(self, u, init2); }); };
+  })();
   /* q160 (Andre): the tournament server refuses a wrong admin code with "Admin PIN required to generate the draw." — for EVERY
      action (move a pair, seeds, entry). Say what it means, and forget the refused code so the next tap asks again. */
   (function(){ var W=window, f0=W.fetch;
