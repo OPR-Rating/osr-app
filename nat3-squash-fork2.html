@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script>window.__nsqNameHit=function(q,name){ q=String(q==null?"":q).trim().toLowerCase(); if(!q) return true; var n=String(name==null?"":name).toLowerCase(); if(n.indexOf(q)===0) return true; return n.split(/[\s&\/\-\.,()]+/).some(function(w){ return w && w.indexOf(q)===0; }); };</script>
+<head><script>window.__nsqNameHit=function(q,name){ q=String(q==null?"":q).trim().toLowerCase(); if(!q) return true; var n=String(name==null?"":name).toLowerCase(); if(n.indexOf(q)===0) return true; return n.split(/[\s&\/\-\.,()]+/).some(function(w){ return w && w.indexOf(q)===0; }); };</script><script>window.__nsqNameRank=function(q,name){ q=String(q==null?"":q).trim().toLowerCase(); var n=String(name==null?"":name).trim().toLowerCase(); if(!q) return 0; if(n.indexOf(q)===0) return 0; return window.__nsqNameHit(q,name)?1:2; };window.__nsqRankBy=function(q,arr,get){ q=String(q==null?"":q).trim().toLowerCase(); if(!q||!arr) return arr; get=get||function(x){ return x; }; return arr.map(function(x,i){ return {x:x,i:i,r:window.__nsqNameRank(q,get(x))}; }).sort(function(a,b){ return (a.r-b.r)||(a.i-b.i); }).map(function(o){ return o.x; }); };</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>OSR</title>
@@ -2108,7 +2108,7 @@ function mkPick(slot){
 }
 function mkFilterPick(){
   const q=(document.getElementById('mkSearch').value||'').toLowerCase().trim();
-  const list=MK._pool.filter(n=>window.__nsqNameHit(q,n));
+  const list=window.__nsqRankBy(q,MK._pool.filter(n=>window.__nsqNameHit(q,n)));
   document.getElementById('mkPlist').innerHTML = list.map(n=>{ const dis=MK._taken.includes(n); return `<button class="mk-popt" style="${dis?'opacity:.35;':''}" ${dis?'':`onclick="mkPicked('${n.replace(/'/g,"\\'")}')"`}>${n}${dis?' · in match':''}</button>`; }).join('');
 }
 function mkPicked(name){ MK.players[MK.pickSlot]=name; mkCloseOv(); mkRenderSetup(); }
@@ -3634,7 +3634,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q229-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q230-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -4640,7 +4640,7 @@ function renderPlayerList(players) {
 function filterPlayers() {
   const q=document.getElementById('playerSearch').value.toLowerCase().trim();
   const inds=window._profileIndivs||[];
-  renderIndivList(q ? inds.filter(p=>window.__nsqNameHit(q,p.full_name)) : inds);
+  renderIndivList(q ? window.__nsqRankBy(q,inds.filter(p=>window.__nsqNameHit(q,p.full_name)),function(p){ return p.full_name; }) : inds);
 }
 
 function profileBack(){
@@ -6361,7 +6361,7 @@ async function openPlayerModal(fieldId, label) {
 
 function filterModalPlayers() {
   const q = document.getElementById('playerModalSearch').value.toLowerCase().trim();
-  const filtered = q ? _currentModalPlayers.filter(p => window.__nsqNameHit(q,p)) : _currentModalPlayers;
+  const filtered = q ? window.__nsqRankBy(q,_currentModalPlayers.filter(p => window.__nsqNameHit(q,p))) : _currentModalPlayers;
   renderModalList(filtered);
 }
 
@@ -12683,7 +12683,7 @@ W.mePair=function(name,col){
       var pid=pp?Number(pp.id||pp.individual_id||0):0;
       if(pid && taken[pid]) return false;
       return !v || window.__nsqNameHit(v,n);
-    });   /* n151: every name — the list stopped at 40, so a register of 146 ran out at F */
+    }); names=window.__nsqRankBy(v,names);   /* q230 · n151: every name — the list stopped at 40, so a register of 146 ran out at F */
     hits.innerHTML=names.map(function(n){
       var p=(W.__mePeopleFull||[]).filter(function(x){ return x.full_name===n; })[0];
       var pid=p?Number(p.id||p.individual_id||0):0;
@@ -13532,7 +13532,7 @@ W.mePair=function(name,col){
       all.filter(function(x){ return x.gender===g && x.current_rating!=null; })
          .slice().sort(function(a,b){ return b.current_rating-a.current_rating; })
          .forEach(function(x,i){ rank[x.full_name]=i+1; }); });
-    var rows=all.filter(function(p){ return !v || window.__nsqNameHit(v,p.full_name); });
+    var rows=window.__nsqRankBy(v,all.filter(function(p){ return !v || window.__nsqNameHit(v,p.full_name); }),function(p){ return p.full_name; });
     var box=document.getElementById("recNames"), cnt=document.getElementById("recCount");
     if(cnt) cnt.textContent=rows.length;
     if(!box) return;
@@ -13546,7 +13546,8 @@ W.mePair=function(name,col){
       var rk=rank[p.full_name], rkStr=(rk!=null)?("("+rk+")"):"\u2014";
       /* n194: the group pill under a name takes the readable ink, the same colour it wears on a match row.
          It was using the club's raw colour, so a pale group read as a faded pill here and a solid one there. */
-      var boards=(p.boards||[]).map(function(id){ var c=CL[id]||{}; var col=inkSafe(c.colour||clubPal(id)[0]);
+      var _cs=(W.PLAT&&W.PLAT.clubs)||[], _here=Number(W.PLAT&&W.PLAT.cid||0), _me=_cs.filter(function(c){ return +c.id===_here; })[0]||{}, _par=_cs.filter(function(c){ return +c.id===+_me.parent_id; })[0]||{}, _club=(_par.parent_id?Number(_par.id):-1);   /* on a division: its club too */
+      var boards=(p.boards||[]).filter(function(id){ return +id!==_here && +id!==_club; }).map(function(id){ var c=CL[id]||{}; var col=inkSafe(c.colour||clubPal(id)[0]);
         return '<span style="display:inline-block;background:'+col+';color:#fff;border-radius:99px;padding:1px 7px;font-size:9.5px;font-weight:800;margin:2px 4px 0 0">'+esc(c.name||nhBoardName(id)||"")+'</span>'; }).join("");
       var who=String(p.full_name).replace(/'/g,"\\'");
       return '<button data-plat-keep="1" onclick="window.nhOpenProfile(\''+who+'\')" style="display:flex;width:100%;align-items:center;gap:10px;'
@@ -14863,7 +14864,7 @@ W.nhOpenPair=function(name){
     }catch(e){}
     var b=document.getElementById("platRegBody"); if(!b) return;
     var q=(REG.q||"").toLowerCase();
-    var rows=REG.players.filter(function(p){ return !q || window.__nsqNameHit(q,p.full_name); });
+    var rows=window.__nsqRankBy(q,REG.players.filter(function(p){ return !q || window.__nsqNameHit(q,p.full_name); }),function(p){ return p.full_name; });
     /* n72: on a CLUB'S OWN ledger the list is that club's people, even before a code is typed. The whole
        register belongs on the register's own ledger — which is where the note below appears instead. */
     if(W.PLAT.nat && REG.role!=="pool" && (W.PLAT.natIds||[]).length){
@@ -16282,7 +16283,7 @@ W.nhOpenPair=function(name){
     SESS.members.filter(function(m){
       if(want && (m.gender||"").toUpperCase().charAt(0)!==want && !SESS.picked[m.full_name]) return false;
       if(pool==="regulars" && !SESS.regulars[m.full_name] && !SESS.picked[m.full_name]) return false;
-      return !q||m.full_name.toLowerCase().split(/\s+/).some(function(w){ return w.indexOf(q)===0; }); }).forEach(function(m){
+      return !q||m.full_name.toLowerCase().split(/\s+/).some(function(w){ return w.indexOf(q)===0; }); }).sort(function(a,b){ return window.__nsqNameRank(q,a.full_name)-window.__nsqNameRank(q,b.full_name); }).forEach(function(m){
       var on=!!SESS.picked[m.full_name], r=SESS.ratings[m.full_name];
       h+='<label style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid #f0ecf4;cursor:pointer">'
         +'<input type="checkbox" '+(on?'checked':'')+' onchange="window.platSessPick(\''+esc(m.full_name).replace(/'/g,"\\'")+'\',this.checked)" style="width:18px;height:18px">'
@@ -19249,7 +19250,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       }).catch(function(){ o.querySelector(".hd div:last-child").textContent="Could not load \u2014 try again."; });
     };
     W.nsqIndFilter=function(){ var v=String((document.getElementById("nsqIndFind")||{}).value||"").trim().toLowerCase();
-      Array.prototype.forEach.call(document.querySelectorAll("#nsq .nsqIndRow"),function(a){ a.style.display=(!v||a.getAttribute("data-n").indexOf(v)>=0)?"flex":"none"; }); };
+      var rows=Array.prototype.slice.call(document.querySelectorAll("#nsq .nsqIndRow"));   /* q230: start of a word, first names first */
+      rows.forEach(function(a,i){ if(a.dataset.ord==null) a.dataset.ord=i; a.style.display=(!v||W.__nsqNameHit(v,a.getAttribute("data-n")))?"flex":"none"; });
+      rows.slice().sort(function(a,b){ var ra=v?W.__nsqNameRank(v,a.getAttribute("data-n")):0, rb=v?W.__nsqNameRank(v,b.getAttribute("data-n")):0; return (ra-rb)||(+a.dataset.ord-+b.dataset.ord); })
+        .forEach(function(a){ if(a.parentNode) a.parentNode.appendChild(a); }); };
     /* q055: A TABLE ASKED FOR BEFORE THE APP WAS READY IS LOADED AGAIN ONCE IT IS. On a slow start a tap on Men's Pairs
        came before the register had loaded: nothing was asked, nothing retried — an empty table until a refresh. The last
        table asked for is remembered; while it is on screen and still empty, it is loaded again once the register is in. */
@@ -21285,7 +21289,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       h+=checkHtml();
       /* the schedule for the day */
       var show=rows.filter(function(x){ return x.r.play_day===UI.day && (!UI.venue||+x.r.venue_id===UI.venue) && (!UI.div||x.r.division===UI.div)
-        && (!UI.q || (x.a+" "+x.b).toLowerCase().indexOf(UI.q)>=0); });
+        && (!UI.q || (W.__nsqNameHit?W.__nsqNameHit(UI.q, String(x.a+" & "+x.b).replace(/\[\d+\]/g," ")):(x.a+" "+x.b).toLowerCase().indexOf(UI.q)>=0)); });   /* q230 */
       if(!rows.length){
         h+='<div class="card"><h2>Nothing scheduled yet</h2><p class="sub">Once the draws are generated, the organiser allocates each division a venue, courts, a day and a start time below, and the system fills the courts.</p></div>';
       } else if(!show.length){
@@ -23366,11 +23370,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var here=mine(), q=ST.q.trim().toLowerCase();
       var rows=ROSTER.filter(function(p){
         if(ST.scope==="here" && here.indexOf(p.club)<0) return false;
-        if(q && p.name.toLowerCase().indexOf(q)<0) return false;
+        if(q && !W.__nsqNameHit(q,p.name)) return false;   /* q230: the start of a word */
         if(p.name===ST.other) return false;                       /* already this team's other player */
         if(ST.used && ST.used[p.name.toLowerCase()]) return false; /* already in this division */
         return true;
       });
+      if(q && W.__nsqRankBy) rows=W.__nsqRankBy(q,rows,function(p){ return p.name; });   /* q230: first names first */
       /* the division's own rule, when we can tell */
       var wantM=/^men|men's|men's singles/i.test(ST.cat), wantF=/ladies|women/i.test(ST.cat);
       var fit=[], wrong=[], unknown=[];
