@@ -3634,7 +3634,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q235-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q238-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17543,6 +17543,7 @@ W.nhOpenPair=function(name){
   function nhTourBar(){
     var act=nhTourContent(); if(!act) return;
     var _st0=nhTabStrip(act), _scope=(_st0 && _st0.closest && _st0.closest("#tournamentSheetContent, #nsqSheetOld"))||act;   /* fork 2 */
+    if(_scope!==act) Array.prototype.forEach.call(act.querySelectorAll(".nhTourBar"),function(x){ if(!(x.closest && x.closest("#tournamentSheetContent, #nsqSheetOld"))) x.remove(); });   /* q236 fork 2: a row put in before the tabs existed (at the top) is not left behind as a second row */
     var have=_scope.querySelector(".nhTourBar");
     if(have){ var st=nhTabStrip(act); if(st && st.parentNode && have.previousElementSibling!==st) st.parentNode.insertBefore(have, st.nextSibling); return; }   /* settle under the tabs once they exist */
     var bar=document.createElement("div"); bar.className="nhTourBar"; bar.setAttribute("data-plat-keep","1");
@@ -21101,8 +21102,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var st=!isNaN(ps)?ps:((w&&!isNaN(w.s))?w.s:tmin(a.start_time)), fin=!isNaN(pe)?pe:((w&&!isNaN(w.e))?w.e:NaN);
       var last=(isNaN(fin) && a.end_time)?tmin(a.end_time):NaN;
       return {s:st, fin:fin, last:last}; };
-    var fitsWin=function(w,t,slot){ if(!isNaN(w.fin)) return t+slot<=w.fin; if(!isNaN(w.last)) return t<w.last; return true; };
-    var winEnd=function(w,slot){ return !isNaN(w.fin)?w.fin:(!isNaN(w.last)?(w.last-1+slot):NaN); };
+    /* q237 (Andre: "Last start 21:00" lost the 21:00 match on every court): the last start itself is allowed, as the server does */
+    var fitsWin=function(w,t,slot){ if(!isNaN(w.fin)) return t+slot<=w.fin; if(!isNaN(w.last)) return t<=w.last; return true; };
+    var winEnd=function(w,slot){ return !isNaN(w.fin)?w.fin:(!isNaN(w.last)?(w.last+slot):NaN); };
     /* the server's start times: the section's grid from the day's start, re-anchored after every break */
     var gridOf=function(a,day){ var w=winOf(a,day), slot=Number(a.slot_minutes||60)||60, brk=brkOf(a.venue_id,day), out=[];
       if(!isNaN(w.s)){ var hz=w.s+16*60, t; for(t=w.s; t<hz; t+=slot) out.push(t); brk.forEach(function(b){ for(var u=b[1]; u<hz; u+=slot) out.push(u); }); }
@@ -21204,21 +21206,53 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         if(plan){
           var koRounds={}; fxs.forEach(function(f){ if(Number(f.round)>=90) koRounds[Number(f.round)]=1; });
           plan.forEach(function(p){ tokens(p.rounds).forEach(function(t){ var x=t.match(/^(\d+)([AB])?$/);
-            if(x){ var r=+x[1]; if(isRR || r<=have) return; var n=x[2]?(x[2]==="A"?Math.ceil(half/2):Math.floor(half/2)):half; jobs.push({day:p.day,label:"Round "+r+(x[2]?(x[2]==="A"?" (first half)":" (second half)"):""),n:n}); return; }
+            if(x){ var r=+x[1]; if(isRR || r<=have) return; var n=x[2]?(x[2]==="A"?Math.ceil(half/2):Math.floor(half/2)):half; jobs.push({day:p.day,label:"Round "+r+(x[2]?(x[2]==="A"?" (first half)":" (second half)"):""),n:n, r:r, off:(x[2]==="B"?Math.ceil(half/2):0)}); return; }
             if(/^(SF|S|SEMI|SEMIS|P1)$/.test(t) && !hasKO) jobs.push({day:p.day,label:"Semi-final",n:2});
             else if(/^(F|FINAL|FINALS|P2)$/.test(t) && Object.keys(koRounds).length<2) jobs.push({day:p.day,label:"Final",n:1}); }); });
         } else {
           if(isRR || hasKO) return;
           var planned=Math.ceil(Math.log(N)/Math.LN2), rpd=Math.max(1,Number(a.rounds_per_day||1)), first=String(a.play_day), last=a.last_day?String(a.last_day):first;
-          for(var r=have+1; r<=planned; r++){ var dd=addDays(first, Math.floor((r-1)/rpd)); if(dd>last) dd=last; jobs.push({day:dd,label:"Round "+r,n:half}); }
+          for(var r=have+1; r<=planned; r++){ var dd=addDays(first, Math.floor((r-1)/rpd)); if(dd>last) dd=last; jobs.push({day:dd,label:"Round "+r,n:half, r:r, off:0}); }
         }
+        /* q238 (Andre: "Round 2 · match 3 means nothing — I want to read: if I win tonight, my next match is …"). A round
+           still to be drawn is labelled with WHO plays in it, as far as the format fixes that in advance:
+             · placement draw — fixed by the draw: round 2 is the round-1 winners for places 1–8 (1 v 8, 2 v 7 …) and the
+               losers for 9–16; round 3 is won-won 1 v 4, won-lost 5 v 8 …; the last round is for 1st/2nd, 3rd/4th …
+             · true Swiss — teams on the same record: round 2 the round-1 winners, then the losers; later rounds by wins
+           Banded Swiss and anything else keep the plain label. */
+        var fmtPl=fxs.some(function(f){ return f.round_type==="place"; }) && (N&(N-1))===0;
+        var fmtSw=!fmtPl && fxs.some(function(f){ return f.round_type==="swiss"; }) && !fxs.some(function(f){ return f.round_type==="fixed"; });
+        var ordN=function(k){ var t=k%100; return k+((t>=11&&t<=13)?"th":(["th","st","nd","rd"][k%10]||"th")); };
+        var whoOf=function(J, m){
+          if(J.r==null || J.r<2) return "";
+          var gi=(J.off||0)+m, done=J.r-1;
+          if(fmtPl){
+            var B=N/Math.pow(2,done); if(B<2) return ""; var per=B/2, blk=Math.floor((gi-1)/per), i=(gi-1)%per, st=blk*B+1;
+            var path=[]; for(var q=done-1;q>=0;q--) path.push(((blk>>q)&1)?"lost":"won");
+            var who=(done===1)?(blk===0?"round-1 winners":"round-1 losers"):path.join(", ");
+            return who+" · "+(B===2?("for "+ordN(st)+"/"+ordN(st+1)+" place"):((st+i)+" v "+(st+B-1-i)));
+          }
+          if(fmtSw){
+            /* the standings order after done rounds: C(done,k)·N/2^done teams on k wins, most wins first; match gi = the
+               (2gi-1)th and (2gi)th teams in it */
+            var C=function(n,k){ var c=1; for(var z=1;z<=k;z++) c=c*(n-z+1)/z; return c; };
+            var winsAt=function(pos){ var acc=0; for(var k=done;k>=0;k--){ acc+=C(done,k)*N/Math.pow(2,done); if(pos<=acc) return k; } return 0; };
+            if(N%Math.pow(2,done)!==0) return "";
+            var w1=winsAt(2*gi-1), w2=winsAt(2*gi);
+            if(done===1) return (w1===w2)?(w1?"round-1 winners":"round-1 losers"):"a round-1 winner v a round-1 loser";
+            var wt=function(k){ return k+" win"+(k===1?"":"s"); };
+            return (w1===w2)?("teams on "+wt(w1)):(wt(w1)+" v "+wt(w2));
+          }
+          return "";
+        };
+        var labOf=function(J, m){ var w=whoOf(J,m); return J.label+(w?(" · "+w):(" · match "+m))+" — pairs to follow"; };
         jobs.forEach(function(J){
           var G=gridOf(a,J.day), slot=G.slot, nb=divEnd[d+"|"+J.day]; if(nb!=null) nb+=REST;   /* after this section's previous round that day, and the players' rest (q227) */
           var m=1;
           (reserve(a.venue_id,J.day)[d]||[]).forEach(function(r){ if(m>J.n) return; if(nb!=null && r.s<nb) return; if(!freeC(a.venue_id,J.day,r.c,r.s,r.e)) return;   /* q228: its own slots first */
             addB(a.venue_id,J.day,r.c,r.s,r.e,d);
             out.push({prov:true, r:{id:"p"+d+J.label+m, play_day:J.day, venue_id:a.venue_id, start_time:("0"+Math.floor(r.s/60)).slice(-2)+":"+("0"+(r.s%60)).slice(-2), court:r.c, division:d, status:"", minutes:slot},
-              a:J.label+" · match "+m+" — pairs to follow", b:"", played:false, score:"", label:divLabel(d)+" · provisional"}); m++; });
+              a:labOf(J,m), b:"", played:false, score:"", label:divLabel(d)+" · provisional"}); m++; });
           for(var i=0;i<G.cand.length && m<=J.n;i++){ var t=G.cand[i];
             if(!fitsWin(G.w,t,slot)) break;
             if(nb!=null && t<nb) continue;
@@ -21227,7 +21261,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
               if(!freeC(a.venue_id,J.day,c,t,t+slot)) continue;
               addB(a.venue_id,J.day,c,t,t+slot,d);
               out.push({prov:true, r:{id:"p"+d+J.label+m, play_day:J.day, venue_id:a.venue_id, start_time:("0"+Math.floor(t/60)).slice(-2)+":"+("0"+(t%60)).slice(-2), court:c, division:d, status:"", minutes:slot},
-                a:J.label+" · match "+m+" — pairs to follow", b:"", played:false, score:"", label:divLabel(d)+" · provisional"}); m++; }
+                a:labOf(J,m), b:"", played:false, score:"", label:divLabel(d)+" · provisional"}); m++; }
           }
           if(m<=J.n) UNFIT.push({day:J.day, div:d, label:J.label, n:J.n-m+1, venue_id:a.venue_id, slot:slot});
         });
@@ -21245,6 +21279,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var nc=Object.keys(courts).length, cap=null;
         if(!unknown && st!=null && en!=null && nc){ var len=en-st; brkOf(y.vid,y.day).forEach(function(b){ len-=Math.max(0, Math.min(b[1],en)-Math.max(b[0],st)); }); cap=Math.max(0,len)*nc; }
         y.cap=cap; y.st=st; y.en=en; y.nc=nc; y.courtList=Object.keys(courts).map(Number).sort(function(p,q){ return p-q; });
+        /* q237: one match length that day → the whole matches a court holds, and the finish the day's matches need */
+        var sl={}; Object.keys(y.divs).forEach(function(dv){ var a=allocOf(dv); if(a && +a.venue_id===y.vid) sl[Number(a.slot_minutes||60)]=1; });
+        var sls=Object.keys(sl).map(Number); y.oneSlot=(sls.length===1)?sls[0]:null;
+        if(y.oneSlot && st!=null && en!=null && nc && !brkOf(y.vid,y.day).length){ y.perCourt=Math.floor((en-st)/y.oneSlot); y.fitN=y.perCourt*nc; y.needEnd=st+Math.ceil(y.n/nc)*y.oneSlot; }
         y.short=(cap!=null && y.mins>cap); y.bad=y.short||y.out>0; DAYCHECK.push(y); });
       return out;
     };
@@ -21288,7 +21326,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           if(y.out){ h+='<br><b>'+y.out+' match'+(y.out===1?' is':'es are')+' not on the schedule:</b> '+Object.keys(y.outList).map(function(k){ return esc(k)+' ('+y.outList[k]+')'; }).join(', ')+'.';
             if(y.canNow) h+='<br><span style="color:#1e5631"><b>'+y.canNow+' of '+(y.canNow===1?'them':'these')+' can go on now</b> — press <b>Generate</b> (or <b>Save</b> the section).</span>';
             var stuck=y.out-y.canNow;
-            if(stuck && (y.canNow || !y.short)) h+='<br><b>'+stuck+(y.canNow?' still':'')+' do'+(stuck===1?'es':'')+' not fit</b>'+(y.short?'.':' — there is room on paper, but sections with different match lengths leave gaps between matches; a finish one match later, or the same match length for the sections that day, usually does it.');
+            /* q237 (Andre: "I set the same time for each section — why?"): with ONE match length the reason is plain arithmetic —
+               say it in whole matches and name the finish that makes room; the gaps explanation is only for mixed lengths */
+            if(stuck && y.oneSlot && y.fitN!=null && y.fitN<y.n) h+='<br><b>'+stuck+(y.canNow?' still':'')+' do'+(stuck===1?'es':'')+' not fit</b> — with '+y.oneSlot+'-minute matches, '+y.perCourt+' fit on each court from '+mm(y.st)+' to '+mm(y.en)+' ('+y.fitN+' on '+y.nc+' court'+(y.nc===1?'':'s')+'). '+y.n+' need a finish of <b>'+mm(y.needEnd)+'</b> (last start '+mm(y.needEnd-y.oneSlot)+').';
+            else if(stuck && (y.canNow || !y.short)) h+='<br><b>'+stuck+(y.canNow?' still':'')+' do'+(stuck===1?'es':'')+' not fit</b>'+(y.short?'.':(y.oneSlot?' — the courts have room, but the slots left would break the rules (every player '+REST+' minutes off court between matches, each round after the one before it); a finish one match later usually does it.':' — there is room on paper, but sections with different match lengths leave gaps between matches; a finish one match later, or the same match length for the sections that day, usually does it.'));
             h+=''; }
           h+='</div>'; });
         if(nr.length){ h+='<div style="margin:8px 0 0"><b>No rest between matches</b> — these players are on court twice in a row:<br>'
