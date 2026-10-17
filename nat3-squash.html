@@ -3634,7 +3634,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q232";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q235";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -7210,7 +7210,7 @@ async function loadTournamentSheet(tournament, division) {
   window._tmAllFixtures = fixtures;
   window._tmComputeMain = computeMainBracket;   // expose for tmEnsureBracketFixtures
   window._tmComputePlate = computePlateBracket;
-  window._tmSeedNames = {}; entries.forEach(e=>{ window._tmSeedNames[e.seed] = tmTeamName(e.p1, e.p2); });
+  window._tmSeedNames = {}; entries.forEach(e=>{ window._tmSeedNames[e.seed] = tmTeamName(e.p1, e.p2); }); window._tmEntriesBySeed = {}; entries.forEach(e=>{ window._tmEntriesBySeed[e.seed] = e; });
 
   // division selector pills (only divisions that have entries)
   let divBar = '<div class="tm-divbar">';
@@ -20432,7 +20432,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var base=String(ed.type||"");
       return getEntries(ev).then(function(all){
         if(all.some(function(r){ return r.category===base; })) return null;
-        var best=null, bestN=0, hit=function(r,x){ return x && (r.p1===x || r.p2===x); };
+        var best=null, bestN=0, hit=function(r,x){ return x && (r.p1===x || r.p2===x || r.sub_p1===x || r.sub_p2===x); };   /* q234 */
         var secs={}; all.forEach(function(r){ if(baseOf(r.category)===base && r.category!==base) (secs[r.category]=secs[r.category]||[]).push(r); });
         /* q199 (Andre's Gillitts tournament, 15 Oct): the section used to be chosen by HOW MANY OF THE FOUR NAMES it
            held. A player may enter several divisions with different partners — by design — so with 47 pairs across
@@ -20443,9 +20443,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
            fall-back for a stand-in, where one name differs — that rule is untouched. */
         var pk=function(a,b){ return [String(a||"").trim().toLowerCase(), String(b||"").trim().toLowerCase()].sort().join("|"); };
         var want1=pk(ed.t1p1,ed.t1p2), want2=pk(ed.t2p1,ed.t2p2);
+        /* q234: a pair with a substitute is also known as it now plays */
+        var pks=function(r){ var a=[pk(r.p1,r.p2)]; if(r.sub_from_round!=null && (r.sub_p1||r.sub_p2)) a.push(pk(r.sub_p1||r.p1, r.p2!=null?(r.sub_p2||r.p2):r.p2)); return a; };
         var exact=Object.keys(secs).filter(function(s){
-          var has1=secs[s].some(function(r){ return pk(r.p1,r.p2)===want1; });
-          var has2=secs[s].some(function(r){ return pk(r.p1,r.p2)===want2; });
+          var has1=secs[s].some(function(r){ return pks(r).indexOf(want1)>=0; });
+          var has2=secs[s].some(function(r){ return pks(r).indexOf(want2)>=0; });
           return has1 && has2; });
         if(exact.length===1){ W.__nsqPlace={event:ev, division:exact[0], at:Date.now()}; return exact[0]; }
         var pool=exact.length?exact:Object.keys(secs);
@@ -20496,7 +20498,13 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
     /* ---- 5. the Enter a team page lists the category's pairs by division ---- */
     var _res=W.renderEnterScreen;
-    if(typeof _res==="function") W.renderEnterScreen=async function(){
+    /* q235 (Andre: "I tapped Placement draw — the page refreshes but that whole bracket is gone"). Tapping a draw format
+       asked for TWO redraws at once (switching Round robin off redraws, then the Placement switch redraws again). Both ran
+       side by side: the second wiped the page while the first was still moving the draw blocks under their sections, so
+       the blocks were left behind in a hidden card. Now the page is drawn ONE AT A TIME: a redraw asked for while one is
+       running waits, and the page is drawn once more, completely, when the first has finished. */
+    var _q235run=null, _q235again=false;
+    var _q235one=async function(){
       /* q139 (Andre): ONE paint. The parent draws, the squash layer rearranges, the divisions card mounts — all under a
          hidden body; shown once at the end instead of flashing three layouts */
       var _eb=document.getElementById("etBody"); if(_eb) _eb.style.visibility="hidden";
@@ -20605,6 +20613,14 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       }catch(e){}
       try{ var _eb2=document.getElementById("etBody"); if(_eb2) _eb2.style.visibility=""; }catch(e){}
       return out;
+    };
+    if(typeof _res==="function") W.renderEnterScreen=function(){
+      var self=this, args=arguments;
+      if(_q235run){ _q235again=true; return _q235run; }
+      _q235run=(async function(){ var out;
+        try{ do{ _q235again=false; out=await _q235one.apply(self,args); } while(_q235again); return out; }
+        finally{ _q235run=null; } })();
+      return _q235run;
     };
 
     /* ---- 7. q130 (Andre): on Draw & Rounds, the division pills whose draw is GENERATED are coloured green, so the live
@@ -22466,7 +22482,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         if(!document.body.contains(host)) return;
         if(host.querySelector('.nsqRules[data-sec="'+d.replace(/"/g,'\\"')+'"]')) return;
         var div=document.createElement("div"); div.innerHTML=html(d);
-        host.appendChild(div.firstChild);   /* q199: at the end of that division's own block */
+        /* q235 (Andre: "how a match is played MUST BE BEFORE you generate"): the panel sits ABOVE the admin code and the
+           Generate button, so the rules are set first; a division with no Generate button yet keeps it at the end */
+        var pinRow=null; Array.prototype.some.call(host.querySelectorAll(".nsqDivPin"),function(pi){ pinRow=pi.parentNode; return true; });
+        if(pinRow && pinRow.parentNode) pinRow.parentNode.insertBefore(div.firstChild, pinRow);
+        else host.appendChild(div.firstChild);   /* q199: at the end of that division's own block */
       }); });
     }catch(e){} }, 700);
 
@@ -22755,6 +22775,13 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var halves=function(v){ return String(v||"").split(/\s*(?:&| \/ )\s*/).map(function(x){ return x.trim(); }).filter(Boolean); };
     var catOf=function(div){ return (W.__nsqTourBase?W.__nsqTourBase(div):String(div||"")).replace(/ - .*$/,"") || "All Sorts"; };
 
+    /* q234: a seed's pair as it plays a given round — the substitute from sub_from_round on (exactly as the draw shows it) */
+    W.__nsqPairAt=function(seed, round){
+      var e=(W._tmEntriesBySeed||{})[seed]; if(!e) return null;
+      var on=e.sub_from_round!=null && round!=null && Number(round)>=Number(e.sub_from_round) && (e.sub_p1 || e.sub_p2);
+      var p1=on?(e.sub_p1||e.p1):e.p1, p2=on?(e.p2!=null?(e.sub_p2||e.p2):e.p2):e.p2;
+      return (typeof tmTeamName==="function") ? tmTeamName(p1, p2) : (p2 ? p1+" & "+p2 : p1);
+    };
     W.__nsqFxClose=function(){ var o=document.getElementById("nsqFx"); if(o) o.remove(); };
 
     W.__nsqFxMarker=function(){
@@ -22957,7 +22984,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(W.nhNav) W.nhNav(href); else location.href=href;
     };
 
-    W.__nsqFxOrganiser=function(){ var d=W.__nsqFxNow; W.__nsqFxClose(); if(d && typeof W.__nsqFxRaw==="function") W.__nsqFxRaw(d.id); };
+    W.__nsqFxOrganiser=function(){ var d=W.__nsqFxNow; W.__nsqFxClose(); if(d && typeof W.__nsqFxRaw==="function"){
+      /* q234: the organiser's prompts name the pair as it plays this round */
+      var keep=W._tmSeedNames, nn={}; if(W.__nsqPairAt && d.round!=null) Object.keys(keep||{}).forEach(function(k){ nn[k]=W.__nsqPairAt(Number(k), d.round)||keep[k]; }); else nn=keep;
+      W._tmSeedNames=nn; try{ W.__nsqFxRaw(d.id); } finally { W._tmSeedNames=keep; } } };
 
     var fxOpen=function(d){
       W.__nsqFxNow=d; cssOnce(); W.__nsqFxClose();
@@ -22986,7 +23016,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         W.tmEnterFixtureResult=function(fixtureId){
           try{
             var f=(W._tmFixturesById||{})[fixtureId], ctx=W._tmCtx||{}, names=W._tmSeedNames||{};
-            if(!f || !ctx.tournament || f.sets_a!=null || f.seed_b===0) return f0.apply(this, arguments);
+            if(!f || !ctx.tournament || f.sets_a!=null || f.seed_b===0){
+              /* q234: the organiser's editor names the pair as it played that round too (the server rates it that way) */
+              if(f && W.__nsqPairAt){ var keep=W._tmSeedNames, nn={}; Object.keys(keep||{}).forEach(function(k){ nn[k]=W.__nsqPairAt(Number(k), f.round)||keep[k]; });
+                W._tmSeedNames=nn; try{ return f0.apply(this, arguments); } finally { W._tmSeedNames=keep; } }
+              return f0.apply(this, arguments);
+            }
             /* q188: scored on this phone a moment ago and the board has not caught up — do not offer to score it again */
             if(PEND.has(fixtureId)){
               W.alert("That score was entered a moment ago and is still being saved.\n\nThe draw will show it by itself — give it a few seconds. Score it again only if it has not appeared.");
@@ -22999,9 +23034,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
                of being worked out again from the four names afterwards — which is what sent a Drops result looking
                for its pairs in Grumble. */
             try{ W.__nsqFxDiv={tour:ctx.tournament, div:div, round:Number(f.round)||null, at:Date.now()}; }catch(e){}
+            /* q234 (Andre: "a substitute must be rated, never the player he replaced"): the pair AS IT PLAYS THIS ROUND —
+               from the substitution's round on, the substitute's name is the one filled in, scored and rated */
+            var asPlayed=function(sd){ return W.__nsqPairAt ? (W.__nsqPairAt(sd, f.round) || names[sd]) : names[sd]; };
             var show=function(){ fxOpen({ id:fixtureId, tour:ctx.tournament, div:div, cat:catOf(div), round:Number(f.round)||null,
                      label:(W.tmDivLabel?W.tmDivLabel(div):div), rules:rulesOf(div),
-                     a:names[f.seed_a]||("Seed "+f.seed_a), b:names[f.seed_b]||("Seed "+f.seed_b) }); };
+                     a:asPlayed(f.seed_a)||("Seed "+f.seed_a), b:asPlayed(f.seed_b)||("Seed "+f.seed_b) }); };
             if(typeof W.__nsqRulesLoad==="function"){ var done=false; var once=function(){ if(done) return; done=true; show(); };
               try{ W.__nsqRulesLoad().then(once, once); }catch(e){ once(); } setTimeout(once, 2500); }
             else show();
