@@ -3634,7 +3634,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q240-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q241-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -11411,6 +11411,7 @@ async function clRemove(id, label){
      Every other admin link is gone. */
   W.nhAdminPage=function(){
     var w=nhWrap(); if(!w) return;
+    W.__nhAdminShown=String(location.search||"");   /* q240b */
     try{ nhTrailPush("homeScreen","admin"); }catch(e){}   /* n317: a view of its own — back returns here */
     nhCSS();
     var C=(function(){ var cs=W.PLAT.clubs||[], me=cs.filter(function(c){ return +c.id===+W.PLAT.cid; })[0]; if(!me) return (W.PLAT.parentId||W.PLAT.cid);
@@ -17037,7 +17038,7 @@ W.nhOpenPair=function(name){
       return false;
     }
     var search="?"+p.q.toString()+(p.hash?("#"+p.hash):"");
-    if(search===String(location.search||"")+String(location.hash||"") && !opts.force){ var _tv=W.__nhTrail&&W.__nhTrail[W.__nhTrail.length-1]; var _wantS="homeScreen"; try{ var _wq=new URLSearchParams(search.split("#")[0].replace(/^\?/,""));   var _wg=(_wq.get("go")||"").toLowerCase();   _wantS={tsheet:"tournamentSheetScreen",tournaments:"tournamentScreen",entry:"entryScreen",ladders:"laddersScreen",     ladder:"ladderScreen",profiles:"profileSearchScreen",player:"profileScreen",card:"platSessScreen"}[_wg]||"homeScreen";   if(String(search).indexOf("#enter")>=0) _wantS="entryScreen"; }catch(_e){} var _nowS=""; try{ _nowS=(document.querySelector(".screen.active")||{}).id||""; }catch(_e){} var _elsewhere=!!(_nowS && _wantS && _nowS!==_wantS); if(!_elsewhere && !(_tv && _tv.page && _tv.search===String(location.search||""))){ try{ window.scrollTo(0,0); }catch(e){} return false; } try{ if(_tv && _tv.page) W.__nhTrail.pop(); }catch(e){} opts.force=true; opts.replace=true; }   /* q156b + q196 */
+    if(search===String(location.search||"")+String(location.hash||"") && !opts.force){ var _tv=W.__nhTrail&&W.__nhTrail[W.__nhTrail.length-1]; var _wantS="homeScreen"; try{ var _wq=new URLSearchParams(search.split("#")[0].replace(/^\?/,""));   var _wg=(_wq.get("go")||"").toLowerCase();   _wantS={tsheet:"tournamentSheetScreen",tournaments:"tournamentScreen",entry:"entryScreen",ladders:"laddersScreen",     ladder:"ladderScreen",profiles:"profileSearchScreen",player:"profileScreen",card:"platSessScreen"}[_wg]||"homeScreen";   if(String(search).indexOf("#enter")>=0) _wantS="entryScreen"; }catch(_e){} var _nowS=""; try{ _nowS=(document.querySelector(".screen.active")||{}).id||""; }catch(_e){} var _elsewhere=!!(_nowS && _wantS && _nowS!==_wantS); if(!_elsewhere && !(_tv && _tv.page && _tv.search===String(location.search||"")) && !(W.__nhAdminShown && W.__nhAdminShown===String(location.search||""))){ try{ window.scrollTo(0,0); }catch(e){} return false; }   /* q240b: Admin control drawn over this address, recorded or not */ try{ if(_tv && _tv.page) W.__nhTrail.pop(); }catch(e){} opts.force=true; opts.replace=true; }   /* q156b + q196 */
     try{
       if(opts.replace){ history.replaceState({nat3:1},"",location.pathname+search); var t=nhCrumbs(); t.pop(); nhCrumbsSave(t); nhCrumbPush("?"+p.q.toString()); }
       else { history.pushState({nat3:1},"",location.pathname+search); nhCrumbPush("?"+p.q.toString()); }
@@ -17054,7 +17055,7 @@ W.nhOpenPair=function(name){
     /* n317: entry from the door IS allowed (Andre) — the write is routed to the tournament's own group by the shim */
   }
   function nhRender(shape, page){
-    var tok=++W.__nhNavTok; W.__nhHomeDrawn=String(location.search||"");   /* q212d: what the home page now shows */
+    var tok=++W.__nhNavTok; W.__nhHomeDrawn=String(location.search||""); W.__nhAdminShown="";   /* q240b */   /* q212d: what the home page now shows */
     NEW.data=null; NEW.busy=null;   /* the per-board cache (nhCacheGet) still serves the reads */
     try{ if(W.__nhHeroHold) clearInterval(W.__nhHeroHold); }catch(e){}
     var goq0=""; try{ goq0=(new URLSearchParams(location.search).get("go")||"").toLowerCase(); }catch(e){}
@@ -19973,6 +19974,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     setInterval(function(){ try{ var to=sessionStorage.getItem("nsqOpenAdmin"); if(!to) return;
       if(Number(W.PLAT&&W.PLAT.cid)!==Number(to)) return;
       var hs=document.getElementById("homeScreen"); if(!hs || !hs.classList.contains("active") || typeof W.nhAdminPage!=="function") return;
+      if(W.__nhTrailHold) return;   /* q240b: once the club page is drawn, so Admin control is a step of its own (back returns to the club) */
       sessionStorage.removeItem("nsqOpenAdmin"); W.nhAdminPage(); }catch(e){} }, 250);
     /* q108: THE OLD LEDGER LANDING ("REGION LEDGER · Current Ratings and Ladders · Overall Profile · Recent Matches") NEVER
        SHOWS. Any route that ends on a ledger address with nothing asked of it goes back the way it came: ?back= first, then the
