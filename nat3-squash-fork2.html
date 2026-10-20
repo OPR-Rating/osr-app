@@ -3634,7 +3634,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q239-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q240-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17566,7 +17566,7 @@ W.nhOpenPair=function(name){
      Men's Pairs back to the ladders menu, that back to the group's page. No rules about doors and parents. */
   W.__nhTrail=[{search:String(location.search||""),screen:"homeScreen"}];
   try{ if(/^(ladders|ladder|profiles|tournaments|tsheet)$/i.test(new URLSearchParams(location.search).get("go")||"")) W.__nhTrail=[]; }catch(e){}   /* n353: no phantom home behind a screen you opened on */
-  (function(){ var _gh=W.goHome; if(typeof _gh!=="function") return; W.goHome=function(){ var r=_gh.apply(this,arguments); try{ nhTrailPush("homeScreen"); }catch(e){} try{ nhRowsHome(); }catch(e){} return r; }; })();
+  (function(){ var _gh=W.goHome; if(typeof _gh!=="function") return; W.goHome=function(){ var r=_gh.apply(this,arguments); try{ var _t4=W.__nhTrail||[], _l4=_t4[_t4.length-1], _p4=_t4[_t4.length-2]; if(!W.__nhTrailHold && _l4 && _l4.screen!=="homeScreen" && _p4 && _p4.screen==="homeScreen" && String(_p4.search||"")===String(location.search||"")){ nhScrDrop(_t4.pop()); if(_p4.page==="admin" && !document.querySelector("#nh .band") && W.nhAdminPage) W.nhAdminPage(); } else nhTrailPush("homeScreen"); }catch(e){}   /* q240: Exit is a step back */ try{ nhRowsHome(); }catch(e){} return r; }; })();
   /* n319: THE BRACKET ROW COMES BACK WHERE IT WAS. The row of brackets scrolls sideways (five, four fit). The tapped
      bracket — Tournaments, the last — stays the focused element, and when the page shows again the browser scrolls the
      row to bring it into view: the row sat 190 px to the right with the first bracket cut off ("the brackets got
@@ -17587,7 +17587,7 @@ W.nhOpenPair=function(name){
   }
   function nhScrCount(){ var n=0; (W.__nhTrail||[]).forEach(function(v){ if(v && v.h) n++; }); return n; }
   function nhScrPush(v,last){ try{
-    if(W.__nhInPop || !v || v.screen==="homeScreen" || !last) return;
+    if(W.__nhInPop || !v || (v.screen==="homeScreen" && v.page!=="admin") || !last) return;   /* q240: Admin control gets its own back step too */
     if(String(last.search||"")!==String(v.search||"") || String(location.search||"")!==String(v.search||"")) return;
     v.h=1; history.pushState({nat3:1,nat3scr:1,nat3d:nhScrCount()},"",location.href);   /* q212d */
   }catch(e){} }
