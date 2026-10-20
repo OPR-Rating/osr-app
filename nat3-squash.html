@@ -3634,7 +3634,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q245";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q247";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -21218,7 +21218,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
           if(J.r==null || J.r<2) return "";
           var gi=(J.off||0)+m, done=J.r-1;
           if(fmtPl){
-            var B=N/Math.pow(2,done); if(B<2) return ""; var per=B/2, blk=Math.floor((gi-1)/per), i=(gi-1)%per, st=blk*B+1;
+            var B=N/Math.pow(2,done); if(B<2) return "";
+            if(B===2) gi=(N/2)-gi+1;   /* q246: the last round runs bottom places first — 1st/2nd is the last match */
+            var per=B/2, blk=Math.floor((gi-1)/per), i=(gi-1)%per, st=blk*B+1;
             var path=[]; for(var q=done-1;q>=0;q--) path.push(((blk>>q)&1)?"lost":"won");
             var who=(done===1)?(blk===0?"round-1 winners":"round-1 losers"):path.join(", ");
             return who+" · "+(B===2?("for "+ordN(st)+"/"+ordN(st+1)+" place"):("["+(st+i)+"] v ["+(st+B-1-i)+"]"))   /* q245: [1] v [8] */;
@@ -21582,8 +21584,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var listForExport=function(){ return D.rows.map(rowView).concat(provRows()).sort(function(p,q){ return (p.r.play_day<q.r.play_day?-1:p.r.play_day>q.r.play_day?1:0)||(+p.r.venue_id-+q.r.venue_id)||(tmin(p.r.start_time)-tmin(q.r.start_time))||(p.r.court-q.r.court); }); };
     W.nsqOopPrint=function(){ var L=listForExport(); if(!L.length) return; var w=window.open("","_blank"); if(!w) return;
       var h='<html><head><title>Order of Play \u2014 '+esc(D.tour)+'</title><style>body{font-family:Arial,sans-serif;font-size:12px;margin:18px}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:16px 0 6px;border-bottom:2px solid #D35400;padding-bottom:2px}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ddd;padding:6px 6px;text-align:left;vertical-align:middle}th{background:#f3eee9;font-size:11px;text-transform:uppercase;letter-spacing:.04em}tr:nth-child(even) td{background:#faf7f3}td.t{font-weight:bold;font-size:13px;width:33%}td.v{color:#999;text-align:center;width:20px}td.n{white-space:nowrap;color:#444}td.d{color:#7E3200;font-size:11px;white-space:nowrap}td.sc{text-align:right;font-weight:bold;width:52px}@media print{h2{page-break-after:avoid}tr{page-break-inside:avoid}}</style></head><body><h1>Order of Play \u2014 '+esc(D.tour)+'</h1>';
-      var key=""; L.forEach(function(x){ var vv=venueOf(x.r.venue_id), k=x.r.play_day+"|"+x.r.venue_id; if(k!==key){ if(key) h+='</table>'; key=k; h+='<h2>'+esc(vv?vv.name:"Venue")+' \u00b7 '+esc(fmtDay(x.r.play_day))+'</h2><table><tr><th>Time</th><th>Court</th><th>Division</th><th>Team A</th><th></th><th>Team B</th><th>Score</th></tr>'; }
-        h+='<tr><td class="n"><b>'+hhmm(x.r.start_time)+'</b></td><td class="n">'+x.r.court+'</td><td class="d">'+esc(x.label)+'</td><td class="t">'+esc(x.a)+'</td><td class="v">'+(x.prov?'':'v')+'</td><td class="t">'+esc(x.b)+'</td><td class="sc">'+esc(x.score)+'</td></tr>'; });   /* q140: a column per team, names bold, striped rows */
+      /* q247 (Andre: "the print is continuous and it reads difficult"): a gap between one start time and the next */
+      h=h.replace('</style>','tr.gap td{height:12px;border:none!important;background:#fff!important;padding:0}tr.t0 td{border-top:2px solid #D35400}</style>');
+      var key="", lastT=""; L.forEach(function(x){ var vv=venueOf(x.r.venue_id), k=x.r.play_day+"|"+x.r.venue_id; if(k!==key){ if(key) h+='</table>'; key=k; lastT=""; h+='<h2>'+esc(vv?vv.name:"Venue")+' \u00b7 '+esc(fmtDay(x.r.play_day))+'</h2><table><tr><th>Time</th><th>Court</th><th>Division</th><th>Team A</th><th></th><th>Team B</th><th>Score</th></tr>'; }
+        var _t=hhmm(x.r.start_time), _new=(lastT!=="" && _t!==lastT); if(_new) h+='<tr class="gap"><td colspan="7"></td></tr>'; lastT=_t;   /* q247 */
+        h+='<tr'+(_new?' class="t0"':'')+'><td class="n"><b>'+hhmm(x.r.start_time)+'</b></td><td class="n">'+x.r.court+'</td><td class="d">'+esc(x.label)+'</td><td class="t">'+esc(x.a)+'</td><td class="v">'+(x.prov?'':'v')+'</td><td class="t">'+esc(x.b)+'</td><td class="sc">'+esc(x.score)+'</td></tr>'; });   /* q140: a column per team, names bold, striped rows */
       h+='</table>';
       if(UNPLACED.length || UNFIT.length){ h+='<h2 style="color:#c0392b;border-color:#c0392b">Not on the schedule yet</h2><table><tr><th>Day</th><th>Division</th><th>Team A</th><th></th><th>Team B</th></tr>';
         UNPLACED.forEach(function(u){ h+='<tr><td class="n">'+esc(u.day?fmtDay(u.day):'no day')+'</td><td class="d">'+esc(divLabel(u.div)+' \u00b7 '+u.label)+'</td><td class="t">'+esc(u.a)+'</td><td class="v">v</td><td class="t">'+esc(u.b)+'</td></tr>'; });
@@ -23289,6 +23294,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
               return {tournament:tournament, division:division, round:last+1, round_type:"place",
                       band:(p.from===p.to?String(p.from):(p.from+"–"+p.to)), seed_a:p.seed_a, seed_b:p.seed_b};
             });
+            /* q246 (Andre: "the match for 1st place should be the last of the day, not the first"): the LAST round is
+               written bottom places first, so the Order of Play puts 15th/16th first and 1st/2nd last. Who plays whom
+               is unchanged — only the order the matches are written in. */
+            if(last+1===totalR) rows.reverse();
             var r=await fetch(SB_URL+"/functions/v1/tournament",{method:"POST",
               headers:{apikey:SB_ANON, Authorization:"Bearer "+SB_ANON, "Content-Type":"application/json"},
               body:JSON.stringify({action:"write_fixtures", club_id:CLUB_ID, admin_pin:pin, tournament:tournament, division:division, replace:false, fixtures:rows})});
