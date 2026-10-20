@@ -3634,7 +3634,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q243-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q244-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -22862,7 +22862,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var d=W.__nsqFxNow; if(!d) return; W.__nsqFxClose();
       var r=d.rules, A=halves(d.a), B=halves(d.b);
       W.__nsqBackToDraw={on:true, club:cid(), tour:d.tour};   /* q186 */
-      try{ PEND.put(d.id, d.tour, d.div); }catch(e){}   /* q188 */
+      W.__nsqFxCand={id:d.id, tour:d.tour, div:d.div, at:Date.now()};   /* q244: only a CANDIDATE — it becomes "on its way" once the score has really saved (below) */
       try{
         /* q182 (Andre): NO SET-UP PAGE. Everything was decided when the section was set up, so the marker opens on the
            one thing nobody can know in advance — who serves first. Same route the entry sheet's marker already uses. */
@@ -22884,7 +22884,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       var d=W.__nsqFxNow; if(!d) return; W.__nsqFxClose();
       var r=d.rules, A=halves(d.a), B=halves(d.b), n=0;
       W.__nsqBackToDraw={on:true, club:cid(), tour:d.tour};   /* q186 */
-      try{ PEND.put(d.id, d.tour, d.div); }catch(e){}   /* q188 */
+      W.__nsqFxCand={id:d.id, tour:d.tour, div:d.div, at:Date.now()};   /* q244: only a CANDIDATE — it becomes "on its way" once the score has really saved (below) */
       if(W.__nsqFxManualDirect && W.__nsqFxManualDirect(d, r, A, B)) return;   /* fork 2 */
       (function go(){
         var scr=document.getElementById("entryScreen");
@@ -23001,6 +23001,24 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       drop:function(id){ var m=this.all(); delete m[String(id)]; try{ sessionStorage.setItem(this.key, JSON.stringify(m)); }catch(e){} }
     };
     W.__nsqPend=PEND;
+    /* q244 (Andre, 20 Oct: "That score is saved and it counts" appeared when no score was entered — the mouse had only
+       passed over a match). Opening the marker or the score sheet from a fixture used to mark that fixture "a score is on
+       its way" at once, so backing out left the draw waiting for a result that never came, and after six reads it said a
+       score was saved. Now the fixture is marked only when the server has answered OK to a real save (submit_match). */
+    (function(){ var f0=W.fetch; if(typeof f0!=="function" || f0.__nsq244) return;
+      var f1=function(u,init){
+        var url=""; try{ url=String(u&&u.url||u||""); }catch(e){}
+        var p=f0.apply(this,arguments);
+        var c=W.__nsqFxCand;
+        if(c && /\/functions\/v1\/(plat_)?submit_match(\?|$)/.test(url)){
+          p=p.then(function(res){
+            try{ res.clone().json().then(function(j){
+              if(res.ok && j && j.ok && W.__nsqFxCand===c && (Date.now()-c.at)<3600000){ PEND.put(c.id, c.tour, c.div); W.__nsqFxCand=null; }
+            }).catch(function(){}); }catch(e){}
+            return res; });
+        }
+        return p; };
+      f1.__nsq244=true; W.fetch=f1; })();
 
     /* q213 (Andre: "why does the draw page jump when it updates after a result is posted?"). Every re-read rebuilt the
        whole draw in place: the page snapped to the top (the parent's showScreen scrolls to 0,0), the plain draw showed
