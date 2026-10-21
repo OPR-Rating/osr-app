@@ -3636,7 +3636,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q254";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q255";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -23909,10 +23909,15 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
     var css=function(){ if(document.getElementById("mkSvCss")) return; var st=document.createElement("style"); st.id="mkSvCss";
       st.textContent="#mkSide1 .mk-box,#mkSide2 .mk-box{display:none!important}"
-        +".mkSv{margin-top:10px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:default}"
-        +".mkSv.off{visibility:hidden}"
-        +".mkSvWho{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;max-width:100%;padding:0 6px}"
-        +".mkSvWho span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"
+        /* q255 (Andre, on his phone: "the L R is quite high on the tap for scoring and could get in the way"): the block sits
+           LOW in the serving panel, just above Games, so the middle of the panel is free to tap the point; the line with the
+           server's name stays inside the panel (the ⇄ was cut off at the edge) */
+        +".mkSv{position:absolute;left:0;right:0;bottom:58px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:default;padding:0 6px;box-sizing:border-box}"
+        +".mkSv.off{display:none}"
+        +".mkSvWho{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:800;width:100%;box-sizing:border-box;min-width:0}"
+        +".mkSvWho span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}"
+        +".mkSvWho em{flex:none}"
+        +"@media (max-height:700px){.mkSv{bottom:52px;gap:4px}.mkSvLR button{height:42px;width:56px;font-size:21px}}"
         +".mkSvWho em{font-style:normal;font-size:11px;font-weight:800;padding:2px 7px;border-radius:999px;background:rgba(0,0,0,.28);white-space:nowrap}"
         +".mkSvSw{border:1.5px solid currentColor;background:transparent;color:inherit;border-radius:999px;width:30px;height:30px;font-size:15px;font-weight:800;cursor:pointer;flex:0 0 30px;font-family:inherit}"
         +".mkSvLR{display:flex;gap:8px}"
@@ -23939,25 +23944,38 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         var box=side.querySelector(".mkSv");
         if(!box){ box=document.createElement("div"); box.className="mkSv";
           box.addEventListener("click",function(e){ e.stopPropagation(); });
-          box.innerHTML=(dbl()?'<div class="mkSvWho"><span class="nm"></span><em class="ord"></em><button class="mkSvSw" title="The other partner is serving">⇄</button></div>':'')
+          box.innerHTML=(dbl()?'<div class="mkSvWho"><span class="nm"></span><button class="mkSvSw" title="The other partner is serving">⇄</button></div>':'')
             +'<div class="mkSvLR"><button data-b="L"><span>L</span></button><button data-b="R"><span>R</span></button></div><div class="mkSvHint"></div>';
           Array.prototype.forEach.call(box.querySelectorAll(".mkSvLR button"),function(b){ b.addEventListener("click",function(e){ e.stopPropagation(); W.mkSvSide(b.getAttribute("data-b")); }); });
           var sw=box.querySelector(".mkSvSw"); if(sw) sw.addEventListener("click",function(e){ e.stopPropagation(); W.mkSvSwap(); });
-          var sc=side.querySelector(".mk-score"); if(sc && sc.nextSibling) side.insertBefore(box, sc.nextSibling); else side.appendChild(box); }
+          side.appendChild(box); }   /* q255: held low in the panel by its own position, above Games */
         var on=(MK.server===t && !MK.over);
         box.classList.toggle("off", !on);
         box.classList.toggle("ask", on && !MK.boxChosen);
         Array.prototype.forEach.call(box.querySelectorAll(".mkSvLR button"),function(b){ b.classList.toggle("on", b.getAttribute("data-b")===MK.box); });
-        var h=box.querySelector(".mkSvHint"); if(h) h.textContent = on ? (MK.boxChosen ? ("Serving from the "+(MK.box==="L"?"left":"right")) : "Server: tap L or R") : "";
+        var h=box.querySelector(".mkSvHint"); if(h) h.textContent = on ? ((dbl()?((MK.srvI===1?"2nd":"1st")+" server \u00b7 "):"")+(MK.boxChosen ? ("from the "+(MK.box==="L"?"left":"right")) : "tap L or R")) : "";   /* q255: 1st / 2nd server on this line */
         if(dbl()){
           var who=nameOf(t, t===MK.server?MK.srvI:0);
-          var n=box.querySelector(".nm"); if(n) n.textContent=who;
-          var o=box.querySelector(".ord"); if(o) o.textContent=(MK.srvI===1?"2nd":"1st")+" server";
+          var n=box.querySelector(".nm"); if(n) n.textContent=String(who).trim().split(/\s+/)[0]||who;   /* q255: first name — the full name is underlined above */
           if(nm) Array.prototype.forEach.call(nm.querySelectorAll(".mkPn"),function(s){ s.classList.toggle("on", on && s.textContent===who); });
         }
       });
     };
 
+    /* q255: the score sits in the space between the names and the serve block (same place on both sides), smaller only if
+       that space is short (long names on a small phone) */
+    var fit=function(){ try{
+      var wrap=document.getElementById("mkWrap"), s1=document.getElementById("mkSide1"), s2=document.getElementById("mkSide2"); if(!wrap||!s1||!s2) return;
+      var sides=[s1,s2];
+      if(wrap.classList.contains("mkDone")){ sides.forEach(function(sd){ sd.style.paddingTop=""; sd.style.paddingBottom=""; var sc=sd.querySelector(".mk-score"); if(sc) sc.style.fontSize=""; }); return; }
+      var top=0; sides.forEach(function(sd){ var nm=sd.querySelector(".mk-names"); if(nm) top=Math.max(top, nm.offsetTop+nm.offsetHeight); });
+      var blk=0; sides.forEach(function(sd){ var bx=sd.querySelector(".mkSv"); if(bx && !bx.classList.contains("off")){ var cs=getComputedStyle(bx); blk=Math.max(blk, bx.offsetHeight+(parseFloat(cs.bottom)||58)); } });
+      if(!blk) blk=170;
+      var natural=Math.min(110, window.innerWidth*0.23);
+      sides.forEach(function(sd){ sd.style.boxSizing="border-box"; sd.style.paddingTop=(top+4)+"px"; sd.style.paddingBottom=(blk+6)+"px";
+        var avail=sd.clientHeight-(top+4)-(blk+6), sc=sd.querySelector(".mk-score");
+        if(sc) sc.style.fontSize=(avail<natural)?(Math.max(40, Math.floor(avail*0.95))+"px"):""; });
+    }catch(e){} };
     /* the L | R pill: the new server's choice, or the marker putting the server right (rule 5.12) */
     W.mkSvSide=function(b){ if(MK.over || (b!=="L" && b!=="R")) return; if(b===MK.box && MK.boxChosen) return;
       mkSnap(); MK.box=b; MK.boxChosen=true; mkRenderScore(); };
@@ -23992,9 +24010,10 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       if(last && last.sv){ MK.srvI=last.sv.i; MK.nxt={1:last.sv.n[1],2:last.sv.n[2]}; MK.boxChosen=last.sv.c; mkRenderScore(); }
       return r; };
     var _live=W.mkRenderLive;
-    W.mkRenderLive=function(){ var r=_live.apply(this, arguments); paint(); return r; };
+    W.mkRenderLive=function(){ var r=_live.apply(this, arguments); paint(); fit(); return r; };
+    W.addEventListener("resize", function(){ try{ if(MK.view==="live") fit(); }catch(e){} });
     var _score=W.mkRenderScore;
-    W.mkRenderScore=function(){ var r=_score.apply(this, arguments); try{ paint(); }catch(e){} return r; };
+    W.mkRenderScore=function(){ var r=_score.apply(this, arguments); try{ paint(); fit(); }catch(e){} return r; };
 
     /* before the match: each team's serving order (1st / 2nd server), kept for the whole match */
     var orderBlock=function(){
