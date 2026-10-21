@@ -3636,7 +3636,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q255";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q256";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -21769,9 +21769,52 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
        them on: the section's own Generate — it only adds, never moves a match already placed. ---------- */
     var DB={key:"",sig:"",busy:false,note:""};
     var drawCtx=function(){ var scr=document.getElementById("tournamentSheetScreen"); if(!scr||!scr.classList.contains("active")) return null;
-      var cont=document.getElementById("tournamentSheetContent"); if(!cont || !cont.querySelector(".tm-nav")){ Array.prototype.forEach.call(scr.querySelectorAll(".nsqOopDrawBar,.nsqOopDrawBtn"),function(x){ x.remove(); }); return null; }   /* q250: the draw only, not a stats table */
+      var cont=document.getElementById("tournamentSheetContent"); if(!cont || !cont.querySelector(".tm-nav")){ scr.classList.remove("nsqIsDraw"); Array.prototype.forEach.call(scr.querySelectorAll(".nsqOrgHead,.nsqOopFoot,.nsqOopDrawBar,.nsqOopDrawBtn"),function(x){ x.remove(); }); return null; }   /* q250: the draw only, not a stats table */
       var c=W._tmCtx||{}; if(!c.tournament||!c.division) return null; return {scr:scr,tour:c.tournament,div:c.division}; };
-    var visBar=function(scr){ var bars=scr.querySelectorAll(".nhTourBar"); for(var i=0;i<bars.length;i++){ if(bars[i].offsetParent!==null) return bars[i]; } return null; };
+    /* q256 (Andre, 21 Oct: "move the Order of Play pill below the table — less clutter, and up there people might generate
+       unnecessarily; it is not a general pill"): the Order of Play button and the placing bar live in one block at the FOOT
+       of the draw, under the table (above "How a match is played"); the row under the tabs is Schedule / Page as before. */
+    /* q256b (Andre, 21 Oct: "keep the top of the page solely for players — below the table, Organiser: the match set-up,
+       the order part and the print part"). LAYOUT ONLY. Under the table, one ORGANISER area: its heading, then "How a match is
+       played" (the same panel, where it already sits), then the Order of Play button with its placing bar, then Print & share
+       — the same four buttons that sat under the tabs, calling the same functions. Squash only: on a draw, the row under the
+       tabs is hidden (a stats or form table keeps it). Tapping a match, the scores, the round buttons: untouched. The
+       printed / shared page leaves the Organiser area out. */
+    var orgCss=function(){ if(document.getElementById("nsqOrgCss")) return; var st=document.createElement("style"); st.id="nsqOrgCss";
+      st.textContent="#tournamentSheetScreen:has(#tournamentSheetContent .tm-nav) .nhTourBar{display:none!important}"   /* only while a DRAW is shown — the moment it is */
+        +".nsqOrgHead{margin:18px 0 0;padding:10px 4px 0;border-top:2px solid #eadfd5}"
+        +".nsqOrgHead b{display:block;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8a5a3a}"
+        +".nsqOrgHead span{display:block;font-size:11.5px;color:#8a7a6e;margin-top:2px}"
+        +".nsqOrgPrint{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:12px 0 4px}"
+        +".nsqOrgPrint button{flex:none;white-space:nowrap;padding:6px 11px;font:inherit;font-size:12px;font-weight:700;border-radius:999px;border:1.5px solid var(--nhc,#6c3483);background:#fff;color:var(--nhc,#6c3483);cursor:pointer}";
+      document.head.appendChild(st); };
+    /* the four print / share buttons: the same functions as before, with the Organiser area left out of what is printed or shared */
+    W.nsqOrgRun=function(fn){ var hid=Array.prototype.slice.call(document.querySelectorAll(".nsqOrgHead,.nsqOopFoot"));
+      hid.forEach(function(e){ e.setAttribute("data-was", e.style.display||""); e.style.display="none"; });
+      try{ if(typeof W[fn]==="function") return W[fn](); }
+      finally{ hid.forEach(function(e){ e.style.display=e.getAttribute("data-was")||""; e.removeAttribute("data-was"); }); } };
+    var arrange=function(cont){
+      var head=cont.querySelector(":scope > .nsqOrgHead"), foot=cont.querySelector(":scope > .nsqOopFoot");
+      if(!head){ head=document.createElement("div"); head.className="nsqOrgHead"; head.setAttribute("data-plat-keep","1");
+        head.innerHTML='<b>Organiser</b><span>For the tournament’s organisers — players don’t need these.</span>'; }
+      if(!foot){ foot=document.createElement("div"); foot.className="nsqOopFoot"; foot.setAttribute("data-plat-keep","1"); foot.style.cssText="margin:12px 0 4px";
+        foot.innerHTML='<div class="nsqOopFootRow" style="display:flex;justify-content:center"><button type="button" class="nsqOopDrawBtn" onclick="nsqOopFromDraw()" style="border:1.5px solid var(--nhc,#6c3483);background:#fff;color:var(--nhc,#6c3483);border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer">🕒 Order of Play</button></div>'
+          +'<div class="nsqOrgPrint"><button type="button" onclick="nsqOrgRun(\'nhTourSchedule\')">🖨 Schedule</button><button type="button" onclick="nsqOrgRun(\'nhTourScheduleText\')">💬 Schedule</button>'
+          +'<button type="button" onclick="nsqOrgRun(\'nhTourPrint\')">🖨 Page</button><button type="button" onclick="nsqOrgRun(\'nhTourWhatsApp\')">💬 Page</button></div>'; }
+      var rules=cont.querySelector(":scope > .nsqRules");
+      if(rules){ if(rules.previousElementSibling!==head) cont.insertBefore(head, rules); if(rules.nextElementSibling!==foot) cont.insertBefore(foot, rules.nextSibling); }
+      else { if(head.parentNode!==cont || foot.previousElementSibling!==head){ cont.appendChild(head); cont.appendChild(foot); }
+             else if(foot.nextElementSibling){ cont.appendChild(head); cont.appendChild(foot); } }
+      return foot; };
+    var OBS=null;
+    var visBar=function(scr){
+      var cont=document.getElementById("tournamentSheetContent"); if(!cont || cont.offsetParent===null) return null;
+      orgCss(); if(scr) scr.classList.add("nsqIsDraw");
+      if(!OBS){ try{ OBS=new MutationObserver(function(){ try{ var c0=document.getElementById("tournamentSheetContent"), sc=document.getElementById("tournamentSheetScreen");
+            if(c0 && sc && sc.classList.contains("active") && c0.querySelector(".tm-nav") && c0.querySelector(":scope > .nsqOopFoot")) arrange(c0); }catch(e){} });
+          OBS.observe(cont,{childList:true}); }catch(e){} }
+      var foot=arrange(cont);
+      return foot.querySelector(".nsqOopFootRow"); };
     W.nsqOopFromDraw=function(){ var c=drawCtx(); W.__nsqOopFrom=c?{tour:c.tour,draw:true}:null; W.nsqOopOpen(true); };
     var waitingOf=function(div){ var on={}; D.rows.forEach(function(r){ on[r.fixture_id]=1; });
       return Object.keys(D.fx).map(function(k){ return D.fx[k]; }).filter(function(f){ return f.division===div && f.sets_a==null && Number(f.seed_a)>0 && Number(f.seed_b)>0 && !on[f.id]; }); };
@@ -21814,8 +21857,6 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     };
     setInterval(function(){ try{
       var c=drawCtx(); if(!c) return; var bar=visBar(c.scr); if(!bar) return;
-      if(!bar.querySelector(".nsqOopDrawBtn")){ var src=bar.querySelector("button"); var b=document.createElement("button");
-        b.className="nsqOopDrawBtn"; if(src) b.style.cssText=src.style.cssText; b.innerHTML="🕒 Order of Play"; b.setAttribute("onclick","nsqOopFromDraw()"); bar.insertBefore(b, bar.firstChild); }
       /* fresh from the server when the draw on screen changes (a round made), else every 20 s */
       var ids=Array.prototype.map.call(c.scr.querySelectorAll('tr[onclick^="tmEnterFixtureResult("]'),function(tr){ return (String(tr.getAttribute("onclick")).match(/\d+/)||[""])[0]; }).join(",");
       var key=c.tour+"|"+c.div, sig=key+"#"+ids;
