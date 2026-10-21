@@ -3636,7 +3636,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q257-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q259-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -17466,7 +17466,9 @@ W.nhOpenPair=function(name){
      every round with its fixtures — scores where played, "to play" where not, byes shown — ready for the noticeboard.
      The same as text for WhatsApp. Read from the tournament's own entries and fixtures (no screen scraping). */
   function nhSchedData(){
-    var tn=(document.getElementById("tournamentSheetTitle")||{}).textContent||W.TOURNAMENT_EVENT||"";
+    var tn=""; try{ var _c=document.getElementById("tournamentSheetContent");
+      if(_c && !_c.querySelector(".tm-nav")) tn=(typeof TOURNAMENT_EVENT!=="undefined"?TOURNAMENT_EVENT:"")||W.TOURNAMENT_EVENT||(W._tmCtx&&W._tmCtx.tournament)||""; }catch(e){}   /* q258: a stats / form table: the tournament, not the table's title */
+    if(!tn) tn=(document.getElementById("tournamentSheetTitle")||{}).textContent||W.TOURNAMENT_EVENT||"";   /* a draw: as before */
     tn=String(tn).trim(); if(!tn || typeof W.sbGet!=="function") return Promise.resolve(null);
     var C=W.PLAT.tourClub||W.PLAT.cid, enc=encodeURIComponent(tn);
     return Promise.all([
@@ -23447,6 +23449,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
      ================================================================================================================== */
   (function(){
     var W=window;
+    /* q259 (Andre, 21 Oct: "the band is in white text — you can't see it"): the round table's Band pill is white text on a
+       colour only for Banded Swiss (DA / DB / Cross); any other label — a placement draw's places "1–8", a round robin's
+       "A·R2" — had no colour behind it, so it was invisible. Those labels now read dark on a light pill. Display only. */
+    try{ var _st=document.createElement("style"); _st.id="nsqBandPillCss";
+      _st.textContent="#tournamentSheetContent .pill:not(.DA):not(.DB):not(.Cross):not(:empty){background:#f6e9dd;color:#7a3e12;border:1px solid #e3c7ab}";
+      (document.head||document.documentElement).appendChild(_st); }catch(e){}
     var LS=function(d){ return "nsqPlace|"+(W._etTournament||"")+"|"+d; };
     var ON={};
     W.__nsqPlaceOn=function(d){ if(ON[d]!=null) return ON[d]; try{ return localStorage.getItem(LS(d))==="1"; }catch(e){ return false; } };
