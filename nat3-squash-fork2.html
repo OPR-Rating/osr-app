@@ -3634,7 +3634,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q248-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q250-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -4560,7 +4560,8 @@ async function loadTournament(category, title) {
     // Tournament STATISTICS table: performance during the event, NOT the final placing.
     // Sort by WIN % (self-explaining for casual players) → sets won → game diff/set.
     // Qualifier: 6 games played together; sub-6 shown greyed for reference, not ranked.
-    const data = await sbGet(`${tourTable()}?select=rank,p1,p2,combined,weighted,level,sets,sets_won,set_win_pct,game_diff_per_set&event=eq.${encodeURIComponent(TOURNAMENT_EVENT)}&category=eq.${encodeURIComponent(category)}&club_id=eq.${CLUB_ID}`);
+    let data = await sbGet(`${tourTable()}?select=rank,p1,p2,combined,weighted,level,sets,sets_won,set_win_pct,game_diff_per_set&event=eq.${encodeURIComponent(TOURNAMENT_EVENT)}&category=eq.${encodeURIComponent(category)}&club_id=eq.${CLUB_ID}`);
+    if(typeof window.__nsqStatsFilter==='function') data = window.__nsqStatsFilter(category, data);   /* q250: a section's pairs only */
     if(data.length===0){document.getElementById('tournamentSheetContent').innerHTML='<div class="empty-state"><div class="icon">🎾</div><p>No tournament matches in this category yet.</p></div>';return;}
     const ratingHdr = isSingles ? 'Rating' : (usesCombined ? 'Rating (Comb)' : 'Rating (Wtd)');
     const nameHdr = isSingles ? 'Player' : 'Pair';
@@ -21030,6 +21031,8 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
        the tournament's own club, Kloof's own schedule could not be reached at all. The tournament the page is ON
        comes first now; the last draw is only the fall-back, and only while that draw is actually on screen. */
     var tourNow=function(){ try{
+      var oopS=document.getElementById("nsqOopScreen");   /* q249: opened from a draw -> that draw's tournament */
+      if(W.__nsqOopFrom && W.__nsqOopFrom.tour && oopS && oopS.classList.contains("active")) return W.__nsqOopFrom.tour;
       var sheet=document.getElementById("tournamentSheetScreen");
       if(sheet && sheet.classList.contains("active") && W._tmCtx && W._tmCtx.tournament) return W._tmCtx.tournament;
       return TOURNAMENT_EVENT || W._etTournament || (W._tmCtx&&W._tmCtx.tournament) || "";
@@ -21306,8 +21309,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       return scr;
     };
     var UI={day:"",venue:0,div:"",q:"",admin:false,pin:"",openAdmin:false,editing:null};
-    W.nsqOopBack=function(){ try{ if(typeof showScreen==="function") showScreen("tournamentScreen"); }catch(e){} };
-    W.nsqOopOpen=function(){ if(!ensure()) return; UI.editing=null; showScreen("nsqOopScreen"); try{ W.scrollTo(0,0); }catch(e){} draw(true); };
+    W.nsqOopBack=function(){ try{ var f=W.__nsqOopFrom; W.__nsqOopFrom=null;
+      if(typeof showScreen==="function") showScreen(f && f.draw ? "tournamentSheetScreen" : "tournamentScreen"); }catch(e){} };   /* q249: back to the draw it came from */
+    W.nsqOopOpen=function(fromDraw){ if(!ensure()) return; UI.editing=null;
+      if(fromDraw!==true) W.__nsqOopFrom=null;   /* q249: from the tournament page, back goes there as before */
+      showScreen("nsqOopScreen"); try{ W.scrollTo(0,0); }catch(e){} draw(true); };
     W.nsqOopSet=function(k,v){ UI[k]=v; draw(false); };
     W.nsqOopQ=function(v){ UI.q=String(v||"").trim().toLowerCase(); render(); };
     W.nsqOopAdmin=function(){ UI.openAdmin=!UI.openAdmin; render(); };
@@ -21562,7 +21568,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
              once — the matches still to play come off and are placed again under the new plan; completed matches keep
              their place and show with their scores */
           msg("nsqOopGenMsg","Saved \u2014 placing "+divLabel(d)+"\u2019s matches\u2026");
-          return act({action:"oop_clear",admin_pin:UI.pin,tournament:D.tour,division:d}).then(function(c){
+          return act({action:"oop_clear",admin_pin:UI.pin,tournament:D.tour,division:d,keep_moved:true}).then(function(c){   /* q249: matches moved by hand stay */
             if(!c.ok){ draw(true); setTimeout(function(){ msg("nsqOopGenMsg",c.error||"Saved, but the schedule was not redone \u2014 press Generate.",true); },400); return; }
             return act({action:"oop_generate",admin_pin:UI.pin,tournament:D.tour,division:d}).then(function(g){
               var t=g.ok?((g.report||[]).map(function(r){ return divLabel(r.division)+": "+r.placed+" on the schedule"+(r.unplaced?" \u00b7 "+r.unplaced+" have NO court or time yet \u2014 see \u201cNot everything is on the schedule\u201d at the top":"")+(r.waiting?", "+r.waiting+" waiting for earlier rounds":""); }).join(" \u00b7 ")||(g.placed+" placed.")):(g.error||"Saved, but not placed \u2014 press Generate.");
@@ -21577,9 +21583,9 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     /* q216: generate ALL = re-plan everything allocated: the matches still to play come off and are placed again — so
        breaks (or days) added after an earlier generate are taken into account. Completed matches keep their place. */
     W.nsqOopGenerateAll=function(){ if(!pinOk()) return;
-      if(D.rows.length && !confirm("Re-plan every allocated division? Matches still to play are placed again (any you moved by hand go back to the plan). Completed matches stay where they are.")) return;
+      if(D.rows.length && !confirm("Re-plan every allocated division? Matches still to play are placed again. Matches you moved by hand, and completed matches, stay where they are.")) return;   /* q249 */
       msg("nsqOopGenAllMsg","Placing the matches\u2026");
-      act({action:"oop_clear",admin_pin:UI.pin,tournament:D.tour,division:""}).then(function(c){
+      act({action:"oop_clear",admin_pin:UI.pin,tournament:D.tour,division:"",keep_moved:true}).then(function(c){   /* q249: matches moved by hand stay */
         if(!c.ok){ msg("nsqOopGenAllMsg",c.error||"Not generated.",true); return; }
         return act({action:"oop_generate",admin_pin:UI.pin,tournament:D.tour,division:""}).then(function(j){
           if(!j.ok){ msg("nsqOopGenAllMsg",j.error||"Not generated.",true); return; }
@@ -21696,6 +21702,69 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     }catch(e){} };
     W.__nsqStripPass=stripPass;
     setInterval(stripPass, 900);
+
+    /* ---------- q249: THE ORDER OF PLAY FROM THE DRAW (Andre, 21 Oct: "we do the draw, then go out to the order, generate,
+       back to the draw, later back out to the order ..."). Under the draw's tabs, beside Schedule / Page: an Order of Play
+       button (its back arrow returns to this draw). And when THIS section has an Order of Play (an allocation — by choice:
+       a tournament without one sees nothing) and the draw holds matches not on it yet (a round just made), one button puts
+       them on: the section's own Generate — it only adds, never moves a match already placed. ---------- */
+    var DB={key:"",sig:"",busy:false,note:""};
+    var drawCtx=function(){ var scr=document.getElementById("tournamentSheetScreen"); if(!scr||!scr.classList.contains("active")) return null;
+      var cont=document.getElementById("tournamentSheetContent"); if(!cont || !cont.querySelector(".tm-nav")){ Array.prototype.forEach.call(scr.querySelectorAll(".nsqOopDrawBar,.nsqOopDrawBtn"),function(x){ x.remove(); }); return null; }   /* q250: the draw only, not a stats table */
+      var c=W._tmCtx||{}; if(!c.tournament||!c.division) return null; return {scr:scr,tour:c.tournament,div:c.division}; };
+    var visBar=function(scr){ var bars=scr.querySelectorAll(".nhTourBar"); for(var i=0;i<bars.length;i++){ if(bars[i].offsetParent!==null) return bars[i]; } return null; };
+    W.nsqOopFromDraw=function(){ var c=drawCtx(); W.__nsqOopFrom=c?{tour:c.tour,draw:true}:null; W.nsqOopOpen(true); };
+    var waitingOf=function(div){ var on={}; D.rows.forEach(function(r){ on[r.fixture_id]=1; });
+      return Object.keys(D.fx).map(function(k){ return D.fx[k]; }).filter(function(f){ return f.division===div && f.sets_a==null && Number(f.seed_a)>0 && Number(f.seed_b)>0 && !on[f.id]; }); };
+    var roundsTxt=function(list){ var rs={}; list.forEach(function(f){ rs[Number(f.round)>=90?"the knockout":("round "+f.round)]=1; }); var k=Object.keys(rs); return k.length===1?k[0]:"new rounds"; };
+    var paintDrawBar=function(c, bar){
+      var host=bar.parentNode; if(!host) return; var have=host.querySelector(".nsqOopDrawBar");
+      var alloc=D.tour===c.tour && D.allocs.some(function(a){ return a.division===c.div; });
+      var list=alloc?waitingOf(c.div):[];
+      var html="";
+      if(alloc && list.length && !DB.busy) html='<span style="flex:1;min-width:0">🕒 <b>'+list.length+' match'+(list.length===1?'':'es')+'</b> of '+esc(divLabel(c.div))+' ('+esc(roundsTxt(list))+') '+(list.length===1?'is':'are')+' not on the Order of Play yet.</span>'
+        +'<button onclick="nsqOopDrawPlace()" style="flex:none;border:none;background:#D35400;color:#fff;border-radius:999px;padding:8px 13px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit">Put on the Order of Play</button>';
+      else if(DB.busy) html='<span style="flex:1">🕒 Placing the matches…</span>';
+      if(DB.note && DB.noteKey===c.tour+"|"+c.div) html+=(html?'<div style="flex-basis:100%;height:0"></div>':'')+'<span style="flex:1;font-size:12px">'+DB.note+'</span>';
+      if(!html){ if(have) have.remove(); return; }
+      if(!have){ have=document.createElement("div"); have.className="nsqOopDrawBar"; have.setAttribute("data-plat-keep","1");
+        have.style.cssText="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0 4px;padding:9px 11px;border-radius:12px;background:#fff7ed;border:1.5px solid #f0b37e;font-size:13px;color:#4a3426";
+        host.insertBefore(have, bar.nextSibling); }
+      if(have.dataset.h!==html){ have.dataset.h=html; have.innerHTML=html; }
+    };
+    W.nsqOopDrawPlace=function(){
+      var c=drawCtx(); if(!c || DB.busy) return;
+      var pin=UI.pin; if(!pin){ try{ pin=sessionStorage.getItem("nsqAdminEntries")||""; }catch(e){} }
+      if(!pin){ pin=String(prompt("Admin code (to place the matches on the Order of Play):")||"").trim(); if(!pin) return; }
+      DB.busy=true; DB.note=""; var bar=visBar(c.scr); if(bar) paintDrawBar(c, bar);
+      var before={}; D.rows.forEach(function(r){ before[r.fixture_id]=1; });
+      act({action:"oop_generate",admin_pin:pin,tournament:c.tour,division:c.div}).then(function(j){
+        DB.busy=false; DB.noteKey=c.tour+"|"+c.div;
+        if(!j || !j.ok){ DB.note='<span style="color:#c0392b">'+esc((j&&j.error)||"Not placed.")+'</span>'; var b0=visBar(c.scr); if(b0) paintDrawBar(c,b0); return; }
+        UI.pin=pin; UI.admin=true;
+        return load(true).then(function(){
+          var fresh=D.rows.filter(function(r){ return !before[r.fixture_id] && r.division===c.div; }).sort(function(a,b){ return (a.play_day+a.start_time)<(b.play_day+b.start_time)?-1:1; });
+          var r0=(j.report||[]).filter(function(r){ return r.division===c.div; })[0]||{};
+          var t=fresh.length ? ('<span style="color:#1e8449">✓ '+fresh.length+' placed — from '+esc(fmtDay(fresh[0].play_day))+' '+esc(hhmm(fresh[0].start_time))+'.</span>') : '';
+          if(r0.unplaced) t+=(t?' ':'')+'<span style="color:#c0392b">'+r0.unplaced+' have NO court or time yet — open the Order of Play to see why.</span>';
+          if(!t) t='Nothing new to place.';
+          DB.note=t+' <a href="#" onclick="event.preventDefault();nsqOopFromDraw()" style="color:#D35400;font-weight:700">Order of Play ›</a>';
+          var b1=visBar(c.scr); if(b1) paintDrawBar(c,b1);
+        });
+      });
+    };
+    setInterval(function(){ try{
+      var c=drawCtx(); if(!c) return; var bar=visBar(c.scr); if(!bar) return;
+      if(!bar.querySelector(".nsqOopDrawBtn")){ var src=bar.querySelector("button"); var b=document.createElement("button");
+        b.className="nsqOopDrawBtn"; if(src) b.style.cssText=src.style.cssText; b.innerHTML="🕒 Order of Play"; b.setAttribute("onclick","nsqOopFromDraw()"); bar.insertBefore(b, bar.firstChild); }
+      /* fresh from the server when the draw on screen changes (a round made), else every 20 s */
+      var ids=Array.prototype.map.call(c.scr.querySelectorAll('tr[onclick^="tmEnterFixtureResult("]'),function(tr){ return (String(tr.getAttribute("onclick")).match(/\d+/)||[""])[0]; }).join(",");
+      var key=c.tour+"|"+c.div, sig=key+"#"+ids;
+      if(key!==DB.key){ DB.key=key; DB.note=""; }
+      var stale=(D.tour!==c.tour) || (Date.now()-D.at>20000);
+      if(sig!==DB.sig || stale){ DB.sig=sig; load(true).then(function(){ var c2=drawCtx(); if(c2 && c2.tour===c.tour){ var b2=visBar(c2.scr); if(b2) paintDrawBar(c2,b2); } }); }
+      else paintDrawBar(c, bar);
+    }catch(e){} }, 1500);
 
     /* ---------- My page: your matches ---------- */
     var MINE={at:0,name:"",html:""};
@@ -22578,6 +22647,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
          on a blank page (Andre's bump video) */
       var txt=box.innerText||"";
       if(/Loading tournament/.test(txt) || txt.trim().length<60){ var old=box.querySelector(".nsqRules"); if(old) old.remove(); return; }
+      if(!box.querySelector(".tm-nav")){ var o2=box.querySelector(".nsqRules"); if(o2) o2.remove(); return; }   /* q250: a stats / form table is not the draw */
       var ctx=W._tmCtx||{}, d=ctx.division||""; if(!d || !tourNow()) return;
       var have=box.querySelector(".nsqRules");
       if(have && have.dataset.sec===d) return;
@@ -23948,6 +24018,56 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     W.mkSvOrd=function(t,k){ ensure(); MK.ord[t]=(k===1?1:0); addOrder(); };
     ["mkServePrompt","mkRenderSetup"].forEach(function(fn){ var o=W[fn]; if(typeof o!=="function") return;
       W[fn]=function(){ var r=o.apply(this, arguments); addOrder(); return r; }; });
+  })();
+
+  /* ===================================================================================================================
+     NAT-SQUASH q250 · TOURNAMENT STATS BY SECTION (Andre, 21 Oct: "the tab All Sorts should have the 3 sections and not
+     one combined — the combined one is the Universal, which we have"). On Tournament Stats a sectioned category (All
+     Sorts - Section 1, 2, 3) gets one button per section instead of the one combined button; each shows that section's
+     pairs only (a substituted pair under the names it played), ranked among themselves exactly as the table ranks
+     (win % -> games won -> difference). Universal stays as it is. A tournament without sections is unchanged.
+     ================================================================================================================== */
+  (function(){
+    var W=window;
+    var _rtb=W.renderTournamentButtons; if(typeof _rtb!=="function") return;
+    var ENC=encodeURIComponent;
+    var H=function(){ return {apikey:SB_ANON,Authorization:"Bearer "+SB_ANON}; };
+    var cid=function(){ try{ return Number(W.PLAT&&W.PLAT.cid)||Number(CLUB_ID)||0; }catch(e){ return 0; } };
+    var tourName=function(){ try{ return TOURNAMENT_EVENT||""; }catch(e){ return ""; } };
+    var baseOf=function(c){ c=String(c||"").trim(); var i=c.indexOf(" - "); return i>0?c.slice(0,i).trim():c; };
+    var secOf=function(c){ c=String(c||"").trim(); var i=c.indexOf(" - "); return i>0?c.slice(i+3).trim():""; };
+    var low=function(s){ return String(s||"").trim().toLowerCase(); };
+    var key=function(a,b){ return [low(a),low(b)].sort().join("|"); };
+    /* the button text the page gives a category (as renderTournamentButtons labels it) */
+    var label=function(d){ return d==="Men's"?"Men's Doubles":d==="Ladies"?"Ladies Doubles":d==="Mixed"?"Mixed Doubles":d; };
+    var split=function(){
+      var box=document.getElementById("tStatsButtons"), tour=tourName(), c=cid(); if(!box||!tour||!c) return;
+      return fetch(SB_URL+"/rest/v1/plat_squash_tournament_entries?club_id=eq."+c+"&tournament=eq."+ENC(tour)+"&select=category,p1,p2,sub_p1,sub_p2",{headers:H()})
+        .then(function(r){ return r.ok?r.json():[]; }).catch(function(){ return []; }).then(function(ents){
+          if(tourName()!==tour || !Array.isArray(ents)) return;
+          var secs={};   /* base -> { section category -> pairs } */
+          ents.forEach(function(e){ var cat=String(e.category||""); if(!secOf(cat)) return;
+            var b=baseOf(cat); secs[b]=secs[b]||{}; var p=secs[b][cat]=secs[b][cat]||{};
+            p[key(e.p1,e.p2)]=1;
+            if(e.sub_p1||e.sub_p2) p[key(e.sub_p1||e.p1, e.p2!=null?(e.sub_p2||e.p2):e.p2)]=1; });
+          Object.keys(secs).forEach(function(b){
+            var btn=Array.prototype.filter.call(box.querySelectorAll("button"),function(x){ return (x.textContent||"").trim()===label(b) && !x.dataset.nsqSec; })[0];
+            if(!btn) return;
+            var cats=Object.keys(secs[b]).sort(function(x,y){ return secOf(x).localeCompare(secOf(y), undefined, {numeric:true}); });
+            cats.forEach(function(cat){
+              var nb=document.createElement("button"); nb.className="menu-btn"; nb.dataset.nsqSec=cat;
+              var title=label(b)+" · "+secOf(cat); nb.textContent=secOf(cat);
+              nb.addEventListener("click",function(){ W.__nsqStatsSec={base:b, pairs:secs[b][cat]}; loadTournament(b, title); });
+              btn.parentNode.insertBefore(nb, btn); });
+            btn.remove();   /* the combined table is the Universal one */
+          });
+        });
+    };
+    W.renderTournamentButtons=function(){ var r=_rtb.apply(this, arguments); return Promise.resolve(r).then(function(v){ return Promise.resolve(split()).then(function(){ return v; }); }); };
+    /* loadTournament asks this for the rows it is about to rank (q250 hook in the build) */
+    W.__nsqStatsFilter=function(cat, data){ var s=W.__nsqStatsSec; W.__nsqStatsSec=null;
+      if(!s || s.base!==cat || !Array.isArray(data)) return data;
+      return data.filter(function(p){ return !!s.pairs[key(p.p1,p.p2)]; }); };
   })();
 
 })();</script>
