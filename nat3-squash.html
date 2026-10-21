@@ -2069,8 +2069,10 @@ function mkMatchOver(games){ return MK.allPlay ? ((games[0]+games[1])>=MK.fmt) :
 function mkFmtLabel(){ return (MK.allPlay?(MK.fmt+' games'):('Best of '+MK.fmt))+' \u00b7 to '+(MK.target||11)+((!MK.hcTeam && MK.winByTwo===true)?' \u00b7 win by two':''); }   /* q183 */
 function mkMatchRows(){
   var on=function(c){ return c?'on':''; };
+  var _fixedG=(MK.fmt!==3 && MK.fmt!==5);   /* q252: 1, 2 or 4 games — chosen on the score sheet */
   return '<div style="margin-bottom:10px;"><div style="font-size:11px;color:#9a8578;margin-bottom:5px;">Games</div>'
-    +'<div class="mk-seg"><button class="'+on(!MK.allPlay&&MK.fmt===3)+'" onclick="mkSetFmt(3)">Best of 3</button><button class="'+on(!MK.allPlay&&MK.fmt===5)+'" onclick="mkSetFmt(5)">Best of 5</button><button class="'+on(MK.allPlay)+'" onclick="mkSetFmt(&quot;3all&quot;)">3 games, all played</button></div></div>'
+    +(_fixedG ? ('<div style="font-size:15px;font-weight:800;color:#3b2a1e;padding:6px 2px">'+MK.fmt+' game'+(MK.fmt===1?'':'s')+(MK.fmt===1?'':', all played')+'<span style="display:block;font-size:12px;font-weight:600;color:#9a8578;margin-top:2px">as chosen in Games Played on the score sheet</span></div></div>') : '')
+    +(_fixedG ? '' : '<div class="mk-seg"><button class="'+on(!MK.allPlay&&MK.fmt===3)+'" onclick="mkSetFmt(3)">Best of 3</button><button class="'+on(!MK.allPlay&&MK.fmt===5)+'" onclick="mkSetFmt(5)">Best of 5</button><button class="'+on(MK.allPlay)+'" onclick="mkSetFmt(&quot;3all&quot;)">3 games, all played</button></div></div>')
     +'<div style="margin-bottom:10px;"><div style="font-size:11px;color:#9a8578;margin-bottom:5px;">Points to win a game (first to, no 2-point margin)</div>'
     +(MK.handicap?'<div style="font-size:12px;color:#9a8578">11 \u2014 a handicap match is played to 11</div>'
       :'<div class="mk-seg"><button class="'+on((MK.target||11)===11)+'" onclick="mkSetTarget(11)">11</button><button class="'+on(MK.target===15)+'" onclick="mkSetTarget(15)">15</button></div>')+'</div>';
@@ -3634,7 +3636,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q251";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q254";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -10672,7 +10674,7 @@ async function clRemove(id, label){
       /* n97: on the door this opened plat's profile list scoped to the region's own board — empty, "no individuals
          registered". It goes to the records' profiles page for this scope instead. */
       +'</div><button class="more" onclick="'+(scope==="club"
-          ? ("window.nhNav('"+PAGE+"?club="+(W.PLAT.parentId||W.PLAT.cid)+"&go=records&view=profiles&back="+encodeURIComponent("?club="+W.PLAT.cid)+"')")   /* Nat-Squash: back to this page */
+          ? ("window.nhNav('"+PAGE+"?club="+W.PLAT.cid+"&go=records&view=profiles&back="+encodeURIComponent("?club="+W.PLAT.cid)+"')")   /* Nat-Squash: back to this page; q254: this door's own */
           : "window.nhGo('profiles')")+'">See player profiles here \u2192</button></div>';
   }
   function nhFormBrk(d,ink,scope){
@@ -10703,7 +10705,7 @@ async function clRemove(id, label){
           +'<span class="nm"><b>'+esc(p.name)+'</b><span>'+p.won+' of '+p.played+' games won '+nhWhen()+'</span></span>'
           +'<span class="val"><b class="up">+'+p.move+'</b><span>'+nhWhen()+'</span></span></div>'; }).join("")
       +'</div><button class="more" onclick="'+(scope==="club"
-        ? ("window.nhNav('"+PAGE+"?club=0&pool="+W.PLAT.pool+"&nat="+(W.PLAT.parentId||W.PLAT.cid)+"&go=ladders&back="+encodeURIComponent("?club="+(W.PLAT.parentId||W.PLAT.cid))+"')")
+        ? ("window.nhNav('"+PAGE+"?club=0&pool="+W.PLAT.pool+"&nat="+W.PLAT.cid+"&go=ladders&back="+encodeURIComponent("?club="+W.PLAT.cid)+"')")   /* q254: this door's own */
         : "window.nhGo('ladders')")+'">Ratings and ladders \u2192</button></div>';
   }
   function nhTrail(name,ms){
@@ -20813,7 +20815,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     var dayN=function(d){ var t=Date.parse(String(d||"").slice(0,10)+"T00:00:00Z"); return isNaN(t)?0:Math.floor(t/86400000); };
     var todayN=function(){ var n=new Date(); return Math.floor(Date.UTC(n.getFullYear(),n.getMonth(),n.getDate())/86400000); };
     W.__nhLfRules={start:START, keep:KEEP};
-    var MINP=12;   /* Andre (11 Oct): a category with no history starts when 12 pairs have played */
+    var MINP=6;   /* q254 (Andre, 21 Oct: "some clubs only have about 8 ladies"): a category starts when 6 pairs have played (was 12) */
     var nmOf=function(m,t){ var A=t===1?side(m.t1p1,m.t1p2):side(m.t2p1,m.t2p2); return (t===1?m.t1p2:m.t2p2)?A.join(" & "):String(t===1?m.t1p1:m.t2p1).trim(); };
     var build=function(rows, cat, asOf, leaps){
       var lad=[], info={};
@@ -20885,7 +20887,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
             +(a?'background:var(--nhc,#6c3483);color:#fff':'background:#fff;color:var(--nhc,#6c3483)')+'">'+esc(c[1])+'</button>'; });
         if(L.notYet){
           h+='</div></div><div style="padding:16px 14px;margin:6px 0;border:1.5px dashed #d9cfe6;border-radius:12px;text-align:center;font-size:13px;line-height:1.5;color:#4a4256">'
-            +'<b>The '+esc(state.cat)+' Leapfrog Index starts when 12 pairs have played.</b><br>'+L.count+' of 12 so far. Keep entering your scores.</div>';
+            +'<b>The '+esc(state.cat)+' Leapfrog Index starts when '+MINP+' pairs have played.</b><br>'+L.count+' of '+MINP+' so far. Keep entering your scores.</div>';
           box.innerHTML=h;
           Array.prototype.forEach.call(box.querySelectorAll("button[data-cat]"),function(b){ b.onclick=function(){ state.cat=b.getAttribute("data-cat"); draw(); }; });
           return;
@@ -20924,7 +20926,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       +'<b>The last 60 days.</b> A pair that has not played for 60 days drops off the index, and everyone below moves up. '
       +'Play again and you come back as a new pair: win and you take the loser\u2019s place, lose and you start at the bottom. '
       +'The index started on 15 September 2026 in the order of the pair ratings that day; every match since moves it. '
-      +'A new group or category starts the day its 12th pair plays, in the order of the ratings that day. To stay on the index, keep playing.';
+      +'A new club or category starts the day its 6th pair plays, in the order of the ratings that day. To stay on the index, keep playing.';
     var ensure=function(){
       var scr=document.getElementById("nhLfScreen"); if(scr) return scr;
       var lad=document.getElementById("laddersScreen"); if(!lad || !lad.parentNode) return null;
@@ -20995,6 +20997,77 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       }catch(e){}
     };
     setInterval(leapBrk, 900);
+    /* q254 (Andre, 21 Oct): ON THE KZN AND NATIONAL PAGES — "Biggest leaps" across every club, and "Leapfrog leaders" (each
+       club's number one). Both are read from each club's OWN Leapfrog Index, exactly as that club's door shows it; nothing
+       is combined into one ladder (a combined ladder would move pairs who were not on court) and nothing is written. */
+    var REG={key:"", rows:null, at:0};
+    var lvlOf=function(id){ try{ return W.__nsqLevelOf ? W.__nsqLevelOf(Number(id)) : ""; }catch(e){ return ""; } };
+    var regionNow=function(){ try{
+      var hs=document.getElementById("homeScreen"); if(!hs || !hs.classList.contains("active")) return null;
+      var q=new URLSearchParams(location.search); if(q.get("go")) return null;
+      var c=Number((W.PLAT&&W.PLAT.cid)||0), L=lvlOf(c);
+      return (L==="province" || L==="national") ? c : null; }catch(e){ return null; } };
+    var clubsUnder=function(c){ var all=W.PLAT.clubs||[], byId={}; all.forEach(function(x){ byId[Number(x.id)]=x; });
+      var under=function(x){ var p=Number(x.parent_id||0), n=0; while(p && n++<6){ if(p===c) return true; p=Number((byId[p]||{}).parent_id||0); } return false; };
+      return all.filter(function(x){ return lvlOf(x.id)==="club" && (c===0 || under(x)); }); };
+    var regLoad=function(c, clubs){
+      if(REG.key===String(c) && REG.rows && Date.now()-REG.at<60000) return Promise.resolve(REG.rows);
+      var all=W.PLAT.clubs||[], ids=[];
+      clubs.forEach(function(k){ ids.push(Number(k.id)); all.forEach(function(x){ if(Number(x.parent_id)===Number(k.id)) ids.push(Number(x.id)); }); });
+      if(!ids.length) return Promise.resolve([]);
+      var out=[], page=function(off){
+        return Promise.resolve(sbGet("matches?select=id,club_id,match_date,match_type,t1p1,t1p2,t2p1,t2p2,t1_sets,t2_sets,t1_games,t2_games,t1_rating_at,t2_rating_at,rating_delta&club_id=in.("+ids.join(",")+")&order=match_date.asc,id.asc&limit=1000&offset="+off))
+          .then(function(r){ r=Array.isArray(r)?r:[]; out=out.concat(r); return r.length<1000?out:page(off+1000); }); };
+      return page(0).then(function(rows){ REG={key:String(c), rows:rows, at:Date.now()}; return rows; });
+    };
+    var regBrk=function(){
+      try{
+        var c=regionNow(); if(c==null) return;
+        var nh=document.getElementById("nh"); if(!nh) return;
+        var have=document.getElementById("nhLeapReg");
+        if(have && have.getAttribute("data-c")===String(c) && nh.contains(have)) return;
+        if(have) have.remove();
+        var clubs=clubsUnder(c); if(!clubs.length) return;
+        var h2s=Array.prototype.slice.call(nh.querySelectorAll(".brk > h2"));
+        var after=h2s.filter(function(h){ return /^\s*movers/i.test(h.textContent||""); })[0] || h2s.filter(function(h){ return /^\s*in form/i.test(h.textContent||""); })[0] || h2s[0];
+        if(!after || !after.parentNode || !after.parentNode.parentNode) return;
+        var host=document.createElement("div"); host.id="nhLeapReg"; host.setAttribute("data-c",String(c)); host.style.display="none";
+        var b0=after.parentNode; b0.parentNode.insertBefore(host, b0.nextSibling);
+        var scopeName=(c===0)?"National":(((W.PLAT.clubs||[]).filter(function(x){ return Number(x.id)===c; })[0]||{}).name||"");
+        var PAGEN=(location.pathname.split("/").pop()||"nat3-squash.html");
+        regLoad(c, clubs).then(function(rows){
+          if(regionNow()!==c || !document.body.contains(host)) return;
+          var all=W.PLAT.clubs||[], today=todayN(), leaps=[], leaders=[];
+          clubs.forEach(function(k){
+            var ids={}; ids[Number(k.id)]=1; all.forEach(function(x){ if(Number(x.parent_id)===Number(k.id)) ids[Number(x.id)]=1; });
+            var mine=rows.filter(function(m){ return ids[Number(m.club_id)]; }); if(!mine.length) return;
+            var tops=[];
+            CATS.forEach(function(ct){ var lp=[]; var L=build(mine, ct[0], null, lp);
+              if(L && !L.notYet && L.length) tops.push(ct[1]+": "+L[0].i.name);
+              lp.forEach(function(x){ if(!x.isNew && today-dayN(x.d)<=LEAPDAYS){ x.cat=ct[1]; x.club=k; leaps.push(x); } }); });
+            if(tops.length) leaders.push({club:k, tops:tops});
+          });
+          leaps.sort(function(a,b){ return (b.up-a.up) || (a.d<b.d?1:-1); });
+          leaders.sort(function(a,b){ return String(a.club.name).localeCompare(String(b.club.name)); });
+          var go=function(k){ return "window.nhNav('"+PAGEN+"?club="+Number(k.id)+"')"; };
+          var dot=function(k,txt){ return '<span class="av" style="display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:'+esc(k.colour||"#6c3483")+';color:#fff;font-weight:800;font-size:13px;flex:none">'+txt+'</span>'; };
+          var h="";
+          var top=leaps.slice(0,3);
+          if(top.length) h+='<div class="brk"><h2 style="display:flex;align-items:center;gap:8px">Biggest leaps · '+esc(scopeName)+' · last '+LEAPDAYS+' days</h2><div class="rows">'
+            + top.map(function(x){ return '<button class="row" onclick="'+go(x.club)+'">'+dot(x.club,'#'+x.to)
+                +'<span class="nm"><b>'+esc(x.name)+'</b><span>beat '+esc(x.over)+' · '+esc(x.cat)+' · '+esc(x.club.name)+' · '+esc(fmtD(x.d))+'</span></span>'
+                +'<span class="val"><b class="up">▲ '+x.up+'</b><span>place'+(x.up===1?'':'s')+'</span></span></button>'; }).join("")
+            +'</div><div style="padding:2px 14px 10px;font-size:11.5px;color:#7a6f8a">From each club’s own Leapfrog Index — tap one to open that club.</div></div>';
+          if(leaders.length) h+='<div class="brk"><h2 style="display:flex;align-items:center;gap:8px">Leapfrog leaders · '+esc(scopeName)+'</h2><div class="rows">'
+            + leaders.map(function(o){ var nm=String(o.club.name||""); return '<button class="row" onclick="'+go(o.club)+'">'+dot(o.club, esc(nm.charAt(0).toUpperCase()))
+                +'<span class="nm"><b>'+esc(nm)+'</b><span>'+esc(o.tops.join(" · "))+'</span></span></button>'; }).join("")
+            +'</div><div style="padding:2px 14px 10px;font-size:11.5px;color:#7a6f8a">Each club’s number one, on its own Leapfrog Index.</div></div>';
+          if(!h){ host.remove(); return; }
+          host.innerHTML=h; host.style.display="";
+        }).catch(function(){ try{ host.remove(); }catch(e){} });
+      }catch(e){}
+    };
+    setInterval(regBrk, 1200);
     W.__nhTsBuild=build;   /* for the test */
   })();
 
@@ -23991,6 +24064,86 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     W.__nsqStatsFilter=function(cat, data){ var s=W.__nsqStatsSec; W.__nsqStatsSec=null;
       if(!s || s.base!==cat || !Array.isArray(data)) return data;
       return data.filter(function(p){ return !!s.pairs[key(p.p1,p.p2)]; }); };
+  })();
+  /* ===================================================================================================================
+     NAT-SQUASH q253 · BACK FROM A STATS TABLE RETURNS TO THE STATS (Andre, 21 Oct: "I open Section 3 to look, then back —
+     it takes me out of the stats page to the tournament page; it must take me to the stats page where I can see the
+     Section 1 and 2 pills"). A stats or form table opened from Tournament Stats remembers that; the back arrow then
+     lands on the same tournament with Tournament Stats open, not on Draw & Rounds.
+     ================================================================================================================== */
+  (function(){
+    var W=window, RET=null;
+    ["loadTournament","loadTournamentForm"].forEach(function(fn){ var o=W[fn]; if(typeof o!=="function") return;
+      W[fn]=function(){ try{ RET=(W._tourInternalView==="stats") ? {tour:TOURNAMENT_EVENT, at:Date.now()} : null; }catch(e){ RET=null; }
+        return o.apply(this, arguments); }; });
+    var _ss=W.showScreen; if(typeof _ss!=="function") return;
+    W.showScreen=function(id){
+      var r=_ss.apply(this, arguments);
+      try{
+        if(id==="tournamentScreen" && RET){ var want=RET; RET=null; var n=0;
+          var t=setInterval(function(){ try{
+            var scr=document.getElementById("tournamentScreen");
+            if(++n>20 || !scr || !scr.classList.contains("active")){ clearInterval(t); return; }
+            if(TOURNAMENT_EVENT!==want.tour) return;   /* the page is still settling on the tournament */
+            clearInterval(t);
+            if(W._tourInternalView!=="stats" && typeof W.setTourView==="function") W.setTourView("stats");
+          }catch(e){ clearInterval(t); } }, 100); }
+        else if(id!=="tournamentSheetScreen") RET=null;
+      }catch(e){}
+      return r; };
+  })();
+
+  /* ===================================================================================================================
+     NAT-SQUASH q254 · A CLUB'S LINKS OPEN THAT CLUB, WITH ONE TAP TO WIDEN (Andre, 21 Oct: "on the Gillitts front door the
+     brackets show Gillitts players, but the link opens the KZN ratings and profiles — confusing when I am fixed on Gillitts").
+     The door's "Ratings and ladders" and "See player profiles here" now open the door's OWN scope (the build changes those
+     two links, squash only), and those two pages carry a row of pills — Gillitts · KZN · National — the one you are on lit;
+     a tap widens (or narrows back). Read only; nothing else on the pages changes.
+     ================================================================================================================== */
+  (function(){
+    var W=window;
+    var esc=function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+    var PAGEN=function(){ return (location.pathname.split("/").pop()||"nat3-squash.html"); };
+    var lvl=function(id){ try{ return W.__nsqLevelOf ? W.__nsqLevelOf(Number(id)) : ""; }catch(e){ return ""; } };
+    var byId=function(id){ return (W.PLAT.clubs||[]).filter(function(x){ return Number(x.id)===Number(id); })[0]||null; };
+    /* the door you came from (the page's back link): a club or a province */
+    var origin=function(q){ var b=q.get("back")||""; var m=b.match(/club=(\d+)/); var id=m?Number(m[1]):0; var L=lvl(id); return (L==="club"||L==="province")?id:0; };
+    /* its chain: club -> province -> National (0) */
+    var chainOf=function(id){ var out=[], x=byId(id), n=0; while(x && n++<6){ var L=lvl(x.id); if(L==="club"||L==="province") out.push({id:Number(x.id), name:x.name}); x=x.parent_id?byId(x.parent_id):null; }
+      out.push({id:0, name:"National"}); return out; };
+    var row=function(chain, cur, hrefOf){
+      return '<div id="nsqScope" class="nsqScopeRow" data-plat-keep="1" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:10px 12px 4px">'
+        + chain.map(function(c){ var on=(c.id===cur);
+            return '<button type="button" data-href="'+esc(hrefOf(c.id))+'" style="flex:1;min-width:84px;max-width:220px;padding:9px 10px;border-radius:999px;font:inherit;font-size:13px;font-weight:800;cursor:'+(on?'default':'pointer')+';'
+              +'border:1.5px solid var(--nhc,#6c3483);'+(on?'background:var(--nhc,#6c3483);color:#fff':'background:#fff;color:var(--nhc,#6c3483)')+'">'+esc(c.name)+'</button>'; }).join("")
+        + '</div>'; };
+    var wire=function(box){ Array.prototype.forEach.call(box.querySelectorAll("button[data-href]"),function(b){ b.onclick=function(){
+      var h=b.getAttribute("data-href"); if(!h || b.style.cursor==="default") return; try{ if(typeof W.nhNav==="function"){ W.nhNav(h); return; } }catch(e){} location.href=h; }; }); };
+    setInterval(function(){ try{
+      var q=new URLSearchParams(location.search), go=q.get("go"), o=origin(q);
+      var have=document.getElementById("nsqScope");
+      /* Ratings and ladders */
+      if(go==="ladders"){
+        var sc=document.getElementById("laddersScreen"); if(!sc || !sc.classList.contains("active") || !o){ if(have) have.remove(); return; }
+        var cur=Number(q.get("nat")||0), key="L|"+cur+"|"+o;
+        if(have && have.dataset.k===key && sc.contains(have)) return; if(have) have.remove();
+        var first=sc.querySelector(".screen-content > .ladders-group-title"); if(!first) return;   /* above the first group of buttons (the box after the scope line is hidden by the page) */
+        var back=q.get("back")||"", pool=q.get("pool")||String(W.PLAT.pool||"");
+        var d=document.createElement("div"); d.innerHTML=row(chainOf(o), cur, function(id){ return PAGEN()+"?club=0&pool="+pool+(id?("&nat="+id):"")+"&go=ladders&back="+encodeURIComponent(back); });
+        var el=d.firstChild; el.dataset.k=key; el.className="nsqScopeRow"; first.parentNode.insertBefore(el, first); wire(el); return;
+      }
+      /* Member profiles */
+      if(go==="records" && q.get("view")==="profiles"){
+        var nh=document.getElementById("nh"), band=nh&&nh.querySelector(".band"); if(!band || !o){ if(have) have.remove(); return; }
+        var all=q.get("all")==="1", cur2=all?0:Number(q.get("club")||0), key2="P|"+cur2+"|"+o;
+        if(have && have.dataset.k===key2 && nh.contains(have)) return; if(have) have.remove();
+        var back2=q.get("back")||"";
+        var d2=document.createElement("div"); d2.innerHTML=row(chainOf(o), cur2, function(id){ return id ? (PAGEN()+"?club="+id+"&go=records&view=profiles&back="+encodeURIComponent(back2))
+                                                                                        : (PAGEN()+"?club="+o+"&go=records&all=1&view=profiles&back="+encodeURIComponent(back2)); });
+        var el2=d2.firstChild; el2.dataset.k=key2; band.parentNode.insertBefore(el2, band.nextSibling); wire(el2); return;
+      }
+      if(have) have.remove();
+    }catch(e){} }, 700);
   })();
 
 })();</script>
