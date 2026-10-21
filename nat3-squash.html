@@ -3636,7 +3636,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q256";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q257";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -18829,20 +18829,27 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
         MV.busy=false; MV.key=key; ms=Array.isArray(ms)?ms:[];
         var n2=document.getElementById("nh"); if(!n2 || +W.PLAT.cid!==cid) return;
         var old=n2.querySelector("#nsqMovesCard"); if(old) old.remove();
-        var card=document.createElement("div"); card.id="nsqMovesCard"; card.className="brk"; card.setAttribute("data-plat-keep","1");
+        /* q257 (Andre, 21 Oct: "Division moves takes about half the page and you keep scrolling past it to Tournaments — make it a
+           roll-up"): the same card in the same place, CLOSED — tap its heading to open the list (as My partnerships does) */
+        var card=document.createElement("div"); card.id="nsqMovesCard"; card.className="brk nhRoll nhOpenList"; card.setAttribute("data-plat-keep","1");
         var ago3=function(t){ var d=(Date.now()-new Date(t).getTime())/86400000; return d<1?"today":d<2?"yesterday":Math.floor(d)+" days ago"; };
-        card.innerHTML='<h2>Division moves</h2>'+(ms.length?ms.map(function(m){ var up=m.direction==="up";
+        var _open=!!W.__nsqMovesOpen;
+        card.innerHTML='<h2 onclick="window.nsqMovesToggle()" style="display:flex;align-items:center;gap:8px;cursor:pointer">Division moves'+(ms.length?(' \u00b7 '+ms.length):'')
+          +'<span id="nsqMovesCaret" class="nhExp'+(_open?' open':'')+'" data-plat-keep="1" style="margin-left:auto;color:var(--nhc,#6c3483);border-color:var(--nhc,#6c3483)"><svg width="12" height="12" viewBox="0 0 12 12" style="display:block"><path d="M2.5 4.4 6 7.9 9.5 4.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></h2>'
+          +'<div id="nsqMovesBody" style="display:'+(_open?'block':'none')+'">'+(ms.length?ms.map(function(m){ var up=m.direction==="up";
             return '<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-top:1px solid #f0ecf6;font-size:13.5px">'
               +'<b style="flex:none;color:'+(up?"#1e8449":"#c0392b")+'">'+(up?"\u25b2":"\u25bc")+'</b>'
               +'<span style="flex:1;min-width:0"><b>'+e(m.full_name)+'</b> moved '+(up?"up":"down")+' \u00b7 '+e(m.from_div)+' \u2192 '+e(m.to_div)
               +'<span style="display:block;font-size:11.5px;color:#8a8196">'+(m.rating!=null?("at "+Math.round(m.rating)+" \u00b7 "):"")+ago3(m.moved_at)+'</span></span></div>'; }).join("")
-            :'<div style="padding:11px 14px;font-size:13px;color:#7a6658">No division moves yet. A player moves up at the line + '+ZONE.z+' and down below the line \u2212 '+ZONE.z+'.</div>');
+            :'<div style="padding:11px 14px;font-size:13px;color:#7a6658">No division moves yet. A player moves up at the line + '+ZONE.z+' and down below the line \u2212 '+ZONE.z+'.</div>')+'</div>';
         var after=null; Array.prototype.forEach.call(n2.querySelectorAll(".brk"),function(k){ var h=k.querySelector("h2"); if(h && /^\s*Movers/i.test(h.textContent||"")) after=k; });
         if(after) after.parentNode.insertBefore(card, after.nextSibling);
         else { var bar=document.getElementById("nhBar"); var lastBrk=n2.querySelectorAll(".brk"); var tgt=lastBrk.length?lastBrk[lastBrk.length-1]:band; tgt.parentNode.insertBefore(card, tgt.nextSibling); }
       }).catch(function(){ MV.busy=false; });
     }
     setInterval(function(){ try{ movesCard(); }catch(e){} }, 900);
+    W.nsqMovesToggle=function(){ var bd=document.getElementById("nsqMovesBody"), c=document.getElementById("nsqMovesCaret"); if(!bd) return;
+      var open=bd.style.display==="none"; bd.style.display=open?"block":"none"; if(c) c.classList.toggle("open",open); W.__nsqMovesOpen=open; };   /* q257: open stays open while you move around */
     /* a profile in the transition zone says so */
     function zoneNote(){
       var q=new URLSearchParams(location.search); if(q.get("go")!=="me") return;
