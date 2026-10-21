@@ -3634,7 +3634,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q250-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q251-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -21241,7 +21241,12 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
             var per=B/2, blk=Math.floor((gi-1)/per), i=(gi-1)%per, st=blk*B+1;
             var path=[]; for(var q=done-1;q>=0;q--) path.push(((blk>>q)&1)?"lost":"won");
             var who=(done===1)?(blk===0?"round-1 winners":"round-1 losers"):path.join(", ");
-            return who+" · "+(B===2?("for "+ordN(st)+"/"+ordN(st+1)+" place"):("["+(st+i)+"] v ["+(st+B-1-i)+"]"))   /* q245: [1] v [8] */;
+            if(B===2) return who+" \u00b7 for "+ordN(st)+"/"+ordN(st+1)+" place";
+            /* q251: by position in the draw (Kloof) — round 2: the winners (or losers) of two neighbouring round-1 lines */
+            if(done===1 && W.__nsqPlaceBracket){ var br=W.__nsqPlaceBracket(N), wl=(blk===0?"winner":"loser");
+              var L1="["+br[4*i]+"] v ["+br[4*i+1]+"]", L2="["+br[4*i+2]+"] v ["+br[4*i+3]+"]";
+              return who+" \u00b7 "+wl+" of "+L1+" plays "+wl+" of "+L2; }
+            return who+" \u00b7 for places "+st+"\u2013"+(st+B-1);
           }
           if(fmtSw){
             /* the standings order after done rounds: C(done,k)·N/2^done teams on k wins, most wins first; match gi = the
@@ -23310,6 +23315,14 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
        · the next round pairs each block high against low: 1 v 8, 2 v 7 … then 1 v 4, 2 v 3 … then 1 v 2
        · so a block of 16 becomes two of 8, then four of 4, then eight of 2, and the last round decides 1/2, 3/4 …
      Points are games won (fixed 3 games, so every match hands out exactly 3 points — a 3-0 or a 2-1).
+
+     q251 (Andre, 21 Oct, from Kloof's Wednesday sheet: "align us with Kloof"). Kloof pair BY POSITION IN THE DRAW, as a
+     bracket: the draw's lines are 1 v 16, 8 v 9, 4 v 13, 5 v 12, 2 v 15, 7 v 10, 3 v 14, 6 v 11; round 2 is the winner of
+     the first line against the winner of the second (1/16 v 8/9), the third against the fourth (4/13 v 5/12) …, and the
+     losers the same way; round 3 again pairs neighbouring lines inside each half. The places each block plays for are
+     unchanged (winners 1–8, losers 9–16, then 1–4, 5–8 …). Points no longer reorder anyone. And the "make the next round"
+     button now ALWAYS reaches this draw: the page re-creates that button's function every time a draw is shown, which
+     silently put Banded Swiss back from round 2 on — it is now held so that every new copy still comes through here.
      ================================================================================================================== */
   (function(){
     var W=window;
@@ -23322,8 +23335,11 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
     /* ---- the arithmetic ---- */
     /* every block is an array of seeds in place order; one rule pairs them all: top against bottom */
-    var pairsOf=function(block){ var out=[], m=block.length; for(var i=0;i<Math.floor(m/2);i++) out.push([block[i], block[m-1-i]]); return out; };
+    var pairsOf=function(block){ var out=[]; for(var i=0;i+1<block.length;i+=2) out.push([block[i], block[i+1]]); return out; };   /* q251: neighbouring lines of the draw */
     W.__nsqPlacePairs=pairsOf;
+    /* q251: the draw's lines in bracket order — 1,16,8,9,4,13,5,12,2,15,7,10,3,14,6,11 for 16 */
+    var bracketOf=function(N){ var b=[1,2]; while(b.length<N){ var m=b.length*2, nb=[]; b.forEach(function(x){ nb.push(x, m+1-x); }); b=nb; } return b.slice(0,N); };
+    W.__nsqPlaceBracket=bracketOf;
 
     /* games won by each seed across every played fixture */
     var pointsOf=function(fixtures){
@@ -23338,8 +23354,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
     /* replay the played rounds and give the blocks as they now stand */
     W.__nsqPlaceBlocks=function(N, fixtures){
-      var seeds=[]; for(var i=1;i<=N;i++) seeds.push(i);
-      var blocks=[seeds], pts=pointsOf(fixtures);
+      var blocks=[bracketOf(N)], pts=pointsOf(fixtures);   /* q251: the draw's lines, in bracket order */
       var byRound={}; (fixtures||[]).forEach(function(f){ (byRound[f.round]=byRound[f.round]||[]).push(f); });
       var rounds=Object.keys(byRound).map(Number).sort(function(a,b){ return a-b; });
       var order=function(a,b){ return ((pts[b]||0)-(pts[a]||0)) || (a-b); };   /* points, then the starting number */
@@ -23357,8 +23372,7 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
             var winner=aw?f.seed_a:f.seed_b, loser=aw?f.seed_b:f.seed_a;
             win.push(winner); los.push(loser);
           });
-          win.sort(order); los.sort(order);
-          out.push(win); out.push(los);
+          out.push(win); out.push(los);   /* q251: kept in the draw's order — no re-sorting by points */
         });
         blocks=out;
       }
@@ -23443,13 +23457,16 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
     /* ---- the next round ---- */
     (function(){
       var hook=function(){
-        var f0=W.tmGenerateNextRound; if(typeof f0!=="function" || W.__nsqPlaceNextRaw) return false;
-        W.__nsqPlaceNextRaw=f0;
-        W.tmGenerateNextRound=async function(){
+        if(W.__nsqPlaceNextRaw) return true;
+        var f0=W.tmGenerateNextRound;   /* q251: the page's own (Banded / True Swiss) next round — kept up to date below */
+        W.__nsqPlaceNextRaw=true;
+        var ours=async function(){
           try{
             var tournament=(W._tmCtx&&W._tmCtx.tournament)||W._etTournament, division=(W._tmCtx&&W._tmCtx.division)||TM_DIVISION;
             var fx=await tmLoadFixtures(tournament, division);
-            if(!fx.length || !fx.some(function(f){ return f.round_type==="place"; })) return f0.apply(this, arguments);
+            if(!fx.length || !fx.some(function(f){ return f.round_type==="place"; })){   /* not a placement draw: the page's own next round, as before */
+              if(typeof f0!=="function"){ W.alert("The draw is still loading \u2014 try again in a moment."); return; }
+              return f0.apply(this, arguments); }
             var ent=await tmLoadEntries(tournament, division), N=ent.length;
             var byRound={}; fx.forEach(function(f){ (byRound[f.round]=byRound[f.round]||[]).push(f); });
             var rounds=Object.keys(byRound).map(Number).sort(function(a,b){ return a-b; });
@@ -23479,9 +23496,15 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
             try{ loadTournamentSheet(tournament, division); }catch(e){}
           }catch(e){ W.alert("Could not make the round: "+(e&&e.message||e)); }
         };
+        /* q251: every time a draw is shown the page writes a fresh copy of the button's function; that copy is kept as the
+           Swiss fall-back (f0) and the button keeps reaching ours — a placement section can never be paired as Banded Swiss */
+        try{ Object.defineProperty(W, "tmGenerateNextRound", { configurable:true, enumerable:true,
+          get:function(){ return ours; },
+          set:function(fn){ if(typeof fn==="function" && fn!==ours) f0=fn; } }); }
+        catch(e){ W.tmGenerateNextRound=ours; }
         return true;
       };
-      if(!hook()){ var n=0, t=setInterval(function(){ if(hook() || ++n>40) clearInterval(t); }, 250); }
+      hook();
     })();
   })();
 
