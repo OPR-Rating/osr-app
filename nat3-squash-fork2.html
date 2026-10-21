@@ -3634,7 +3634,7 @@ const _club = CLUBS[_clubParam] || (/^\d+$/.test(_clubParam) ? {id:Number(_clubP
 const CLUB_ID = _club.id;
 document.title = 'OSR · ' + _club.name;
 const CLUB_NAME = _club.name;  // shown in the logo as "OPR · <name>"
-const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q247-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
+const OPR_VERSION = "OSR-LAPTOP v46 · SQUASH 01 q248-fork2";   // PLAT MARKED HUNK: the build stamp everywhere the parent prints its own  // SCOPED ADMIN CODE: every admin call carries club_id, so a club code is checked against this club only (with admin v2026.09.13-2) — a code from another club no longer opens its admin from here. Master unchanged. Includes v2026.09.03-45 and all prior.  // MANUAL PAIR CREATION REMOVED FROM ADMIN (ported from OPR v56): Create a pair, Bulk create pairs and Re-derive all pairs are gone — they only made match-less ghost pairs, and Re-derive rewrote every stored initial club-wide. Pairs are born automatically at match entry. Current pairs list untouched; underlying JS left in place unreferenced. Includes all prior work.
 // Explanation shown above the individual ladder. Open on load so it's read; collapsible
 // (state kept for the session) and scrolls away. Mechanics only — no outcome framing, so
 // members aren't nudged away from playing stronger opponents. Every clause maps to a real
@@ -7236,6 +7236,8 @@ async function loadTournamentSheet(tournament, division) {
     }
     return tmTeamName(e.p1, e.p2);
   };
+  const tNameNow = s => tNameAt(s, 9999);   /* q248: a later round / the champion: the pair as it plays (substitute on) */
+  const _q248Round = () => { let m = 0; (fixtures||[]).forEach(f => { const r = Number(f.round)||0; if(r < 90 && r > m) m = r; }); return m || null; };   /* q248: the section's latest round */
 
   // Per-fixture handicap (for handicap events). Uses the two teams' frozen seed_rating
   // (already the division-correct pair rating — combined for Men's/Ladies', weighted 0.6/0.4
@@ -7449,7 +7451,7 @@ async function loadTournamentSheet(tournament, division) {
       if (f.seed_b === 0) {
         h += '<tr class="bkt-byerow">'
           + '<td class="num"><span class="seed' + (f.seed_a === 1 ? ' s1' : '') + '">' + f.seed_a + '</span></td>'
-          + '<td class="ta">' + stk(tName(f.seed_a)) + '</td>'
+          + '<td class="ta">' + stk(tNameAt(f.seed_a, f.round)) + '</td>'   /* q248 */
           + '<td class="num"></td>'
           + '<td class="tb" style="font-style:italic;color:#999;">bye this round</td>'
           + '<td class="num"></td>'
@@ -7563,10 +7565,10 @@ async function loadTournamentSheet(tournament, division) {
         }catch(e){}
       }
       h += '<div class="bkt-match'+(bye?' bkt-bye':'')+'" '+(bye?'':'onclick="tmEnterFixtureResult('+f.id+')" title="Tap to enter/edit score"')+'>'
-        + '<div class="bkt-team'+(aWin?' bkt-win':'')+'"><span class="bkt-sd">'+f.seed_a+'</span>'+tName(f.seed_a)+hcA+'<span class="bkt-sc">'+(played?f.sets_a:'')+'</span></div>'
+        + '<div class="bkt-team'+(aWin?' bkt-win':'')+'"><span class="bkt-sd">'+f.seed_a+'</span>'+tNameAt(f.seed_a, f.round)+hcA+'<span class="bkt-sc">'+(played?f.sets_a:'')+'</span></div>'
         + (bye
             ? '<div class="bkt-team bkt-byerow"><span class="bkt-sd">–</span>BYE<span class="bkt-sc"></span></div>'
-            : '<div class="bkt-team'+(bWin?' bkt-win':'')+'"><span class="bkt-sd">'+f.seed_b+'</span>'+tName(f.seed_b)+hcB+'<span class="bkt-sc">'+(played?f.sets_b:'')+'</span></div>')
+            : '<div class="bkt-team'+(bWin?' bkt-win':'')+'"><span class="bkt-sd">'+f.seed_b+'</span>'+tNameAt(f.seed_b, f.round)+hcB+'<span class="bkt-sc">'+(played?f.sets_b:'')+'</span></div>')
         + '</div>';
     });
     h += '</div>';
@@ -7591,7 +7593,7 @@ async function loadTournamentSheet(tournament, division) {
     let champ = '';
     if(lastFix.length===1 && lastFix[0].sets_a!=null){
       const w = koWinner(lastFix[0]);
-      champ = '<div class="bkt-champ">🏆 '+(type==='plate'?'Plate Winner':'Champion')+': <b>'+tName(w)+'</b></div>';
+      champ = '<div class="bkt-champ">🏆 '+(type==='plate'?'Plate Winner':'Champion')+': <b>'+tNameNow(w)+'</b></div>';   /* q248 */
     }
     return '<div class="bkt-block"><h3 class="bkt-title">'+title+'</h3>'+champ+'<div class="bkt-tree">'+cols+'</div></div>';
   }
@@ -7745,7 +7747,7 @@ async function loadTournamentSheet(tournament, division) {
   // One match box. Shows names (or an empty slot), score if played, and is tappable
   // to enter a score ONLY when both players are known and it hasn't been played.
   function koBox(m, isPlate){
-    const known = (s)=> (s===0) ? 'BYE' : (s!=null ? tName(s) : '');
+    const known = (s)=> (s===0) ? 'BYE' : (s!=null ? ((m.fx && m.fx.round!=null) ? tNameAt(s, m.fx.round) : tNameNow(s)) : '');   /* q248 */
     const aName = known(m.a), bName = known(m.b);
     const played = m.fx && m.fx.sets_a!=null;
     const w = m.fx ? koWinnerSeed(m.fx) : null;
@@ -7803,7 +7805,7 @@ async function loadTournamentSheet(tournament, division) {
     let champ='';
     if(finalRd.length===1 && finalRd[0].fx && finalRd[0].fx.sets_a!=null){
       const w=koWinnerSeed(finalRd[0].fx);
-      champ='<div class="bkt-champ">🏆 '+(isPlate?'Plate Winner':'Champion')+': <b>'+tName(w)+'</b></div>';
+      champ='<div class="bkt-champ">🏆 '+(isPlate?'Plate Winner':'Champion')+': <b>'+tNameNow(w)+'</b></div>';   /* q248 */
     }
     return '<div class="bkt-block"><h3 class="bkt-title">'+title+'</h3>'+champ+'<div class="bkt-tree">'+cols+'</div></div>';
   }
@@ -7891,7 +7893,7 @@ async function loadTournamentSheet(tournament, division) {
     let h = '<table><thead><tr><th class="num">#</th><th>Team</th><th class="num">P</th><th class="num">Games Won</th><th class="num">P.Won</th><th class="num">P.Diff</th></tr></thead><tbody>';   /* q184 */
     rows.forEach((r, i) => {
       h += '<tr><td class="num"><span class="rank' + (i === 0 ? ' top' : '') + '">' + (i + 1) + '</span></td>'
-        + '<td><b>' + tName(r.seed) + '</b></td>'
+        + '<td><b>' + tNameAt(r.seed, _q248Round()) + '</b></td>'   /* q248 */
         + '<td class="num">' + r.p + '</td><td class="num"><b>' + r.sets + '</b></td>'
         + '<td class="num">' + r.gw + '</td><td class="num">' + (r.gd >= 0 ? '+' : '') + r.gd + '</td></tr>';
     });
@@ -7934,9 +7936,9 @@ async function loadTournamentSheet(tournament, division) {
     const aWin = played && f.sets_a > f.sets_b, bWin = played && f.sets_b > f.sets_a;
     const score = played ? (f.sets_a + '–' + f.sets_b + ' (' + f.games_a + '–' + f.games_b + ')') : '—';
     return '<tr style="cursor:pointer;" onclick="tmEnterFixtureResult(' + f.id + ')" title="Tap to enter/edit the score">'
-      + '<td class="ta' + (aWin ? ' winr' : '') + '">' + tName(f.seed_a) + '</td>'
+      + '<td class="ta' + (aWin ? ' winr' : '') + '">' + tNameAt(f.seed_a, f.round) + '</td>'   /* q248 */
       + '<td class="num" style="color:#5aa98d;">vs</td>'
-      + '<td class="tb' + (bWin ? ' winr' : '') + '">' + tName(f.seed_b) + '</td>'
+      + '<td class="tb' + (bWin ? ' winr' : '') + '">' + tNameAt(f.seed_b, f.round) + '</td>'   /* q248 */
       + '<td class="num">' + (played ? '<span class="res-done">' + score + '</span>' : '<span style="color:#B8480A;font-weight:700;">enter ▸</span>') + '</td></tr>';
   }
   function bracketGroupHTML(title, semiRound, finalRound, group){
@@ -7955,7 +7957,7 @@ async function loadTournamentSheet(tournament, division) {
       h += '</tbody></table>';
       const fr = fin[0];
       if(fr.sets_a!=null){
-        const champ = (fr.sets_a>fr.sets_b)?tName(fr.seed_a):tName(fr.seed_b);
+        const champ = (fr.sets_a>fr.sets_b)?tNameAt(fr.seed_a, fr.round):tNameAt(fr.seed_b, fr.round);   /* q248 */
         h += '<div style="text-align:center;margin-top:10px;padding:10px;background:#f9f3dd;border:1px solid #F1C40F;border-radius:10px;font-weight:700;color:#7d6608;">🏆 Champion: ' + champ + '</div>';
       }
     } else if(semisDone){
@@ -23806,6 +23808,146 @@ window.__SQ_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
       try{ if(typeof W.nhNav==="function"){ W.nhNav(href); return; } }catch(e){}
       location.href=href;
     };
+  })();
+
+  /* ===================================================================================================================
+     NAT-SQUASH q248 · SERVING IN THE MARKER, AS THE DOUBLES RULES HAVE IT (Andre, 20 Oct, from the Kloof markers: "the
+     players decide where to start serving, left or right — an L R pill big enough to tap — and 1st server and 2nd
+     server on the scoring so the marker knows the order and who is serving").
+     World Squash doubles rules: each team names its 1st and 2nd server before the match, and the order stays for the
+     whole match (5.2). Team A's 1st server serves until his team loses a rally (hand out), then Team B's 1st server,
+     then A's 2nd, then B's 2nd, then back to A's 1st (5.3-5.5). At the start of each game and after every change of
+     server the server chooses his side; while he keeps serving he alternates (5.7). The winners of a game serve first
+     in the next (5.6) — here with their 1st server; a tap on the server's name changes it if the club does otherwise.
+     Singles: the same left/right choice at the start of each game and after every hand out.
+     Only the marker's screen changes. The score, the result and what is sent are exactly as before.
+     ================================================================================================================== */
+  (function(){
+    var W=window;
+    if(typeof W.mkRally!=="function" || typeof W.mkStart!=="function") return;
+    var esc=function(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+    var dbl=function(){ return MK.format!=="singles"; };
+    /* MK.ord[t]: which of the team's two players is its 1st server (0 = the first named, 1 = the second)
+       MK.srvI : the player serving now is his team's 1st (0) or 2nd (1) server
+       MK.nxt[t]: the team's 1st (0) or 2nd (1) server serves the team's next hand
+       MK.boxChosen: false = a new server (new game / hand out) has not chosen his side yet (R until he does) */
+    var ensure=function(){
+      var key=[MK.players.t1p1,MK.players.t1p2,MK.players.t2p1,MK.players.t2p2].join("|");
+      if(!MK.ord || MK._ordKey!==key){ MK.ord={1:0,2:0}; MK._ordKey=key; }
+      if(MK.srvI==null) MK.srvI=0;
+      if(!MK.nxt) MK.nxt={1:0,2:0};
+    };
+    var nameOf=function(t,i){ var p=MK.players||{}; var k=((MK.ord[t]||0)+(i||0))%2; return p["t"+t+"p"+(k+1)]||""; };
+    var startHand=function(team, idx){ MK.server=team; MK.srvI=idx; MK.nxt[team]=1-idx; MK.box="R"; MK.boxChosen=false; };
+    var startGame=function(team){ ensure(); MK.nxt={1:0,2:0}; startHand(team, 0); };
+
+    var css=function(){ if(document.getElementById("mkSvCss")) return; var st=document.createElement("style"); st.id="mkSvCss";
+      st.textContent="#mkSide1 .mk-box,#mkSide2 .mk-box{display:none!important}"
+        +".mkSv{margin-top:10px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:default}"
+        +".mkSv.off{visibility:hidden}"
+        +".mkSvWho{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;max-width:100%;padding:0 6px}"
+        +".mkSvWho span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"
+        +".mkSvWho em{font-style:normal;font-size:11px;font-weight:800;padding:2px 7px;border-radius:999px;background:rgba(0,0,0,.28);white-space:nowrap}"
+        +".mkSvSw{border:1.5px solid currentColor;background:transparent;color:inherit;border-radius:999px;width:30px;height:30px;font-size:15px;font-weight:800;cursor:pointer;flex:0 0 30px;font-family:inherit}"
+        +".mkSvLR{display:flex;gap:8px}"
+        +".mkSvLR button{width:62px;height:48px;border-radius:12px;font-size:23px;font-weight:900;cursor:pointer;font-family:inherit;border:2px solid currentColor;background:rgba(255,255,255,.12);color:inherit;opacity:.55}"
+        +".mkSvLR button.on{opacity:1;background:currentColor}"
+        +".mk-side.t1 .mkSvLR button.on span{color:#E0631A}.mk-side.t2 .mkSvLR button.on span{color:#20130a}"
+        +".mkSv.ask .mkSvLR button{opacity:1;animation:mkSvPulse 1.1s ease-in-out infinite}"
+        +".mkSv.ask .mkSvLR button.on{background:rgba(255,255,255,.12)}.mkSv.ask .mkSvLR button.on span{color:inherit!important}"
+        +"@keyframes mkSvPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.0)}50%{box-shadow:0 0 0 5px rgba(255,255,255,.35)}}"
+        +".mkSvHint{font-size:11px;font-weight:700;opacity:.9;min-height:14px}"
+        +".mk-names .mkPn.on{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:2px}"
+        +".mk-wrap.mkDone .mkSv{display:none}"
+        +".mkSvOrd{margin:2px 0 12px}.mkSvOrd .lb{font-size:11px;color:#9a8578;margin:8px 0 5px}";
+      document.head.appendChild(st); };
+
+    /* the court panels: the serving side shows WHO serves (1st / 2nd) and the L | R pill */
+    var paint=function(){
+      if(MK.view!=="live") return; ensure(); css();
+      [1,2].forEach(function(t){
+        var side=document.getElementById("mkSide"+t); if(!side) return;
+        var nm=side.querySelector(".mk-names");
+        if(nm && dbl() && !nm.querySelector(".mkPn")){
+          var p=MK.players; nm.innerHTML='<span class="mkPn" data-k="1">'+esc(p["t"+t+"p1"])+'</span><br><span class="mkPn" data-k="2">'+esc(p["t"+t+"p2"])+'</span>'; }
+        var box=side.querySelector(".mkSv");
+        if(!box){ box=document.createElement("div"); box.className="mkSv";
+          box.addEventListener("click",function(e){ e.stopPropagation(); });
+          box.innerHTML=(dbl()?'<div class="mkSvWho"><span class="nm"></span><em class="ord"></em><button class="mkSvSw" title="The other partner is serving">⇄</button></div>':'')
+            +'<div class="mkSvLR"><button data-b="L"><span>L</span></button><button data-b="R"><span>R</span></button></div><div class="mkSvHint"></div>';
+          Array.prototype.forEach.call(box.querySelectorAll(".mkSvLR button"),function(b){ b.addEventListener("click",function(e){ e.stopPropagation(); W.mkSvSide(b.getAttribute("data-b")); }); });
+          var sw=box.querySelector(".mkSvSw"); if(sw) sw.addEventListener("click",function(e){ e.stopPropagation(); W.mkSvSwap(); });
+          var sc=side.querySelector(".mk-score"); if(sc && sc.nextSibling) side.insertBefore(box, sc.nextSibling); else side.appendChild(box); }
+        var on=(MK.server===t && !MK.over);
+        box.classList.toggle("off", !on);
+        box.classList.toggle("ask", on && !MK.boxChosen);
+        Array.prototype.forEach.call(box.querySelectorAll(".mkSvLR button"),function(b){ b.classList.toggle("on", b.getAttribute("data-b")===MK.box); });
+        var h=box.querySelector(".mkSvHint"); if(h) h.textContent = on ? (MK.boxChosen ? ("Serving from the "+(MK.box==="L"?"left":"right")) : "Server: tap L or R") : "";
+        if(dbl()){
+          var who=nameOf(t, t===MK.server?MK.srvI:0);
+          var n=box.querySelector(".nm"); if(n) n.textContent=who;
+          var o=box.querySelector(".ord"); if(o) o.textContent=(MK.srvI===1?"2nd":"1st")+" server";
+          if(nm) Array.prototype.forEach.call(nm.querySelectorAll(".mkPn"),function(s){ s.classList.toggle("on", on && s.textContent===who); });
+        }
+      });
+    };
+
+    /* the L | R pill: the new server's choice, or the marker putting the server right (rule 5.12) */
+    W.mkSvSide=function(b){ if(MK.over || (b!=="L" && b!=="R")) return; if(b===MK.box && MK.boxChosen) return;
+      mkSnap(); MK.box=b; MK.boxChosen=true; mkRenderScore(); };
+    /* the other partner is serving this hand (the order is then kept from here) */
+    W.mkSvSwap=function(){ if(MK.over || !dbl()) return; mkSnap(); MK.srvI=1-MK.srvI; MK.nxt[MK.server]=1-MK.srvI;
+      mkFlash(nameOf(MK.server, MK.srvI)+" to serve"); mkRenderScore(); };
+
+    /* a rally: the server keeps serve and changes side, or HAND OUT to the next server in the order */
+    W.mkRally=function(t){
+      if(MK.over) return; ensure(); mkSnap();
+      MK.gp[t-1]++;
+      if(t===MK.server){ MK.box=(MK.box==="R"?"L":"R"); MK.boxChosen=true; }
+      else { var i=dbl()?(MK.nxt[t]||0):0; startHand(t, i);
+        mkFlash(dbl()?("Hand out — "+nameOf(t,i)+" to serve"):"Hand out"); }
+      mkCheckGame(); mkRenderScore();
+    };
+
+    /* start of the match: the team serving first, its 1st server, side still to choose */
+    var _start=W.mkStart;
+    W.mkStart=function(){ ensure(); startGame(MK.firstServe||1); var r=_start.apply(this, arguments);
+      return Promise.resolve(r).then(function(v){ paint(); return v; }); };
+    /* a new game: the winners serve first, with their 1st server, side to choose */
+    var _adv=W.mkAdvanceGame;
+    W.mkAdvanceGame=function(){ var r=_adv.apply(this, arguments); if(!MK.over && MK.server){ startGame(MK.server); mkRenderScore(); } return r; };
+    /* undo puts back the server and his side too */
+    var _snap=W.mkSnap;
+    W.mkSnap=function(){ _snap.apply(this, arguments);
+      try{ var i=MK.history.length-1, s=JSON.parse(MK.history[i]); s.sv={i:MK.srvI, n:{1:MK.nxt[1],2:MK.nxt[2]}, c:!!MK.boxChosen}; MK.history[i]=JSON.stringify(s); }catch(e){} };
+    var _undo=W.mkUndo;
+    W.mkUndo=function(){ var last=null; try{ last=JSON.parse(MK.history[MK.history.length-1]); }catch(e){}
+      var r=_undo.apply(this, arguments);
+      if(last && last.sv){ MK.srvI=last.sv.i; MK.nxt={1:last.sv.n[1],2:last.sv.n[2]}; MK.boxChosen=last.sv.c; mkRenderScore(); }
+      return r; };
+    var _live=W.mkRenderLive;
+    W.mkRenderLive=function(){ var r=_live.apply(this, arguments); paint(); return r; };
+    var _score=W.mkRenderScore;
+    W.mkRenderScore=function(){ var r=_score.apply(this, arguments); try{ paint(); }catch(e){} return r; };
+
+    /* before the match: each team's serving order (1st / 2nd server), kept for the whole match */
+    var orderBlock=function(){
+      if(!dbl()) return "";
+      var p=MK.players||{}; if(!(p.t1p1&&p.t1p2&&p.t2p1&&p.t2p2)) return "";
+      var row=function(t){ return '<div class="lb">'+esc(p["t"+t+"p1"])+' &amp; '+esc(p["t"+t+"p2"])+' — 1st server</div>'
+        +'<div class="mk-seg"><button class="'+(MK.ord[t]===0?'on':'')+'" onclick="mkSvOrd('+t+',0)">'+esc(p["t"+t+"p1"])+'</button>'
+        +'<button class="'+(MK.ord[t]===1?'on':'')+'" onclick="mkSvOrd('+t+',1)">'+esc(p["t"+t+"p2"])+'</button></div>'; };
+      return '<div class="mkSvOrd" id="mkSvOrd"><div style="font-size:12px;color:#9a8578">Serving order — each team’s 1st server (kept for the whole match; the partner is 2nd server)</div>'+row(1)+row(2)+'</div>';
+    };
+    var addOrder=function(){
+      try{ ensure(); css(); var c=document.getElementById("mkContent"); if(!c) return;
+        var old=document.getElementById("mkSvOrd"); if(old) old.remove();
+        var h3=Array.prototype.filter.call(c.querySelectorAll("h3"),function(h){ return /who serves first/i.test(h.textContent||""); })[0];
+        if(!h3) return; var html=orderBlock(); if(!html) return;
+        var d=document.createElement("div"); d.innerHTML=html; h3.parentNode.insertBefore(d.firstChild, h3); }catch(e){} };
+    W.mkSvOrd=function(t,k){ ensure(); MK.ord[t]=(k===1?1:0); addOrder(); };
+    ["mkServePrompt","mkRenderSetup"].forEach(function(fn){ var o=W[fn]; if(typeof o!=="function") return;
+      W[fn]=function(){ var r=o.apply(this, arguments); addOrder(); return r; }; });
   })();
 
 })();</script>
